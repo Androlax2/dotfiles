@@ -6,6 +6,7 @@ dunst
 efibootmgr
 fastfetch
 fish
+fisher
 git
 github-cli
 grim
