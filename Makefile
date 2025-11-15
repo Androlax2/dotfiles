@@ -15,3 +15,4 @@ install:
 
 update:
 	sudo pacman -Syu
+	yay -Syu
