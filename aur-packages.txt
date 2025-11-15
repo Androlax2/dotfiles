@@ -1,0 +1,3 @@
+yay 12.5.2-2
+yay-debug 12.5.2-2
+zen-browser-bin 1.17.6b-1
