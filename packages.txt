@@ -2,7 +2,6 @@ adobe-source-code-pro-fonts
 amd-ucode
 base
 base-devel
-brightnessctl
 ddcutil
 dunst
 efibootmgr

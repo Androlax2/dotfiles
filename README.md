@@ -51,3 +51,11 @@ leftcontrol = leftmeta
 rightmeta = rightcontrol
 rightcontrol = rightmeta
 ```
+
+## Useful
+
+Uninstall package and deps :
+
+```bash
+sudo pacman -Rcns <package>
+```
