@@ -15,6 +15,7 @@ helix
 htop
 hyprland
 hyprshot
+hyprsunset
 intel-media-driver
 iwd
 keyd
