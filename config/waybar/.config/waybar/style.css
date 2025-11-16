@@ -113,7 +113,7 @@ window#waybar {
 
 #clock {
     background: transparent;
-    color: #ffe8e7;
+    color: @textActive;
 }
 
 
