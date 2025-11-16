@@ -7,7 +7,6 @@
       "clock"
     ],
     "modules-right": [
-      "custom/shutdown",
       "tray",
       "pulseaudio",
     ],
@@ -26,11 +25,6 @@
         "7": "\ueb01",
         "8": "\uF1BC",
       },
-    },
-    "custom/shutdown": {
-      "format": "",
-      "interval": "once",
-      "on-click": "wlogout -b 2",
     },
     "clock": {
       "timezone": "Europe/Paris",
