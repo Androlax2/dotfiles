@@ -10,7 +10,6 @@ elephant-menus-debug 2.15.0-1
 elephant-websearch 2.15.0-1
 elephant-websearch-debug 2.15.0-1
 jetbrains-toolbox 3.0.1.59888-1
-openrgb-bin 0.9-3
 plymouth-theme-motion-git r47.5d881745-1
 proton-ge-custom-bin 1:GE_Proton10_25-1
 redhat-fonts 4.1.0-1

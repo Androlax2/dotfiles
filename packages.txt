@@ -40,6 +40,7 @@ noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
 nwg-look
+openrgb
 pavucontrol
 pipewire-pulse
 plymouth
