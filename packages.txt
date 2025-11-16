@@ -18,6 +18,7 @@ intel-media-driver
 iwd
 keyd
 kitty
+less
 libva-intel-driver
 linux
 linux-firmware
