@@ -13,7 +13,9 @@ github-cli
 grim
 helix
 htop
+hypridle
 hyprland
+hyprlock
 hyprshot
 hyprsunset
 intel-media-driver
