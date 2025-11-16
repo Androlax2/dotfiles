@@ -16,15 +16,16 @@
     "hyprland/workspaces": {
       "format": "{icon} ",
       "format-icons": {
-        "1": "\uF121",
+        "1": "\uF121", 
         "2": "\uF120",
         "3": "\ueb01",
         "4": "\uea83",
-        "5": "\udb83\udede",
-        "6": "\ueb01",
-        "7": "\ueb01",
-        "8": "\uF1BC",
+        "5": "\uF1B6",        
+        "6": "\uF001",
       },
+      "persistent-workspaces": {
+        "*": [1, 2, 3, 4, 5, 6]
+      }
     },
     "clock": {
       "timezone": "Europe/Paris",
