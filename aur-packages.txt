@@ -1,3 +1,4 @@
+apple-fonts 7.0.3-1
 arc-gtk-theme 20221218-2
 bitwarden-bin 2025.11.0-2
 bitwarden-bin-debug 2025.11.0-2

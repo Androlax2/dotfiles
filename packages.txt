@@ -41,6 +41,7 @@ noto-fonts-emoji
 noto-fonts-extra
 nwg-look
 openrgb
+otf-libertinus
 pavucontrol
 pipewire-pulse
 plymouth
@@ -52,7 +53,9 @@ slurp
 smartmontools
 steam
 stow
+tex-gyre-fonts
 thunar
+ttf-cascadia-mono-nerd
 ttf-dejavu
 ttf-fira-code
 ttf-hack
