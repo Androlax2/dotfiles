@@ -2,6 +2,7 @@ adobe-source-code-pro-fonts
 amd-ucode
 base
 base-devel
+cantarell-fonts
 ddcutil
 dunst
 efibootmgr
@@ -39,6 +40,7 @@ noto-fonts-extra
 nwg-look
 pavucontrol
 pipewire-pulse
+plymouth
 polkit-kde-agent
 qt5-wayland
 qt6-wayland

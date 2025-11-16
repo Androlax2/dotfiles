@@ -1,5 +1,31 @@
 # Linux machine setup
 
+## Plymouth
+
+```bash
+sudoedit /etc/mkinitcpio.conf
+```
+
+```
+HOOKS=(base udev plymouth ... fsck)
+```
+
+```bash
+sudoedit /boot/loader/entries/{date}.conf
+```
+
+```bash
+options root=PartUUID=... quiet splash
+```
+
+```
+sudo plymouth-set-default-theme -R motion
+```
+
+```bash
+sudo mkinitcpio -p linux
+```
+
 ## Fonts
 
 ```
