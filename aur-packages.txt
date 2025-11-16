@@ -1,9 +1,13 @@
 arc-gtk-theme 20221218-2
+elephant 2.15.0-1
+elephant-debug 2.15.0-1
 proton-ge-custom-bin 1:GE_Proton10_25-1
 redhat-fonts 4.1.0-1
 sddm-silent-theme 1.3.5-2
 ttf-apple-emoji 18.4-2
 ttf-symbola 14.00-2
+walker 2.10.0-1
+walker-debug 2.10.0-1
 yay 12.5.2-2
 yay-debug 12.5.2-2
 zen-browser-bin 1.17.6b-1
