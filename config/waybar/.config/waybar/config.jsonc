@@ -1,0 +1,59 @@
+[
+  {
+    "modules-left": [
+      "hyprland/workspaces"
+    ],
+    "modules-center": [
+      "clock"
+    ],
+    "modules-right": [
+      "custom/shutdown",
+      "tray",
+      "pulseaudio",
+    ],
+    "tray": {
+      "spacing": 10,
+    },
+    "hyprland/workspaces": {
+      "format": "{icon} ",
+      "format-icons": {
+        "1": "\uF121",
+        "2": "\uF120",
+        "3": "\ueb01",
+        "4": "\uea83",
+        "5": "\udb83\udede",
+        "6": "\ueb01",
+        "7": "\ueb01",
+        "8": "\uF1BC",
+      },
+    },
+    "custom/shutdown": {
+      "format": "",
+      "interval": "once",
+      "on-click": "wlogout -b 2",
+    },
+    "clock": {
+      "timezone": "Europe/Paris",
+      "locale": "fr_FR.utf8",
+      "format": "{:L%d %B, %H:%M}",
+    },
+    "pulseaudio": {
+      "format": "{volume}% {icon} {format_source}",
+      "format-bluetooth": "{volume}% {icon} {format_source}",
+      "format-bluetooth-muted": " {icon} {format_source}",
+      "format-muted": " {format_source}",
+      "format-source": "{volume}% ",
+      "format-source-muted": "",
+      "format-icons": {
+        "headphone": "",
+        "hands-free": "",
+        "headset": "",
+        "phone": "",
+        "portable": "",
+        "car": "",
+        "default": ["", "", ""],
+      },
+      "on-click": "pavucontrol",
+    },
+  },
+ ]

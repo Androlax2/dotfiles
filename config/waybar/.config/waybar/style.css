@@ -1,0 +1,137 @@
+@import "colors.css";
+
+* {
+    font-family: "JetBrainsMono Nerd Font";
+    font-weight: bold;
+    font-size: 13px;
+    min-height: 4px;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+
+window#waybar {
+    background: @bg;
+    color: @textActive;
+    background: transparent;
+}
+
+#backlight,
+#battery,
+#bluetooth,
+#custom-cliphist,
+#clock,
+#custom-cpuinfo,
+#cpu,
+#custom-gpuinfo,
+#idle_inhibitor,
+#custom-keybindhint,
+#language,
+#memory,
+#mpris,
+#network,
+#custom-notifications,
+#custom-power,
+#pulseaudio,
+#custom-spotify,
+#taskbar,
+#custom-theme,
+#tray,
+#window,
+#workspaces {
+    background: @bg;
+    color: @textActive;
+    border-radius: 8px;
+    opacity: 1;
+    margin: 0px 2px 0px 2px;
+    padding: 4px 8px 4px 8px;
+}
+
+#custom-shutdown,
+#custom-media {
+    margin: 0px 2px 0px 2px;
+    padding: 4px 8px 4px 8px;
+}
+
+/* If workspaces is the leftmost module, omit left margin */
+.modules-left,
+.modules-right {
+    margin: 4px 2px 0 2px;
+}
+
+.modules-center {
+    margin-top: 4px;
+}
+
+#workspaces {
+    padding: 4px;
+}
+
+#workspaces label {
+    font-size: 16px;
+    padding: 0px 0px 0px 4px;
+}
+
+#workspaces button,
+#workspaces button:hover {
+    margin: 0px 2px;
+    color: @text;
+    border-radius: 4px;
+    min-width: 0;
+}
+
+#workspaces button.visible,
+#workspaces button.active {
+    color: @textActive;
+    background-color: @bgActive;
+}
+
+#workspaces button.special,
+#workspaces button.urgent {
+    color: #DB4B4B;
+}
+
+#cpu {
+    color: #9D7CD8;
+}
+
+#memory {
+    color: #449DAB;
+}
+
+#custom-media {
+    color: #9ECE6A;
+}
+
+#custom-gpu {
+    color: #7AA2F7;
+}
+
+#custom-shutdown {
+    color: #A6333F;
+}
+
+#clock {
+    background: transparent;
+    color: #ffe8e7;
+}
+
+
+.colors {
+    color: #6878A6;
+    color: #5d6791;
+    color: #DB4B4B;
+    color: #A6333F;
+    color: #9ECE6A;
+    color: #9ECE6A;
+    color: #E0AF68;
+    color: #BBA461;
+    color: #7AA2F7;
+    color: #6D91DE;
+    color: #BB9AF7;
+    color: #9D7CD8;
+    color: #41A6B5;
+    color: #449DAB;
+    color: @text;
+    color: #9AA5CE;
+}
