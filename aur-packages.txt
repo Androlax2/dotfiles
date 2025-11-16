@@ -1,5 +1,6 @@
 redhat-fonts 4.1.0-1
 sddm-silent-theme 1.3.5-2
+ttf-symbola 14.00-2
 yay 12.5.2-2
 yay-debug 12.5.2-2
 zen-browser-bin 1.17.6b-1

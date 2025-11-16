@@ -1,5 +1,25 @@
 # Linux machine setup
 
+## Fonts
+
+```
+sudo ln -s /usr/share/fontconfig/conf.avail/10-sub-pixel-rgb.conf /etc/fonts/conf.d/
+sudo ln -s /usr/share/fontconfig/conf.avail/10-hinting-slight.conf /etc/fonts/conf.d/
+sudo ln -s /usr/share/fontconfig/conf.avail/11-lcdfilter-default.conf /etc/fonts/conf.d/
+```
+
+```bash
+sudoedit /etc/profile.d/freetype2.sh
+```
+
+```bash
+export FREETYPE_PROPERTIES="truetype:interpreter-version=40"
+```
+
+```bash
+sudo fc-cache -fv
+```
+
 ## SDDM
 
 ```bash
