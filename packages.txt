@@ -4,6 +4,8 @@ base
 base-devel
 cantarell-fonts
 ddcutil
+docker
+docker-compose
 dunst
 efibootmgr
 fastfetch
