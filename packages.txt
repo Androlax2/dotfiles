@@ -16,6 +16,7 @@ htop
 hypridle
 hyprland
 hyprlock
+hyprpaper
 hyprshot
 hyprsunset
 intel-media-driver
