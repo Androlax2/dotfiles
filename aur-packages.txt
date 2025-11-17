@@ -2,6 +2,7 @@ apple-fonts 7.0.3-1
 arc-gtk-theme 20221218-2
 bitwarden-bin 2025.11.0-2
 bitwarden-bin-debug 2025.11.0-2
+docker-rootless-extras 29.0.1-1
 elephant 2.15.0-1
 elephant-debug 2.15.0-1
 elephant-desktopapplications 2.15.0-1
