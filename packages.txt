@@ -42,6 +42,7 @@ noto-fonts-emoji
 noto-fonts-extra
 npm
 nwg-look
+openrgb
 otf-libertinus
 pavucontrol
 pipewire-pulse
