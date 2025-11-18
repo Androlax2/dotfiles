@@ -1,0 +1,51 @@
+display:
+  background:
+    path: /home/theo/.config/thermalright-lcd-control/themes/backgrounds/c004.png
+    type: image
+  date:
+    color: '#FFFFFFFF'
+    enabled: false
+    font_size: 24
+    position:
+      x: 15
+      y: 3
+    text: ''
+  foreground:
+    alpha: 1.0
+    enabled: true
+    path: /home/theo/.config/thermalright-lcd-control/themes/foregrounds/{resolution}/000e.png
+    position:
+      x: 0
+      y: 0
+  metrics:
+    configs:
+    - color: '#FFFFFFFF'
+      enabled: true
+      font_size: 24
+      format_string: '{label}{value}{unit}'
+      label: ''
+      name: cpu_temperature
+      position:
+        x: 54
+        y: 143
+      unit: °
+    - color: '#FFFFFFFF'
+      enabled: true
+      font_size: 24
+      format_string: '{label}{value}{unit}'
+      label: ''
+      name: gpu_temperature
+      position:
+        x: 255
+        y: 141
+      unit: °
+    enabled: true
+  rotation: 0
+  time:
+    color: '#FFFFFFFF'
+    enabled: false
+    font_size: 24
+    position:
+      x: 155
+      y: 141
+    text: ''

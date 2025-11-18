@@ -63,6 +63,47 @@ GreeterEnvironment=QML2_IMPORT_PATH=/usr/share/sddm/themes/silent/components/,QT
 Current=silent
 ```
 
+# Keybinds
+
+Remap binds for mac keyboard
+
+```bash
+sudoedit /etc/keyd/default.conf
+```
+
+```bash
+[ids]
+*
+
+[main]
+
+# Swap Ctrl and Command keys
+control = layer(meta)
+meta = layer(control)
+
+# Tab switching
+[meta]
+tab = C-pagedown
+
+[meta+shift]
+tab = C-pageup
+
+# Insertion point movement
+[control]
+left = home
+right = end
+up = C-home
+down = C-end
+
+[alt]
+left = C-left
+right = C-right
+
+# Screenshot
+[control+shift]
+5 = print
+```
+
 ## Useful
 
 Uninstall package and deps :
