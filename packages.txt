@@ -29,6 +29,7 @@ iwd
 keyd
 kitty
 lazydocker
+lazygit
 less
 libva-intel-driver
 linux
