@@ -11,6 +11,7 @@ elephant-menus
 elephant-menus-debug
 elephant-websearch
 elephant-websearch-debug
+emote
 jetbrains-toolbox
 plymouth-theme-motion-git
 proton-ge-custom-bin
