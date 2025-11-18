@@ -1,25 +1,25 @@
-apple-fonts 7.0.3-1
-arc-gtk-theme 20221218-2
-bitwarden-bin 2025.11.0-2
-bitwarden-bin-debug 2025.11.0-2
-docker-rootless-extras 29.0.1-1
-elephant 2.15.0-1
-elephant-debug 2.15.0-1
-elephant-desktopapplications 2.15.0-1
-elephant-desktopapplications-debug 2.15.0-1
-elephant-menus 2.15.0-1
-elephant-menus-debug 2.15.0-1
-elephant-websearch 2.15.0-1
-elephant-websearch-debug 2.15.0-1
-jetbrains-toolbox 3.0.1.59888-1
-plymouth-theme-motion-git r47.5d881745-1
-proton-ge-custom-bin 1:GE_Proton10_25-1
-redhat-fonts 4.1.0-1
-sddm-silent-theme 1.3.5-2
-ttf-apple-emoji 18.4-2
-ttf-symbola 14.00-2
-walker-bin 2.10.0-1
-walker-debug 2.10.0-1
-yay 12.5.2-2
-yay-debug 12.5.2-2
-zen-browser-bin 1.17.6b-1
+apple-fonts
+arc-gtk-theme
+bitwarden-bin
+bitwarden-bin-debug
+docker-rootless-extras
+elephant
+elephant-debug
+elephant-desktopapplications
+elephant-desktopapplications-debug
+elephant-menus
+elephant-menus-debug
+elephant-websearch
+elephant-websearch-debug
+jetbrains-toolbox
+plymouth-theme-motion-git
+proton-ge-custom-bin
+redhat-fonts
+sddm-silent-theme
+ttf-apple-emoji
+ttf-symbola
+walker-bin
+walker-debug
+yay
+yay-debug
+zen-browser-bin

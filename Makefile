@@ -7,7 +7,7 @@ dotfiles:
 
 dump:
 	pacman -Qqen > packages.txt
-	yay -Qam > aur-packages.txt
+	yay -Qqm > aur-packages.txt
 
 install:
 	sudo pacman -S --needed - < packages.txt
