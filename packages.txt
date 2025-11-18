@@ -9,6 +9,7 @@ docker-compose
 dunst
 efibootmgr
 fastfetch
+feh
 fish
 fisher
 font-manager
