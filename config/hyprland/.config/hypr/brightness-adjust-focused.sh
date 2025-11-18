@@ -11,9 +11,10 @@ fi
 MONITOR=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')
 
 # Map monitor names to I2C bus numbers or handle laptop display
+# Get BUS number with ddcutil detect
 case $MONITOR in
-    "HDMI-A-1")
-        BUS=7  # LG Ultrawide
+    "DP-2")
+        BUS=9  # LG Ultrawide
         ;;
     *)
         echo "Unknown monitor: $MONITOR"
