@@ -17,6 +17,8 @@ plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
 sddm-silent-theme
+synology-drive
+synology-drive-debug
 ttf-apple-emoji
 ttf-symbola
 walker-bin
