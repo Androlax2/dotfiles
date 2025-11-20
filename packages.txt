@@ -3,6 +3,7 @@ amd-ucode
 base
 base-devel
 cantarell-fonts
+composer
 ddcutil
 docker
 docker-compose
@@ -47,6 +48,7 @@ nwg-look
 openrgb
 otf-libertinus
 pavucontrol
+php
 pipewire-pulse
 plymouth
 polkit-kde-agent
