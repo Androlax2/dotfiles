@@ -6,6 +6,8 @@ blueman
 bluez
 cantarell-fonts
 composer
+cups
+cups-pdf
 dbeaver
 ddcutil
 docker
@@ -21,6 +23,7 @@ git
 github-cli
 grim
 helix
+hplip
 htop
 hypridle
 hyprland
@@ -43,6 +46,7 @@ man-db
 nano
 network-manager-applet
 networkmanager
+nmap
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
@@ -63,6 +67,7 @@ slurp
 smartmontools
 steam
 stow
+system-config-printer
 tex-gyre-fonts
 thunar
 ttf-cascadia-mono-nerd
