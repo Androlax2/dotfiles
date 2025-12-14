@@ -4,6 +4,7 @@ base
 base-devel
 blueman
 bluez
+btop
 cantarell-fonts
 composer
 cups
