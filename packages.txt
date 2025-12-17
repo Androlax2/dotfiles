@@ -26,6 +26,7 @@ grim
 helix
 hplip
 htop
+httpie
 hypridle
 hyprland
 hyprlock
