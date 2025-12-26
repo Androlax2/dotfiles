@@ -53,6 +53,20 @@ window#waybar {
     padding: 4px 8px 4px 8px;
 }
 
+#custom-recording {
+    color: #ff0000;
+    font-size: 16px;
+    margin-right: 8px;
+    animation: blink 1s linear infinite
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 1; }
+  51% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
 /* If workspaces is the leftmost module, omit left margin */
 .modules-left,
 .modules-right {

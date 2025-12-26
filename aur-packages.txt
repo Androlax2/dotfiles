@@ -13,6 +13,8 @@ elephant-websearch
 elephant-websearch-debug
 emote
 jetbrains-toolbox
+librepods
+librepods-debug
 plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
@@ -23,6 +25,8 @@ ttf-apple-emoji
 ttf-symbola
 walker-bin
 walker-debug
+wl-screenrec
+wl-screenrec-debug
 yay
 yay-debug
 zen-browser-bin

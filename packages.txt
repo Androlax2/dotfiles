@@ -4,6 +4,7 @@ base
 base-devel
 blueman
 bluez
+bluez-utils
 btop
 cantarell-fonts
 composer
