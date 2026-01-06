@@ -98,10 +98,6 @@ down = C-end
 [alt]
 left = C-left
 right = C-right
-
-# Screenshot
-[control+shift]
-5 = print
 ```
 
 ## Useful
