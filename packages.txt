@@ -89,6 +89,7 @@ waybar
 wget
 wireless_tools
 wireshark-qt
+xclip
 xdg-desktop-portal-hyprland
 xdg-utils
 xf86-video-amdgpu
