@@ -1,3 +1,5 @@
+apache-tools
+apache-tools-debug
 apple-fonts
 arc-gtk-theme
 bitwarden-bin
