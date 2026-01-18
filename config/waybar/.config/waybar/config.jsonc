@@ -7,12 +7,13 @@
       "clock"
     ],
     "modules-right": [
+      "custom/gaming",
       "custom/recording",
       "tray",
-      "pulseaudio",
+      "pulseaudio"
     ],
     "tray": {
-      "spacing": 10,
+      "spacing": 10
     },
     "hyprland/workspaces": {
       "format": "{icon} ",
@@ -22,16 +23,22 @@
         "3": "\ueb01",
         "4": "\uea83",
         "5": "\uF1B6",        
-        "6": "\uF001",
+        "6": "\uf135",
+        "7": "\uf025"
       },
       "persistent-workspaces": {
-        "*": [1, 2, 3, 4, 5, 6]
+        "*": [1, 2, 3, 4, 5, 6, 7]
       }
+    },
+    "custom/gaming": {
+      "exec": "if [ -f /tmp/gaming_mode_active ]; then echo '🎮'; else echo ''; fi",
+      "interval": 1,
+      "tooltip": false
     },
     "clock": {
       "timezone": "Europe/Paris",
       "locale": "fr_FR.utf8",
-      "format": "{:L%d %B, %H:%M}",
+      "format": "{:L%d %B, %H:%M}"
     },
     "custom/recording": {
       "exec": "pgrep -x wl-screenrec > /dev/null && echo '●' || echo ''",
@@ -54,9 +61,9 @@
         "phone": "",
         "portable": "",
         "car": "",
-        "default": ["", "", ""],
+        "default": ["", "", ""]
       },
-      "on-click": "pavucontrol",
-    },
-  },
- ]
+      "on-click": "pavucontrol"
+    }
+  }
+]

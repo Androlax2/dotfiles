@@ -1,39 +1,50 @@
 #!/bin/bash
 
 CHANGE=$1
+if [ -z "$CHANGE" ]; then exit 1; fi
 
-if [ -z "$CHANGE" ]; then
-    echo "Usage: $0 <+/- amount>"
-    exit 1
+# --- 1. Star Citizen / Gaming Check ---
+WINDOW_DATA=$(hyprctl activewindow -j)
+IS_FULLSCREEN=$(echo "$WINDOW_DATA" | jq -r '.fullscreen')
+
+if [ "$IS_FULLSCREEN" -ne 0 ]; then
+    exit 0
 fi
 
-# Get the focused monitor name
+# --- 2. Monitor Detection ---
 MONITOR=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')
-
-# Map monitor names to I2C bus numbers or handle laptop display
-# Get BUS number with ddcutil detect
 case $MONITOR in
-    "DP-1")
-        BUS=8  # LG Ultrawide
-        ;;
-    *)
-        echo "Unknown monitor: $MONITOR"
-        exit 1
-        ;;
+    "DP-1") BUS=8 ;; 
+    *) exit 1 ;;
 esac
 
-# Get current brightness for external monitors
-CURRENT=$(ddcutil --bus $BUS getvcp 10 --terse | cut -d' ' -f4)
+CACHE_FILE="/tmp/brightness_cache_$MONITOR"
 
-# Calculate new brightness
+# --- 3. Instant Brightness Logic ---
+if [ -f "$CACHE_FILE" ]; then
+    CURRENT=$(cat "$CACHE_FILE")
+else
+    CURRENT=$(ddcutil getvcp 10 --bus "$BUS" --terse --sleep-multiplier 0 | cut -d' ' -f4)
+fi
+
+# Calculate new value
 NEW=$((CURRENT + CHANGE))
 
-# Clamp to 0-100 range
-if [ $NEW -lt 0 ]; then NEW=0; fi
-if [ $NEW -gt 100 ]; then NEW=100; fi
+# Clamp 0-100
+[ $NEW -lt 0 ] && NEW=0
+[ $NEW -gt 100 ] && NEW=100
 
-# Set new brightness
-ddcutil --bus $BUS --sleep-multiplier 0.1 setvcp 10 $NEW
+# Update cache immediately
+echo "$NEW" > "$CACHE_FILE"
 
-echo "Monitor $MONITOR (bus $BUS): $CURRENT -> $NEW"
+# --- 4. The Notification Fix ---
+# Ensure NEW is a number before sending to notify-send
+if [[ "$NEW" =~ ^[0-9]+$ ]]; then
+    notify-send -h string:x-canonical-private-synchronous:brightness \
+                -h int:value:"$NEW" \
+                -t 1000 \
+                "Brightness" "$NEW%"
+fi
 
+# Send to hardware in background
+ddcutil setvcp 10 $NEW --bus "$BUS" --sleep-multiplier 0 --skip-ddc-checks &

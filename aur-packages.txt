@@ -17,6 +17,7 @@ emote
 jetbrains-toolbox
 librepods
 librepods-debug
+lug-helper
 plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
