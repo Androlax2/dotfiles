@@ -7,7 +7,7 @@
       "clock"
     ],
     "modules-right": [
-      "custom/gaming",
+      "hyprland/submap",
       "custom/recording",
       "tray",
       "pulseaudio"
@@ -30,9 +30,9 @@
         "*": [1, 2, 3, 4, 5, 6, 7]
       }
     },
-    "custom/gaming": {
-      "exec": "if [ -f /tmp/gaming_mode_active ]; then echo '🎮'; else echo ''; fi",
-      "interval": 1,
+    "hyprland/submap": {
+      "format": "🎮 {}",
+      "max-length": 20,
       "tooltip": false
     },
     "clock": {
