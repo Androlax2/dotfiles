@@ -1,0 +1,8 @@
+[Unit]
+Description=Check for system updates and age
+
+[Service]
+ExecStart=%h/.config/update-timer-task.sh
+
+[Install]
+WantedBy=default.target

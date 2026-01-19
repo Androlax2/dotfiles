@@ -59,6 +59,7 @@ npm
 nwg-look
 openrgb
 otf-libertinus
+pacman-contrib
 pavucontrol
 php
 pipewire-pulse
