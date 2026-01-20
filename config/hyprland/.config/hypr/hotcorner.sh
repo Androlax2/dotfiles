@@ -5,17 +5,11 @@ COMMAND="hyprlock"
 THRESHOLD=15   # Increased slightly for easier triggering
 DEBOUNCE=3     # Seconds between triggers
 
-while true; do
-    # 1. Get Active Window Data
-    WINDOW_DATA=$(hyprctl activewindow -j)
-    CLASS=$(echo "$WINDOW_DATA" | jq -r '.class')
-    FULLSCREEN=$(echo "$WINDOW_DATA" | jq -r '.fullscreen')
+source ~/.config/hypr/scripts/is-gaming.sh
 
-    # 2. THE GAME GUARD
-    # Logic: If window is fullscreen OR matches common game patterns, skip.
-    # Add any other classes (like 'gamescope') to the regex below.
-    if [ "$FULLSCREEN" -ne 0 ] || [[ "$CLASS" =~ ^(steam|steam_app_|Star Citizen|heroic|lutris|retroarch)$ ]]; then
-        sleep 2  # Sleep longer when gaming to save CPU
+while true; do
+    if is_gaming; then
+        sleep 2
         continue
     fi
 
