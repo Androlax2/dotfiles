@@ -89,6 +89,7 @@ vulkan-intel
 vulkan-nouveau
 vulkan-radeon
 waybar
+wayland-utils
 wget
 wireless_tools
 wireshark-qt
