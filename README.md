@@ -100,10 +100,54 @@ left = C-left
 right = C-right
 ```
 
+## DNS (AdGuard Home)
+
+Configure NetworkManager to use systemd-resolved with custom DNS server:
+
+```bash
+sudo mkdir -p /etc/NetworkManager/conf.d
+sudoedit /etc/NetworkManager/conf.d/dns.conf
+```
+
+```ini
+[main]
+dns=systemd-resolved
+```
+
+```bash
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudoedit /etc/systemd/resolved.conf.d/adguard.conf
+```
+
+```ini
+[Resolve]
+DNS=192.168.1.15 # IP of the DNS server AdGuard Home
+DNSStubListener=no
+```
+
+```bash
+sudo systemctl enable systemd-resolved
+sudo systemctl restart NetworkManager systemd-resolved
+```
+
+Verify :
+
+```bash
+systemctl is-enabled systemd-resolved NetworkManager
+resolvectl status  
+```
+
 ## Useful
 
 Uninstall package and deps :
 
 ```bash
 sudo pacman -Rcns <package>
+```
+
+## Systemd
+
+```bash
+systemctl --user enable --now dns-check.timer
+systemctl --user enable --now update-check.timer
 ```

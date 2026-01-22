@@ -1,0 +1,6 @@
+[Unit]
+Description=Check DNS configuration
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/check-dns.sh
