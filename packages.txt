@@ -22,6 +22,8 @@ feh
 fish
 fisher
 font-manager
+fzf
+gamescope
 git
 github-cli
 grim
