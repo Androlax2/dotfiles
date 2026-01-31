@@ -26,9 +26,13 @@ elephant-unicode-debug
 elephant-websearch
 elephant-websearch-debug
 jetbrains-toolbox
+lib32-openssl-1.1
+lib32-openssl-1.1-debug
 librepods
 librepods-debug
 lug-helper
+openssl-1.1
+openssl-1.1-debug
 plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
