@@ -37,6 +37,7 @@ synology-drive
 synology-drive-debug
 ttf-apple-emoji
 ttf-symbola
+vscode-langservers-extracted
 walker-bin
 walker-debug
 wl-screenrec

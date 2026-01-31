@@ -4,34 +4,36 @@
       "hyprland/workspaces"
     ],
     "modules-center": [
+      "hyprland/submap",
       "clock"
     ],
     "modules-right": [
-      "hyprland/submap",
       "custom/recording",
+      "custom/audio-listener",
       "tray",
+      "custom/audio-icon",
       "pulseaudio"
     ],
     "tray": {
-      "spacing": 10
+      "spacing": 8
     },
     "hyprland/workspaces": {
-      "format": "{icon} ",
+      "format": "{icon}",
       "format-icons": {
-        "1": "\uF121", 
-        "2": "\uF120",
-        "3": "\ueb01",
-        "4": "\uea83",
-        "5": "\uF1B6",        
-        "6": "\uf135",
-        "7": "\uf025"
+        "1": "󰅩",
+        "2": "󰆍",
+        "3": "󰖟",
+        "4": "󰉋",
+        "5": "󰓓",
+        "6": "󱓞",
+        "7": "󰋋"
       },
       "persistent-workspaces": {
         "*": [1, 2, 3, 4, 5, 6, 7]
       }
     },
     "hyprland/submap": {
-      "format": "🎮 {}",
+      "format": "<span font_family='JetBrainsMono NF' size='15pt'>󰊴</span>",
       "max-length": 20,
       "tooltip": false
     },
@@ -41,29 +43,40 @@
       "format": "{:L%d %B, %H:%M}"
     },
     "custom/recording": {
-      "exec": "pgrep -x wl-screenrec > /dev/null && echo '●' || echo ''",
+      "exec": "pgrep -x wl-screenrec > /dev/null && echo '󰻂' || echo ''",
       "interval": 1,
       "format": "{}",
       "tooltip": false,
       "on-click": "~/.config/screen-record.sh"
     },
+    "network": {
+      "format-wifi": "󰤨 {signalStrength}%",
+      "format-ethernet": "󰈀",
+      "format-disconnected": "󰤭",
+      "tooltip-format-wifi": "{essid}\n{ipaddr}",
+      "tooltip-format-ethernet": "{ifname}\n{ipaddr}",
+      "on-click": "nm-connection-editor"
+    },
+    "custom/audio-icon": {
+      "exec": "~/.config/waybar/scripts/audio-icon.sh",
+      "exec-on-event": false,
+      "interval": "once",
+      "signal": 8,
+      "on-click": "pavucontrol",
+      "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
+      "tooltip": false
+    },
+    "custom/audio-listener": {
+      "exec": "~/.config/waybar/scripts/audio-listener.sh",
+      "tooltip": false
+    },
     "pulseaudio": {
-      "format": "{volume}% {icon} {format_source}",
-      "format-bluetooth": "{volume}% {icon} {format_source}",
-      "format-bluetooth-muted": " {icon} {format_source}",
-      "format-muted": " {format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "format-icons": {
-        "headphone": "",
-        "hands-free": "",
-        "headset": "",
-        "phone": "",
-        "portable": "",
-        "car": "",
-        "default": ["", "", ""]
-      },
-      "on-click": "pavucontrol"
+      "format": "{volume}%",
+      "format-muted": "muted",
+      "on-click": "pavucontrol",
+      "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
+      "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",
+      "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -RTMIN+8 waybar"
     }
   }
 ]

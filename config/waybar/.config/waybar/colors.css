@@ -1,4 +1,16 @@
+/* Tokyo Night Color Palette */
 @define-color bg #1A1B26;
 @define-color bgActive #2f3344;
-@define-color text #444B6A;
+@define-color bgHighlight #292e42;
+@define-color border #3d59a1;
+@define-color text #565f89;
 @define-color textActive #C0CAF5;
+@define-color blue #7AA2F7;
+@define-color cyan #7dcfff;
+@define-color magenta #BB9AF7;
+@define-color purple #9D7CD8;
+@define-color green #9ECE6A;
+@define-color teal #41A6B5;
+@define-color yellow #E0AF68;
+@define-color orange #ff9e64;
+@define-color red #f7768e;
