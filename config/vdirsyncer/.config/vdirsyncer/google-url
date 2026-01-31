@@ -1,0 +1,3 @@
+#!/bin/sh
+EMAIL=$(grep GOOGLE_EMAIL ~/.secrets/google_hartprint.env | cut -d= -f2)
+printf 'https://www.google.com/calendar/dav/%s/events/' "$EMAIL"

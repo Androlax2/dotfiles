@@ -32,6 +32,6 @@ fileext = ".ics"
 
 [storage google_hartprint_remote]
 type = "caldav"
-url.fetch = ["command", "~/.local/bin/vdirsyncer-google-url"]
+url.fetch = ["command", "~/.config/vdirsyncer/google-url"]
 username.fetch = ["command", "sh", "-c", "grep GOOGLE_EMAIL ~/.secrets/google_hartprint.env | cut -d= -f2"]
 password.fetch = ["command", "sh", "-c", "grep GOOGLE_PASSWORD ~/.secrets/google_hartprint.env | cut -d= -f2 | tr -d '\"'"]
