@@ -5,7 +5,8 @@
     ],
     "modules-center": [
       "hyprland/submap",
-      "clock"
+      "clock",
+      "custom/calendar"
     ],
     "modules-right": [
       "custom/recording",
@@ -41,6 +42,12 @@
       "timezone": "Europe/Paris",
       "locale": "fr_FR.utf8",
       "format": "{:L%d %B, %H:%M}"
+    },
+    "custom/calendar": {
+      "exec": "~/.config/waybar/scripts/calendar.sh",
+      "return-type": "json",
+      "interval": 60,
+      "on-click": "khal interactive"
     },
     "custom/recording": {
       "exec": "pgrep -x wl-screenrec > /dev/null && echo '󰻂' || echo ''",

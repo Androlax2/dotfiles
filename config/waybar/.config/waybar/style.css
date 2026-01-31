@@ -80,11 +80,28 @@ window#waybar {
     color: @green;
 }
 
-#clock {
+#clock,
+#custom-clock {
     background: alpha(@bg, 0.9);
     border-radius: 10px;
     padding: 2px 10px;
     color: @textActive;
+}
+
+#custom-calendar {
+    background: alpha(@bg, 0.9);
+    border-radius: 10px;
+    padding: 2px 10px;
+    margin-left: 6px;
+    color: @textActive;
+}
+
+#custom-calendar.has-events {
+    color: @green;
+}
+
+#custom-calendar.no-events {
+    color: @text;
 }
 
 /* ===== RIGHT SIDE ===== */
