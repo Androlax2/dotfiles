@@ -48,6 +48,8 @@ export FREETYPE_PROPERTIES="truetype:interpreter-version=40"
 sudo fc-cache -fv
 ```
 
+Note: Do NOT use `70-no-bitmaps.conf` or similar configs that disable embedded bitmaps globally - this breaks color emoji fonts (like Apple Color Emoji) which rely on embedded bitmaps.
+
 ## SDDM
 
 ```bash
