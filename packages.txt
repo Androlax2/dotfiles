@@ -40,6 +40,7 @@ hyprsunset
 intel-media-driver
 iwd
 keyd
+khal
 kitty
 lazydocker
 lazygit
@@ -87,6 +88,7 @@ ttf-jetbrains-mono-nerd
 ttf-liberation
 ttf-roboto
 uwsm
+vdirsyncer
 vulkan-intel
 vulkan-nouveau
 vulkan-radeon
