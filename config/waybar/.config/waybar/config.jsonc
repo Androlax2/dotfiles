@@ -47,7 +47,7 @@
       "exec": "~/.config/waybar/scripts/calendar.sh",
       "return-type": "json",
       "interval": 60,
-      "on-click": "khal interactive"
+      "on-click": "~/.config/waybar/scripts/calendar-open.sh"
     },
     "custom/recording": {
       "exec": "pgrep -x wl-screenrec > /dev/null && echo '󰻂' || echo ''",

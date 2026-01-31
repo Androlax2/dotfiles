@@ -1,0 +1,22 @@
+[calendars]
+
+[[personal]]
+path = ~/.local/share/calendars/icloud/home/
+
+[[work]]
+path = ~/.local/share/calendars/icloud/work/
+
+[default]
+default_calendar = personal
+highlight_event_days = True
+
+[locale]
+timeformat = %H:%M
+dateformat = %d/%m/%Y
+longdateformat = %d/%m/%Y
+datetimeformat = %d/%m/%Y %H:%M
+longdatetimeformat = %d/%m/%Y %H:%M
+firstweekday = 0
+
+[view]
+agenda_event_format = {start-end-time-style} {title}

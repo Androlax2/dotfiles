@@ -1,0 +1,19 @@
+[general]
+status_path = "~/.local/share/vdirsyncer/status/"
+
+[pair icloud_calendar]
+a = "icloud_calendar_local"
+b = "icloud_calendar_remote"
+collections = ["from a", "from b"]
+metadata = ["color"]
+
+[storage icloud_calendar_local]
+type = "filesystem"
+path = "~/.local/share/calendars/icloud/"
+fileext = ".ics"
+
+[storage icloud_calendar_remote]
+type = "caldav"
+url = "https://caldav.icloud.com/"
+username.fetch = ["command", "sh", "-c", "grep ICLOUD_EMAIL ~/.secrets/icloud.env | cut -d= -f2"]
+password.fetch = ["command", "sh", "-c", "grep ICLOUD_PASSWORD ~/.secrets/icloud.env | cut -d= -f2"]
