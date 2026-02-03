@@ -30,7 +30,15 @@
         "7": "󰋋"
       },
       "persistent-workspaces": {
-        "*": [1, 2, 3, 4, 5, 6, 7]
+        "*": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
       }
     },
     "hyprland/submap": {
@@ -47,6 +55,7 @@
       "exec": "~/.config/waybar/scripts/calendar.sh",
       "return-type": "json",
       "interval": 60,
+      "signal": 9,
       "on-click": "~/.config/waybar/scripts/calendar-open.sh"
     },
     "custom/recording": {
