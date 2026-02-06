@@ -3,7 +3,8 @@
   "theme": "tokyonight",
   "autoupdate": true,
   "plugin": [
-    "opencode-antigravity-auth@latest"
+    "opencode-antigravity-auth@latest",
+    "opencode-anthropic-auth@latest",
   ],
   "provider": {
     "google": {

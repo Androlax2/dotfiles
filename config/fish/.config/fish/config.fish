@@ -32,3 +32,4 @@ function fish_greeting
         end
     end
 end
+export PATH="$HOME/.local/bin:$PATH"

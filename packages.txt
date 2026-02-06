@@ -65,6 +65,7 @@ otf-libertinus
 pacman-contrib
 pavucontrol
 php
+php-sqlite
 pipewire-pulse
 plymouth
 polkit-kde-agent
