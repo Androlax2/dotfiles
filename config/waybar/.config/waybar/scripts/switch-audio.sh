@@ -1,7 +1,7 @@
 #!/bin/bash
 
 HEADSET="alsa_output.usb-SteelSeries_Arctis_Nova_Pro-00.analog-stereo"
-SPEAKERS="alsa_output.pci-0000_03_00.1.hdmi-stereo"
+SPEAKERS="alsa_output.usb-bestechnic_EDIFIER_M60_20160406.1-00.analog-stereo"
 
 current=$(pactl get-default-sink)
 

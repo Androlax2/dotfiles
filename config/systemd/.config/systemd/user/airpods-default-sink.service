@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep AirPods as default sink when connected
+After=wireplumber.service bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=%h/.config/systemd/scripts/airpods-default-sink.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

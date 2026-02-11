@@ -4,6 +4,7 @@ apple-fonts
 arc-gtk-theme
 bitwarden-bin
 bitwarden-bin-debug
+bluetooth-autoconnect
 docker-rootless-extras
 elephant
 elephant-calc
