@@ -1,0 +1,49 @@
+wireplumber.settings = {
+  node.restore-default-targets = false
+}
+
+monitor.bluez.properties = {
+  bluez5.auto-connect = [ a2dp_sink a2dp_source hfp_hf hsp_hs ]
+}
+
+monitor.bluez.rules = [
+  {
+    matches = [
+      {
+        node.name = "~bluez_output.*@@AIRPODS_MAC_UNDERSCORED@@.*"
+      }
+    ]
+    actions = {
+      update-props = {
+        priority.session = 1800
+      }
+    }
+  }
+]
+
+monitor.alsa.rules = [
+  {
+    matches = [
+      {
+        node.name = "alsa_output.pci-0000_03_00.1.hdmi-stereo"
+      }
+    ]
+    actions = {
+      update-props = {
+        priority.session = 900
+      }
+    }
+  },
+  {
+    matches = [
+      {
+        node.name = "alsa_output.usb-SteelSeries_Arctis_Nova_Pro-00.analog-stereo"
+      }
+    ]
+    actions = {
+      update-props = {
+        priority.session = 700
+      }
+    }
+  }
+]

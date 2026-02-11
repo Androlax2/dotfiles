@@ -4,6 +4,7 @@ stow = cd config && stow -v -t ~
 
 dotfiles:
 	$(stow) --restow */
+	~/.config/wireplumber/wireplumber.conf.d/generate-config.sh
 
 dump:
 	pacman -Qqen > packages.txt
