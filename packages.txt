@@ -88,7 +88,6 @@ ttf-jetbrains-mono
 ttf-jetbrains-mono-nerd
 ttf-liberation
 ttf-roboto
-uwsm
 vdirsyncer
 vulkan-intel
 vulkan-nouveau
