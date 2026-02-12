@@ -1,0 +1,7 @@
+[Unit]
+Description=Check long-term CPU/GPU temperature trends
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/check-temp-trends.sh
+

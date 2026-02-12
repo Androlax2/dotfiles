@@ -1,0 +1,5 @@
+[Unit]
+Description=Log CPU/GPU temperatures
+
+[Service]
+ExecStart=%h/.config/log-temps.sh
