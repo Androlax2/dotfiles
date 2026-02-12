@@ -1847,6 +1847,9 @@
             "Enabled": false
         }
     },
+    "Theme": {
+        "theme": "Dark"
+    },
     "UserInterface": {
         "RunZoneChecks": true,
         "autoload_profiles": {
