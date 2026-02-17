@@ -35,6 +35,7 @@ hypridle
 hyprland
 hyprlock
 hyprpaper
+hyprpicker
 hyprshot
 hyprsunset
 intel-media-driver
