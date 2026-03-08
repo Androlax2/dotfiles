@@ -70,6 +70,7 @@ php-sqlite
 pipewire-pulse
 plymouth
 polkit-kde-agent
+pv
 qt5-wayland
 qt6-wayland
 sddm
