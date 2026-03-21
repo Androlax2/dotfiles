@@ -79,6 +79,7 @@ smartmontools
 steam
 stow
 system-config-printer
+tailscale
 tailspin
 tex-gyre-fonts
 thunar

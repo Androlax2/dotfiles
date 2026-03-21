@@ -38,6 +38,8 @@ plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
 sddm-silent-theme
+steamcmd
+steamcmd-debug
 synology-drive
 synology-drive-debug
 ttf-apple-emoji
