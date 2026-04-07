@@ -51,6 +51,7 @@ libva-intel-driver
 linux
 linux-firmware
 man-db
+mariadb-clients
 nano
 network-manager-applet
 networkmanager
@@ -101,7 +102,6 @@ wget
 wireless_tools
 wireshark-qt
 xclip
-xdg-desktop-portal-hyprland
 xdg-utils
 xf86-video-amdgpu
 xf86-video-ati

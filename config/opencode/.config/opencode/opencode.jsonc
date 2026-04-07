@@ -4,6 +4,7 @@
   "plugin": [
     "opencode-antigravity-auth@latest",
     "opencode-anthropic-auth@latest",
+    "op-anthropic-auth",
   ],
   "provider": {
     "google": {
