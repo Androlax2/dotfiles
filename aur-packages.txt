@@ -27,6 +27,8 @@ elephant-unicode-debug
 elephant-websearch
 elephant-websearch-debug
 jetbrains-toolbox
+lib32-gst-plugins-base-libs
+lib32-gstreamer
 lib32-openssl-1.1
 lib32-openssl-1.1-debug
 librepods

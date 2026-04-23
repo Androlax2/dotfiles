@@ -39,6 +39,7 @@ hyprpicker
 hyprshot
 hyprsunset
 intel-media-driver
+iw
 iwd
 keyd
 khal
