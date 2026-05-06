@@ -42,6 +42,8 @@ redhat-fonts
 sddm-silent-theme
 steamcmd
 steamcmd-debug
+synology-assistant
+synology-assistant-debug
 synology-drive
 synology-drive-debug
 ttf-apple-emoji
