@@ -53,6 +53,8 @@ walker-bin
 walker-debug
 wl-screenrec
 wl-screenrec-debug
+xwin
+xwin-debug
 yay
 yay-debug
 zen-browser-bin
