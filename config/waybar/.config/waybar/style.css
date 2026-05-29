@@ -151,6 +151,17 @@ window#waybar {
     margin-right: 6px;
 }
 
+/* HDR indicator -- only emits text when DP-1 is in HDR mode, so the
+   pill only appears in HDR. Click toggles via ~/.local/bin/hdr-toggle.sh. */
+#custom-hdr {
+    background: alpha(@yellow, 0.9);
+    color: @bg;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin-right: 6px;
+    font-size: 11px;
+}
+
 /* Hidden audio listener */
 #custom-audio-listener {
     margin: 0;

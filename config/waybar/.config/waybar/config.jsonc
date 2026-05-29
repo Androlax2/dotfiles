@@ -10,6 +10,7 @@
     ],
     "modules-right": [
       "custom/recording",
+      "custom/hdr",
       "custom/audio-listener",
       "tray",
       "custom/audio-icon",
@@ -64,6 +65,16 @@
       "format": "{}",
       "tooltip": false,
       "on-click": "~/.config/screen-record.sh"
+    },
+    "custom/hdr": {
+      "exec": "~/.config/waybar/scripts/hdr-indicator.sh",
+      "exec-on-event": false,
+      "interval": "once",
+      "signal": 10,
+      "format": "{}",
+      "tooltip": true,
+      "tooltip-format": "DP-1 is in HDR mode -- click to toggle",
+      "on-click": "~/.local/bin/hdr-toggle.sh"
     },
     "network": {
       "format-wifi": "󰤨 {signalStrength}%",

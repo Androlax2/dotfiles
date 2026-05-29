@@ -44,6 +44,7 @@ iwd
 keyd
 khal
 kitty
+lact
 lazydocker
 lazygit
 less
