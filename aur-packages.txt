@@ -39,6 +39,7 @@ librepods-debug
 lug-helper
 openssl-1.1
 openssl-1.1-debug
+plex-desktop
 plymouth-theme-motion-git
 proton-ge-custom-bin
 redhat-fonts
