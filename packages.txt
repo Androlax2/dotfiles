@@ -80,11 +80,13 @@ qt6-wayland
 sddm
 slurp
 smartmontools
+socat
 steam
 stow
 system-config-printer
 tailscale
 tailspin
+tcpdump
 tex-gyre-fonts
 thunar
 ttf-cascadia-mono-nerd

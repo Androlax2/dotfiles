@@ -36,6 +36,7 @@ lib32-openssl-1.1
 lib32-openssl-1.1-debug
 librepods
 librepods-debug
+libsoup
 lug-helper
 openssl-1.1
 openssl-1.1-debug
@@ -46,6 +47,8 @@ redhat-fonts
 sddm-silent-theme
 steamcmd
 steamcmd-debug
+sunshine
+sunshine-debug
 synology-assistant
 synology-assistant-debug
 synology-drive
