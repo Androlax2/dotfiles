@@ -1,0 +1,9 @@
+[Unit]
+Description=ydotoold
+
+[Service]
+ExecStart=/usr/bin/ydotoold --socket-path=/tmp/.ydotool_socket --socket-perm=0600
+Restart=always
+
+[Install]
+WantedBy=default.target
