@@ -11,6 +11,7 @@
     "modules-right": [
       "custom/recording",
       "custom/hdr",
+      "custom/hyprsunset",
       "custom/audio-listener",
       "tray",
       "custom/audio-icon",
@@ -75,6 +76,12 @@
       "tooltip": true,
       "tooltip-format": "DP-1 is in HDR mode -- click to toggle",
       "on-click": "~/.local/bin/hdr-toggle.sh"
+    },
+    "custom/hyprsunset": {
+      "exec": "pgrep -x hyprsunset > /dev/null && echo '󰖔' || echo ''",
+      "interval": 5,
+      "format": "{}",
+      "tooltip-format": "hyprsunset running (off while gaming)"
     },
     "network": {
       "format-wifi": "󰤨 {signalStrength}%",

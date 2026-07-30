@@ -2,7 +2,7 @@
 -- See https://wiki.hypr.land/Configuring/Basics/Autostart/
 hl.on("hyprland.start", function()
     hl.exec_cmd("waybar")
-    hl.exec_cmd("hyprsunset")
+    hl.exec_cmd("~/.config/hypr/scripts/hyprsunset-if-not-gaming.sh")
     hl.exec_cmd("hypridle")
     hl.exec_cmd("elephant")
     hl.exec_cmd("walker --gapplication-service")

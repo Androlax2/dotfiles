@@ -162,6 +162,15 @@ window#waybar {
     font-size: 11px;
 }
 
+/* Night light indicator -- moon shows while hyprsunset is running
+   (killed during gaming by hyprsunset-if-not-gaming.sh). */
+#custom-hyprsunset {
+    color: @orange;
+    font-family: "JetBrainsMono NF";
+    font-size: 15px;
+    margin-right: 6px;
+}
+
 /* Hidden audio listener */
 #custom-audio-listener {
     margin: 0;
