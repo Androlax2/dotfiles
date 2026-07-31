@@ -78,10 +78,10 @@
       "on-click": "~/.local/bin/hdr-toggle.sh"
     },
     "custom/hyprsunset": {
-      "exec": "pgrep -x hyprsunset > /dev/null && echo '󰖔' || echo ''",
+      "exec": "~/.config/waybar/scripts/hyprsunset-indicator.sh",
       "interval": 5,
       "format": "{}",
-      "tooltip-format": "hyprsunset running (off while gaming)"
+      "tooltip-format": "Night light active (off while gaming)"
     },
     "network": {
       "format-wifi": "󰤨 {signalStrength}%",

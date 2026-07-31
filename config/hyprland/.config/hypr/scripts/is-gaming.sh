@@ -21,4 +21,15 @@ is_gaming() {
     return 1
 }
 
+# Stricter check used by hyprsunset-if-not-gaming.sh: only real game windows
+# count. No fullscreen heuristic here -- a maximized terminal or fullscreen
+# YouTube must not kill the night light. To add a game, find its class with:
+#   hyprctl activewindow -j | jq -r '.class'
+GAME_CLASS_REGEX='^(steam_app_[0-9]+|Star Citizen|Dofus\.x64|retroarch)$'
+
+is_playing_game() {
+    class=$(hyprctl activewindow -j 2>/dev/null | jq -r '.class' 2>/dev/null)
+    [[ "$class" =~ $GAME_CLASS_REGEX ]]
+}
+
 is_gaming
