@@ -30,6 +30,8 @@ gamescope-session-git
 gamescope-session-steam-git
 google-chrome
 jetbrains-toolbox
+ledger-live
+ledger-udev
 lib32-aalib
 lib32-audit
 lib32-cdparanoia
