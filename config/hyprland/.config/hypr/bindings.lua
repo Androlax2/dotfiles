@@ -97,6 +97,6 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl --all-players play-pause"),
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl --all-players play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
 
--- Toggle DP-1 between SDR and HDR (see ~/.local/bin/hdr-toggle.sh).
+-- Toggle the LG ultrawide between SDR and HDR (see ~/.local/bin/hdr-toggle.sh).
 -- SDR for desktop work (brighter overall), HDR for native-HDR games.
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd("~/.local/bin/hdr-toggle.sh"))

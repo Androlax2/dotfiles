@@ -151,7 +151,7 @@ window#waybar {
     margin-right: 6px;
 }
 
-/* HDR indicator -- only emits text when DP-1 is in HDR mode, so the
+/* HDR indicator -- only emits text when Monitor is in HDR mode, so the
    pill only appears in HDR. Click toggles via ~/.local/bin/hdr-toggle.sh. */
 #custom-hdr {
     background: alpha(@yellow, 0.9);

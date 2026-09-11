@@ -1,0 +1,9 @@
+[Unit]
+Description=jobpilot: search platforms and send applications
+Documentation=file:///home/theo/IdeaProjects/jobpilot/README.md
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/theo/IdeaProjects/jobpilot
+ExecStart=/usr/bin/node /home/theo/IdeaProjects/jobpilot/src/cli.ts apply --send
+SyslogIdentifier=jobpilot

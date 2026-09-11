@@ -74,7 +74,7 @@
       "signal": 10,
       "format": "{}",
       "tooltip": true,
-      "tooltip-format": "DP-1 is in HDR mode -- click to toggle",
+      "tooltip-format": "Monitor is in HDR mode -- click to toggle",
       "on-click": "~/.local/bin/hdr-toggle.sh"
     },
     "custom/hyprsunset": {

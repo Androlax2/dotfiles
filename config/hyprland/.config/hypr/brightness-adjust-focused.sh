@@ -12,13 +12,15 @@ if [ "$IS_FULLSCREEN" -ne 0 ]; then
 fi
 
 # --- 2. Monitor Detection ---
-MONITOR=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .name')
-case $MONITOR in
-    "DP-1") BUS=8 ;; 
+# Match by EDID description, not connector name -- DP-N names shuffle
+# across kernel/driver updates.
+MONITOR_DESC=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .description')
+case $MONITOR_DESC in
+    "LG Electronics LG ULTRAWIDE 505NTJJDU468") BUS=8 ;;
     *) exit 1 ;;
 esac
 
-CACHE_FILE="/tmp/brightness_cache_$MONITOR"
+CACHE_FILE="/tmp/brightness_cache_${MONITOR_DESC// /_}"
 
 # --- 3. Instant Brightness Logic ---
 if [ -f "$CACHE_FILE" ]; then

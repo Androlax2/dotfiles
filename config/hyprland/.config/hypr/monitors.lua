@@ -3,7 +3,9 @@
 -- Optimized for retina-class 2x displays, like 13" 2.8K, 27" 5K, 32" 6K.
 -- hl.env("GDK_SCALE", "2")
 
--- DP-1 runs in one of two modes, selected by the HDR flag below. The
+-- The LG ultrawide is matched by EDID description (desc:) rather than
+-- connector name -- DP-N names shuffle across kernel/driver updates.
+-- It runs in one of two modes, selected by the HDR flag below. The
 -- hdr-toggle.sh script in ~/.local/bin/ flips the flag and reloads Hyprland,
 -- so keep the line exactly in the form `local HDR = false`.
 --
@@ -14,11 +16,11 @@
 --   reference luminance but can't reach SDR-mode peak. Good for games
 --   with native HDR (DXVK_HDR=1, e.g. Elden Ring with our setup).
 
-local HDR = true
+local HDR = false
 
 if HDR then
     hl.monitor({
-        output = "DP-1",
+        output = "desc:LG Electronics LG ULTRAWIDE 505NTJJDU468",
         mode = "3840x1600@144.05000",
         position = "0x0",
         scale = 1,
@@ -29,7 +31,7 @@ if HDR then
     })
 else
     hl.monitor({
-        output = "DP-1",
+        output = "desc:LG Electronics LG ULTRAWIDE 505NTJJDU468",
         mode = "3840x1600@144.05000",
         position = "0x0",
         scale = 1,
