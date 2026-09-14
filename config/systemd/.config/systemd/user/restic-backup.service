@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up home to the NAS with restic
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/restic/backup.sh run --skip-if-offline
+Nice=19
+IOSchedulingClass=idle

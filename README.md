@@ -52,6 +52,7 @@ The desktop itself:
   | `~/.secrets/airpods` | `make dotfiles`, to generate the WirePlumber AirPods rule |
   | `~/.secrets/icloud.env` | vdirsyncer, iCloud calendar |
   | `~/.secrets/google_hartprint.env` | vdirsyncer, Google calendar |
+  | `~/.secrets/restic` | Backups: the repository password, see [Backups](#backups) |
 
   `~/.secrets/airpods` holds a single line: `AIRPODS_MAC="XX:XX:XX:XX:XX:XX"`.
 
@@ -128,6 +129,94 @@ make dotfiles
 ```
 
 Don't stow files that programs rewrite by replacing them, such as `mimeapps.list`: the program replaces the symlink with a plain file.
+
+## Backups
+
+```text
+PC ── restic over SFTP, daily ──> NAS share "restic" ── Hyper Backup over WebDAV, nightly ──> Hetzner Storage Box
+                                  └── btrfs snapshots, immutable for 7 days
+```
+
+- **Encrypted on the PC.** restic encrypts and deduplicates before upload, so the NAS and Hetzner only ever store ciphertext.
+- **No cloud credentials on the PC.** The NAS pushes the repository off-site on its own schedule, even while the PC is off.
+- **Protected against deletion.** Immutable NAS snapshots keep the repository safe even if the PC is compromised.
+- **Everything in `~` is backed up** except the caches, games and build output listed in [`excludes.txt`](config/restic/.config/restic/excludes.txt).
+- **One script does the work.** [`backup.sh`](config/restic/.config/restic/backup.sh) runs behind the `make backup*` targets and both timers.
+
+| Job | When | Keeps |
+| --- | --- | --- |
+| Backup, `restic-backup.timer` | 15 minutes after boot, then daily | Every run until maintenance |
+| Maintenance, `restic-maintenance.timer` | Sundays at 14:00, or at the next boot if missed | 7 daily, 4 weekly and 12 monthly snapshots |
+| NAS snapshots | Daily | 14 days, immutable for 7 |
+| Hyper Backup to Hetzner | Daily at 03:00 | Smart Recycle versions |
+
+Away from home, scheduled runs skip quietly. After 3 days without a backup you get a notification, and any failure sends a critical one.
+
+> [!CAUTION]
+> The backups can't be decrypted without `~/.secrets/restic`. Keep a copy of that password in Bitwarden.
+
+### First-time setup
+
+On the NAS, in DSM:
+
+1. In Control Panel, open Shared Folder and create `restic` on Volume 1, with data checksum on and read/write access for your account.
+2. In Control Panel, open File Services, then FTP, and enable SFTP.
+3. In Snapshot Replication, schedule daily snapshots of `restic`, kept 14 days and immutable for 7.
+4. In Package Center, install Hyper Backup.
+
+For the off-site copy:
+
+5. In the Hetzner console, enable WebDAV for the Storage Box and note its WebDAV address, username and password.
+6. In Hyper Backup, create a data backup task to WebDAV with those credentials. Pick the `restic` folder, run it daily at 03:00 with Smart Recycle rotation, and enable a monthly integrity check.
+
+On the PC:
+
+7. Install restic and record it in the package list:
+
+   ```bash
+   sudo pacman -S restic
+   make dump-packages
+   ```
+
+8. Generate the repository password, then save a copy in Bitwarden:
+
+   ```bash
+   (umask 077 && head -c 32 /dev/urandom | base64 > ~/.secrets/restic)
+   ```
+
+9. Create the repository, check what would be uploaded, then run the first backup. Plug in Ethernet for this one, since it uploads everything:
+
+   ```bash
+   make backup-init
+   ~/.config/restic/backup.sh run --dry-run -v
+   make backup
+   ```
+
+10. Turn on the schedule:
+
+    ```bash
+    systemctl --user enable --now restic-backup.timer restic-maintenance.timer
+    ```
+
+### Restoring
+
+```bash
+make backup-status
+~/.config/restic/backup.sh restic restore latest --target /tmp/restore --include "$HOME/IdeaProjects/opusline"
+```
+
+To browse every snapshot as folders, mount the repository:
+
+```bash
+mkdir -p /tmp/restic-mount
+~/.config/restic/backup.sh restic mount /tmp/restic-mount
+```
+
+If the NAS itself is lost, restore the `restic` folder from Hetzner with Hyper Backup, then point restic at the restored copy:
+
+```bash
+~/.config/restic/backup.sh restic -r /path/to/restic/archlinux snapshots
+```
 
 ## Manual steps
 

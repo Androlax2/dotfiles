@@ -1,0 +1,8 @@
+[Unit]
+Description=Prune and verify the restic repository on the NAS
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/restic/backup.sh maintain --skip-if-offline
+Nice=19
+IOSchedulingClass=idle

@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up home to the NAS after boot and then daily
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1d
+
+[Install]
+WantedBy=timers.target

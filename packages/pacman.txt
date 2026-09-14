@@ -84,6 +84,7 @@ pv
 python-pip
 qt5-wayland
 qt6-wayland
+restic
 rust
 sddm
 slurp

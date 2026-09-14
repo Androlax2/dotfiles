@@ -5,6 +5,7 @@ SHELL := /bin/bash
 export LC_ALL := C
 
 stow = cd config && stow -v -t ~
+backup_script = ~/.config/restic/backup.sh
 system_files = $(shell cd system && find . -type f -printf '%P\n' | sort)
 enabled_units = systemctl list-unit-files --state=enabled --no-legend --no-pager | awk '$$3 != "enabled" {print $$1}' | sort
 
@@ -27,7 +28,8 @@ installed_composer = composer --working-dir="$$(composer config --global home)" 
 .PHONY: help setup packages dotfiles global-packages system locale services initramfs install \
 	    check check-packages check-services check-system check-untracked \
 	    dump dump-packages dump-services dump-system \
-	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash
+	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
+	    backup backup-status backup-check backup-maintain backup-init
 
 # Descriptions after `##` and sections after `##@` are rendered by tools/make-help.awk.
 # Tags: [sudo] prompts for a password, [asks] confirms before deleting,
@@ -154,6 +156,24 @@ clean-caches: ## Empty npm, pnpm, go, uv, pip and composer caches
 
 clean-logs: ## [sudo] Delete journal entries older than 4 weeks
 	sudo journalctl --vacuum-time=4weeks
+
+##@ Back up
+
+backup: ## Back up home to the NAS now
+	$(backup_script) run
+
+backup-status: ## [read-only] List snapshots and the next scheduled runs
+	$(backup_script) restic snapshots --compact
+	systemctl --user list-timers 'restic-*' --no-pager
+
+backup-check: ## [read-only] Read back 5% of the backup data
+	$(backup_script) restic check --read-data-subset=5%
+
+backup-maintain: ## Forget old snapshots and prune the repository
+	$(backup_script) maintain
+
+backup-init: ## Create the repository on the NAS, first time only
+	$(backup_script) init
 
 ##@ Delete data
 

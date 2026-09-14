@@ -1,0 +1,9 @@
+[Unit]
+Description=Prune and verify the restic repository weekly
+
+[Timer]
+OnCalendar=Sun 14:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
