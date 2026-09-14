@@ -1,0 +1,12 @@
+[user]
+	email = theo.benoit16@gmail.com
+	name = Androlax2
+[core]
+	autocrlf = input
+	excludesfile = /home/theo/.gitignore_global
+[push]
+	autoSetupRemote = true
+[init]
+	defaultBranch = main
+[credential]
+	helper = store

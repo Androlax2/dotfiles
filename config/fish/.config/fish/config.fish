@@ -7,8 +7,8 @@ alias sail "bash vendor/bin/sail"
 
 # pnpm
 set -gx PNPM_HOME "/home/theo/.local/share/pnpm"
-if not string match -q -- $PNPM_HOME $PATH
-    set -gx PATH "$PNPM_HOME" $PATH
+if not string match -q -- "$PNPM_HOME/bin" $PATH
+    set -gx PATH "$PNPM_HOME/bin" $PATH
 end
 # pnpm end
 
@@ -33,3 +33,8 @@ function fish_greeting
     end
 end
 export PATH="$HOME/.local/bin:$PATH"
+
+function claude
+    set -lx CLAUDE_AUTO_RETRY_ACTIVE 1
+    node (npm root -g)/claude-auto-retry/src/launcher.js $argv
+end

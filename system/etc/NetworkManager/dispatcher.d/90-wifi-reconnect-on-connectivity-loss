@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# The Realtek RTL8922AE (rtw89_8922ae) stalls after the access point announces
+# a channel or bandwidth change: traffic stops but the driver never reports a
+# disconnect, so NetworkManager keeps the link "connected" forever. Its
+# connectivity check does notice (state drops to LIMITED/NONE); this turns that
+# signal into a radio power-cycle, which is what the manual
+# `systemctl restart NetworkManager` used to achieve.
+# Upstream report: "wifi: rtw89: rtw8922ae: HWSI bus lockup during RF
+# recalibration" on linux-wireless (March 2026), still not fully resolved.
+set -euo pipefail
+
+action="${2:-}"
+wifi_interface="wlan0"
+stamp_file="/run/wifi-reconnect.stamp"
+min_seconds_between_reconnects=60
+
+[[ "$action" == "connectivity-change" ]] || exit 0
+[[ "${CONNECTIVITY_STATE:-}" == "LIMITED" || "${CONNECTIVITY_STATE:-}" == "NONE" ]] || exit 0
+
+device_state="$(nmcli -g GENERAL.STATE device show "$wifi_interface" 2>/dev/null || true)"
+[[ "$device_state" == "100 (connected)" ]] || exit 0
+
+if [[ -f "$stamp_file" ]]; then
+    seconds_since_last=$(( $(date +%s) - $(stat -c %Y "$stamp_file") ))
+    if (( seconds_since_last < min_seconds_between_reconnects )); then
+        logger -t wifi-reconnect "connectivity is $CONNECTIVITY_STATE but last reconnect was ${seconds_since_last}s ago, rate-limited"
+        exit 0
+    fi
+fi
+touch "$stamp_file"
+
+logger -t wifi-reconnect "connectivity is $CONNECTIVITY_STATE while $wifi_interface is connected, power-cycling the radio"
+nmcli radio wifi off
+sleep 2
+nmcli radio wifi on

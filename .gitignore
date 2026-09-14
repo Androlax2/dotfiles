@@ -1,2 +1,5 @@
 # Generated from templates (contains secrets)
 config/wireplumber/.config/wireplumber/wireplumber.conf.d/60-airpods-priority.conf
+
+# Rewritten by wallpaper-rotator.sh every 30 minutes
+config/hyprland/.config/hypr/wallpaper.conf

@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply OpenRGB profile
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=/usr/bin/openrgb --noautoconnect --profile /home/theo/.config/OpenRGB/'Vive le bleu.orp'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Thermalright LCD Control Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/theo/.local/share/thermalright-lcd-control
+Environment=PYTHONPATH=/home/theo/.local/share/thermalright-lcd-control
+ExecStart=thermalright-lcd-control-service
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

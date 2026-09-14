@@ -28,6 +28,7 @@ fzf
 gamescope
 git
 github-cli
+go
 grim
 helix
 hplip
@@ -43,6 +44,7 @@ hyprsunset
 intel-media-driver
 iw
 iwd
+jq
 keyd
 khal
 kitty
@@ -76,10 +78,13 @@ php
 php-sqlite
 pipewire-pulse
 plymouth
+pnpm
 polkit-kde-agent
 pv
+python-pip
 qt5-wayland
 qt6-wayland
+rust
 sddm
 slurp
 smartmontools
@@ -96,6 +101,7 @@ tesseract-data-eng
 tex-gyre-fonts
 thunar
 tk
+tmux
 ttf-cascadia-mono-nerd
 ttf-dejavu
 ttf-fira-code
@@ -112,6 +118,7 @@ waybar
 wayland-utils
 webkit2gtk-4.1
 wget
+wireless-regdb
 wireless_tools
 wireshark-qt
 xclip

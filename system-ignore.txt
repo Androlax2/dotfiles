@@ -1,0 +1,37 @@
+# /etc paths deliberately left out of system/. One extended regex per line,
+# matched against the absolute path by `make check-untracked`.
+# Do not add .pacnew files or editor leftovers here: those need a human.
+
+# Machine identity, accounts and disks: generated per install, never copied between machines.
+^/etc/(fstab|crypttab|hostname|machine-id|adjtime)$
+^/etc/(passwd|group|shadow|gshadow|subuid|subgid|shells)-?$
+^/etc/\.pwd\.lock$
+^/etc/\.updated$
+^/etc/credstore
+^/etc/ssh/ssh_host_
+
+# Wi-Fi passwords.
+^/etc/NetworkManager/system-connections/
+
+# Caches and generated databases.
+^/etc/ld\.so\.cache$
+^/etc/udev/hwdb\.bin$
+^/etc/ssl/certs/
+^/etc/ca-certificates/
+^/etc/pacman\.d/gnupg/
+^/etc/xml/catalog$
+^/etc/docker/key\.json$
+^/etc/resolv\.conf$
+
+# Written by applications or installers rather than edited by hand.
+^/etc/cups/
+^/etc/printcap$
+^/etc/lact/
+^/etc/dbeaver/
+^/etc/iproute2/rt_tables$
+^/etc/systemd/system/piavpn\.service$
+^/etc/NetworkManager/conf\.d/wgpia\.conf$
+
+# Older package defaults that were never merged, not local edits.
+^/etc/makepkg\.conf\.d/fortran\.conf$
+^/etc/tpm2-tss/

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+exec /home/theo/.local/bin/greywall -- /home/theo/.opencode/bin/opencode "$@"
+#/home/theo/.opencode/bin/opencode "$@"

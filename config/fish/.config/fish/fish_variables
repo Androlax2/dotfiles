@@ -1,5 +1,6 @@
 # This file contains fish universal variable definitions.
 # VERSION: 3.0
+SETUVAR --export CLAUDE_AUTO_RETRY_KEEP_SHELL:1
 SETUVAR --export TOKYONIGHT:storm
 SETUVAR __fish_initialized:4300
 SETUVAR _fisher_axkirillov_2F_tokyonight_2D_fish_files:\x7e/\x2econfig/fish/functions/_tokyonight_set_background\x2efish\x1e\x7e/\x2econfig/fish/functions/theme_tokyonight\x2efish\x1e\x7e/\x2econfig/fish/functions/tokyonight_day\x2efish\x1e\x7e/\x2econfig/fish/functions/tokyonight_moon\x2efish\x1e\x7e/\x2econfig/fish/functions/tokyonight_night\x2efish\x1e\x7e/\x2econfig/fish/functions/tokyonight_storm\x2efish\x1e\x7e/\x2econfig/fish/conf\x2ed/tokyonight\x2efish
@@ -28,4 +29,4 @@ SETUVAR fish_pager_color_description:565f89
 SETUVAR fish_pager_color_prefix:7dcfff
 SETUVAR fish_pager_color_progress:565f89
 SETUVAR fish_pager_color_selected_background:\x2d\x2dbackground\x3d364a82
-SETUVAR fish_user_paths:/home/theo/\x2econfig/composer/vendor/bin\x1e/home/theo/\x2eopencode/bin
+SETUVAR fish_user_paths:/home/theo/\x2elocal/npm/bin\x1e/home/theo/\x2econfig/composer/vendor/bin\x1e/home/theo/\x2eopencode/bin

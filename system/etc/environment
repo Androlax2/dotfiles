@@ -1,0 +1,10 @@
+#
+# This file is parsed by pam_env module
+#
+# Syntax: simple "KEY=VAL" pairs on separate lines
+#
+BROWSER=zen-browser
+EDITOR=helix
+SHELL=/usr/bin/fish
+FREETYPE_PROPERTIES="truetype:interpreter-version=40"
+XKB_DEFAULT_LAYOUT=fr
