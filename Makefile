@@ -159,24 +159,26 @@ clean-logs: ## [sudo] Delete journal entries older than 4 weeks
 
 ##@ Back up
 
-backup: ## Back up home to the NAS now
+backup: ## Back up home to the NAS and Hetzner now
 	$(backup_script) run
 
 # DEPTH sets how many folder levels below ~ are listed, for example make backup-list DEPTH=2.
 backup-list: ## [read-only] Show the size of each folder a backup includes
 	$(backup_script) list $(DEPTH)
 
-backup-status: ## [read-only] List snapshots and the next scheduled runs
-	$(backup_script) restic snapshots --compact
+backup-status: ## [read-only] Snapshots on both targets, and the next runs
+	$(backup_script) restic nas snapshots --compact
+	$(backup_script) restic hetzner snapshots --compact
 	systemctl --user list-timers 'restic-*' --no-pager
 
-backup-check: ## [read-only] Read back 5% of the backup data
-	$(backup_script) restic check --read-data-subset=5%
+backup-check: ## [read-only] Read back 5% of the data on both targets
+	$(backup_script) restic nas check --read-data-subset=5%
+	$(backup_script) restic hetzner check --read-data-subset=5%
 
-backup-maintain: ## Forget old snapshots and prune the repository
+backup-maintain: ## Forget old snapshots and prune both targets
 	$(backup_script) maintain
 
-backup-init: ## Create the repository on the NAS, first time only
+backup-init: ## Create the repositories that don't exist yet
 	$(backup_script) init
 
 ##@ Delete data

@@ -1,5 +1,5 @@
 [Unit]
-Description=Prune and verify the restic repository weekly
+Description=Prune and verify the restic repositories weekly
 
 [Timer]
 OnCalendar=Sun 14:00

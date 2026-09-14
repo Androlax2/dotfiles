@@ -52,7 +52,7 @@ The desktop itself:
   | `~/.secrets/airpods` | `make dotfiles`, to generate the WirePlumber AirPods rule |
   | `~/.secrets/icloud.env` | vdirsyncer, iCloud calendar |
   | `~/.secrets/google_hartprint.env` | vdirsyncer, Google calendar |
-  | `~/.secrets/restic` | Backups: the repository password, see [Backups](#backups) |
+  | `~/.secrets/restic` | Backups: the password of both repositories, see [Backups](#backups) |
 
   `~/.secrets/airpods` holds a single line: `AIRPODS_MAC="XX:XX:XX:XX:XX:XX"`.
 
@@ -133,29 +133,28 @@ Don't stow files that programs rewrite by replacing them, such as `mimeapps.list
 ## Backups
 
 ```text
-PC ── restic over SFTP, daily ──> NAS share "restic" ── Hyper Backup over rsync and SSH, nightly ──> Hetzner Storage Box
-                                  └── btrfs snapshots, immutable for 7 days
+PC ── restic over SFTP, daily ──> NAS share "restic"          (btrfs snapshots, immutable for 7 days)
+PC ── restic over SFTP, daily ──> Hetzner Storage Box         (Storage Box snapshots)
+NAS ── its own data, nightly, from the homelab repo ──> Hetzner Storage Box
 ```
 
-- **Encrypted twice.** restic encrypts and deduplicates on the PC, and Hyper Backup encrypts again before anything leaves the NAS, including the DSM settings it adds.
-- **No cloud credentials on the PC.** The NAS pushes the repository off-site on its own schedule, even while the PC is off.
-- **Protected against deletion.** Immutable NAS snapshots keep the repository safe even if the PC is compromised.
+- **Two independent copies of the PC.** The NAS and Hetzner each hold a separate restic repository, so losing either one, or the NAS with the house, still leaves a backup.
+- **The NAS backs up its own data.** Photos, apps and databases leave the NAS through the [homelab repository](https://github.com/Androlax2/homelab#backups), not from this machine.
+- **Encrypted on the PC.** restic encrypts and deduplicates before upload: the NAS and Hetzner only store ciphertext.
 - **Everything in `~` is backed up** except the caches, game installs, programs and build output listed in [`excludes.txt`](config/restic/.config/restic/excludes.txt). `make backup-list` shows the size of every included folder, and `make backup-list DEPTH=2` shows fewer levels.
 - **One script does the work.** [`backup.sh`](config/restic/.config/restic/backup.sh) runs behind the `make backup*` targets and both timers.
 
 | Job | When | Keeps |
 | --- | --- | --- |
-| Backup, `restic-backup.timer` | 15 minutes after boot, then daily | Every run until maintenance |
-| Maintenance, `restic-maintenance.timer` | Sundays at 14:00, or at the next boot if missed | 7 daily, 4 weekly and 12 monthly snapshots |
-| NAS snapshots | Daily | 14 days, immutable for 7 |
-| Hyper Backup to Hetzner | Daily at 03:00, integrity check Saturdays at 05:00 | 30 Smart Recycle versions, about 5 weeks |
+| Backup to both, `restic-backup.timer` | 15 minutes after boot, then daily | Every run until maintenance |
+| Maintenance on both, `restic-maintenance.timer` | Sundays at 14:00, or at the next boot if missed | 7 daily, 4 weekly and 12 monthly snapshots |
+| NAS snapshots of the `restic` share | Daily | 14 days, immutable for 7 |
+| Storage Box snapshots | Automatic, set in Hetzner Console | Up to 10 |
 
-Away from home, scheduled runs skip quietly. After 3 days without a backup you get a notification, and any failure sends a critical one.
+A target that can't be reached, away from home or offline, is skipped quietly while the other still runs. After 3 days without a backup to a target you get a notification, and any failure sends a critical one.
 
 > [!CAUTION]
-> Two secrets protect the backups, and without them nothing can be restored. Keep both in Bitwarden:
-> - the restic password in `~/.secrets/restic`
-> - the Hyper Backup encryption password and the `.pem` key file it downloads when the task is created
+> The backups can't be decrypted without `~/.secrets/restic`. Keep a copy outside the NAS, for example on paper stored away from home: Bitwarden here is the Vaultwarden instance running on the NAS, so it disappears with it.
 
 ### First-time setup
 
@@ -164,49 +163,42 @@ On the NAS, in DSM:
 1. In Control Panel, open Shared Folder and create `restic` on Volume 1, with data checksum on and read/write access for your account.
 2. In Control Panel, open File Services, then FTP, and enable SFTP.
 3. In Snapshot Replication, schedule daily snapshots of `restic`, kept 14 days and immutable for 7.
-4. In Package Center, install Hyper Backup.
 
-For the off-site copy:
+On Hetzner:
 
-5. In Hetzner Console, open the Storage Box and turn on **External Reachability** and **SSH Support**. Without External Reachability, only machines inside Hetzner's network can connect. Note the username, which looks like `u000000`, and the password chosen at creation. If it's lost, use Actions, then Reset Password.
-6. In Hyper Backup, create a "Folders and Packages" task with rsync as the destination, following [Hetzner's tutorial](https://community.hetzner.com/tutorials/synology-hyperbackup-to-storagebox/):
-
-   | Setting | Value |
-   | --- | --- |
-   | Server type | rsync-compatible server |
-   | Server name | `u000000.your-storagebox.de` |
-   | Transfer encryption | On |
-   | Port | `23` |
-   | Backup module | `/home/`, typed by hand. The dropdown always shows a connection error, and the summary later shows the shared folder as "undefined" |
-   | Directory | `jeancloud`, which Hyper Backup creates as `jeancloud.hbk` |
-   | Source | The `restic` shared folder |
-   | Compress backup data | Off, since restic data is already compressed |
-   | Schedule | Daily at 03:00, integrity check Saturdays at 05:00 |
-   | Client-side encryption | On, because Hyper Backup always adds the DSM system configuration |
-   | Rotation | Smart Recycle, 30 versions |
-
-   Click "Back up now" once, then confirm `jeancloud.hbk` exists on the Storage Box:
-
-   ```bash
-   echo 'ls -la' | sftp -b - u000000@u000000.your-storagebox.de
-   ```
+4. In Hetzner Console, open the Storage Box and turn on **External Reachability** and **SSH Support**. Without External Reachability, only machines inside Hetzner's network can connect.
+5. In the Storage Box's Snapshots tab, turn on automatic snapshots. This machine holds an SSH key to the box, so snapshots are what protect the backups if it is compromised.
 
 On the PC:
 
-7. Install restic and record it in the package list:
+6. Install restic and record it in the package list:
 
    ```bash
    sudo pacman -S restic
    make dump-packages
    ```
 
-8. Generate the repository password, then save a copy in Bitwarden:
+7. Generate the repository password, then store a copy outside the NAS:
 
    ```bash
    (umask 077 && head -c 32 /dev/urandom | base64 > ~/.secrets/restic)
    ```
 
-9. Create the repository, check what would be uploaded, then run the first backup. Plug in Ethernet for this one, since it uploads everything:
+8. Name the Storage Box `storagebox` in `~/.ssh/config`, with the username from Hetzner Console:
+
+   ```text
+   Host storagebox
+       HostName u000000.your-storagebox.de
+       User u000000
+   ```
+
+   Add this machine's public key to the box's `.ssh/authorized_keys`, then connect once to accept its host key, since restic can't answer that prompt:
+
+   ```bash
+   sftp storagebox
+   ```
+
+9. Create both repositories, check what would be uploaded, then run the first backup. Plug in Ethernet for this one, since it uploads everything twice:
 
    ```bash
    make backup-init
@@ -222,23 +214,21 @@ On the PC:
 
 ### Restoring
 
+Pick the target with `nas` or `hetzner`. They hold the same data, so use the NAS at home, since it's faster:
+
 ```bash
 make backup-status
-~/.config/restic/backup.sh restic restore latest --target /tmp/restore --include "$HOME/IdeaProjects/opusline"
+~/.config/restic/backup.sh restic nas restore latest --target /tmp/restore --include "$HOME/IdeaProjects/opusline"
 ```
 
-To browse every snapshot as folders, mount the repository:
+To browse every snapshot as folders, mount a repository:
 
 ```bash
 mkdir -p /tmp/restic-mount
-~/.config/restic/backup.sh restic mount /tmp/restic-mount
+~/.config/restic/backup.sh restic nas mount /tmp/restic-mount
 ```
 
-If the NAS itself is lost, restore the `restic` folder from Hetzner with Hyper Backup, using its encryption password or key file. Then point restic at the restored copy:
-
-```bash
-~/.config/restic/backup.sh restic -r /path/to/restic/archlinux snapshots
-```
+If the NAS is lost, restore from Hetzner the same way, with `hetzner` as the target.
 
 ## Manual steps
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Prune and verify the restic repository on the NAS
+Description=Prune and verify the restic repositories on the NAS and the Hetzner Storage Box
 
 [Service]
 Type=oneshot

@@ -1,5 +1,5 @@
 [Unit]
-Description=Back up home to the NAS with restic
+Description=Back up home to the NAS and the Hetzner Storage Box with restic
 
 [Service]
 Type=oneshot

@@ -1,5 +1,5 @@
 [Unit]
-Description=Back up home to the NAS after boot and then daily
+Description=Back up home after boot and then daily
 
 [Timer]
 OnBootSec=15min
