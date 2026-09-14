@@ -184,15 +184,16 @@ On the PC:
    (umask 077 && head -c 32 /dev/urandom | base64 > ~/.secrets/restic)
    ```
 
-8. Name the Storage Box `storagebox` in `~/.ssh/config`, with the username from Hetzner Console:
+8. Name the Storage Box `storagebox` in `~/.ssh/config`, with the username from Hetzner Console. Use port 23: there the box accepts the usual one-line OpenSSH key, while port 22 only accepts keys in RFC4716 format:
 
    ```text
    Host storagebox
        HostName u000000.your-storagebox.de
+       Port 23
        User u000000
    ```
 
-   Add this machine's public key to the box's `.ssh/authorized_keys`, then connect once to accept its host key, since restic can't answer that prompt:
+   Add this machine's public key, as its one-line `.pub` file, to the box's `.ssh/authorized_keys`. Then connect once to accept its host key, since restic can't answer that prompt:
 
    ```bash
    sftp storagebox

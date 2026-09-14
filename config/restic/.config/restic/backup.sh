@@ -7,9 +7,11 @@ set -euo pipefail
 
 export RESTIC_PASSWORD_FILE="$HOME/.secrets/restic"
 # <name>:<SSH host from ~/.ssh/config>:<repository path on that host>
+# The Storage Box path has no leading slash: relative to its home folder, it is the same folder
+# whether ~/.ssh/config uses port 22 (home shows as /) or port 23 (home shows as /home).
 targets=(
     "nas:jeancloud:/restic/archlinux"
-    "hetzner:storagebox:/restic/archlinux"
+    "hetzner:storagebox:restic/archlinux"
 )
 
 keep_daily=7
