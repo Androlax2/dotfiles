@@ -17,6 +17,7 @@ stale_after_days=3
 restic_partial_backup_exit_code=3
 
 config_dir="$HOME/.config/restic"
+backup_arguments=("$HOME" --exclude-file "$config_dir/excludes.txt" --exclude-caches --one-file-system)
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/restic-backup"
 last_success_file="$state_dir/last-success"
 
@@ -27,6 +28,7 @@ Usage: backup.sh <command>
   init                                   Create the repository on the NAS
   run [--skip-if-offline] [restic flags] Back up \$HOME (flags go to restic backup, e.g. --dry-run -v)
   maintain [--skip-if-offline]           Forget old snapshots, prune, and verify a data sample
+  list [depth]                           Show the size of every folder a backup includes, 3 levels deep by default
   restic <args>                          Run any restic command against the repository
 
 --skip-if-offline exits quietly when the NAS is unreachable; the timers use it.
@@ -102,11 +104,7 @@ run_backup() {
     wait_for_lock
 
     local exit_code=0
-    restic backup "$HOME" \
-        --exclude-file "$config_dir/excludes.txt" \
-        --exclude-caches \
-        --one-file-system \
-        "$@" || exit_code=$?
+    restic backup "${backup_arguments[@]}" "$@" || exit_code=$?
 
     if is_dry_run "$@"; then
         return "$exit_code"
@@ -137,6 +135,36 @@ run_maintenance() {
     fi
 }
 
+# Dry-runs restic's own exclude rules against an empty throwaway repository, so the result
+# matches a real backup but never touches the NAS. Sizes are on-disk file sizes, summed into
+# every parent folder like du, before deduplication and compression.
+list_backup_contents() {
+    local depth="${1:-3}"
+    local scratch_repository
+    scratch_repository="$(mktemp -d)"
+    # Expanded now: the local variable is gone by the time the EXIT trap runs.
+    trap "rm -rf '$scratch_repository'" EXIT
+
+    env -u RESTIC_PASSWORD_FILE restic -r "$scratch_repository" --insecure-no-password init --quiet
+    env -u RESTIC_PASSWORD_FILE restic -r "$scratch_repository" --insecure-no-password \
+        backup "${backup_arguments[@]}" --dry-run --json -vv \
+        | jq -j 'select(.message_type == "verbose_status" and .item != "" and (.item | endswith("/") | not)) | .item, "\u0000"' \
+        | xargs -0 --no-run-if-empty stat --printf '%s\t%n\n' \
+        | awk -F '\t' -v home="$HOME/" -v depth="$depth" '
+            {
+                part_count = split(substr($2, length(home) + 1), parts, "/")
+                folder = "~"
+                size[folder] += $1
+                for (level = 1; level < part_count && level <= depth; level++) {
+                    folder = folder "/" parts[level]
+                    size[folder] += $1
+                }
+            }
+            END { for (folder in size) printf "%d\t%s\n", size[folder], folder }' \
+        | sort -t $'\t' -k1,1nr \
+        | numfmt --delimiter=$'\t' --field=1 --to=iec --padding=6
+}
+
 main() {
     local command="${1:-}"
     if (( $# > 0 )); then
@@ -146,6 +174,7 @@ main() {
         init) restic init ;;
         run) run_backup "$@" ;;
         maintain) run_maintenance "$@" ;;
+        list) list_backup_contents "$@" ;;
         restic) restic "$@" ;;
         *) usage >&2; exit 2 ;;
     esac

@@ -1,22 +1,36 @@
 # Everything under $HOME is backed up unless it matches a pattern here.
 # A missing exclude only costs space; an over-broad one silently loses data, so keep these narrow.
-# restic expands $HOME in this file and supports ** in patterns.
+# restic expands $HOME in this file, supports ** in patterns, and re-includes paths prefixed with !.
+# A ! pattern only works when its parent folder is still included, hence the two-level JetBrains rules.
 
 # Caches and package stores, re-downloaded on demand
-$HOME/.cache
+$HOME/.cache/*
+$HOME/.config/*/Cache
+$HOME/.config/*/Code Cache
+$HOME/.config/*/GPUCache
 $HOME/.npm
 $HOME/.pnpm-store
 $HOME/.local/share/pnpm/store
 $HOME/.bun/install/cache
 $HOME/go/pkg/mod
+$HOME/.claude/go
 $HOME/.cargo/registry
 $HOME/.xwin-cache
 $HOME/.local/share/Trash
+
+# JetBrains local history lives in the cache folder but records edits that exist nowhere else
+!$HOME/.cache/JetBrains
+$HOME/.cache/JetBrains/*/*
+!$HOME/.cache/JetBrains/*/LocalHistory
+
+# Programs, reinstalled by their installers
+$HOME/.local/share/JetBrains/Toolbox/apps
 
 # Games, reinstallable from their launchers
 $HOME/.local/share/Steam
 $HOME/.steam
 $HOME/Games/star-citizen
+$HOME/.config/Ankama/Dofus-dofus3
 
 # Project dependencies and build output, restored by the package manager or a build
 $HOME/IdeaProjects/**/node_modules

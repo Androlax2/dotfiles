@@ -133,14 +133,14 @@ Don't stow files that programs rewrite by replacing them, such as `mimeapps.list
 ## Backups
 
 ```text
-PC ── restic over SFTP, daily ──> NAS share "restic" ── Hyper Backup over WebDAV, nightly ──> Hetzner Storage Box
+PC ── restic over SFTP, daily ──> NAS share "restic" ── Hyper Backup over rsync and SSH, nightly ──> Hetzner Storage Box
                                   └── btrfs snapshots, immutable for 7 days
 ```
 
-- **Encrypted on the PC.** restic encrypts and deduplicates before upload, so the NAS and Hetzner only ever store ciphertext.
+- **Encrypted twice.** restic encrypts and deduplicates on the PC, and Hyper Backup encrypts again before anything leaves the NAS, including the DSM settings it adds.
 - **No cloud credentials on the PC.** The NAS pushes the repository off-site on its own schedule, even while the PC is off.
 - **Protected against deletion.** Immutable NAS snapshots keep the repository safe even if the PC is compromised.
-- **Everything in `~` is backed up** except the caches, games and build output listed in [`excludes.txt`](config/restic/.config/restic/excludes.txt).
+- **Everything in `~` is backed up** except the caches, game installs, programs and build output listed in [`excludes.txt`](config/restic/.config/restic/excludes.txt). `make backup-list` shows the size of every included folder, and `make backup-list DEPTH=2` shows fewer levels.
 - **One script does the work.** [`backup.sh`](config/restic/.config/restic/backup.sh) runs behind the `make backup*` targets and both timers.
 
 | Job | When | Keeps |
@@ -148,12 +148,14 @@ PC ── restic over SFTP, daily ──> NAS share "restic" ── Hyper Backup
 | Backup, `restic-backup.timer` | 15 minutes after boot, then daily | Every run until maintenance |
 | Maintenance, `restic-maintenance.timer` | Sundays at 14:00, or at the next boot if missed | 7 daily, 4 weekly and 12 monthly snapshots |
 | NAS snapshots | Daily | 14 days, immutable for 7 |
-| Hyper Backup to Hetzner | Daily at 03:00 | Smart Recycle versions |
+| Hyper Backup to Hetzner | Daily at 03:00, integrity check Saturdays at 05:00 | 30 Smart Recycle versions, about 5 weeks |
 
 Away from home, scheduled runs skip quietly. After 3 days without a backup you get a notification, and any failure sends a critical one.
 
 > [!CAUTION]
-> The backups can't be decrypted without `~/.secrets/restic`. Keep a copy of that password in Bitwarden.
+> Two secrets protect the backups, and without them nothing can be restored. Keep both in Bitwarden:
+> - the restic password in `~/.secrets/restic`
+> - the Hyper Backup encryption password and the `.pem` key file it downloads when the task is created
 
 ### First-time setup
 
@@ -166,8 +168,28 @@ On the NAS, in DSM:
 
 For the off-site copy:
 
-5. In the Hetzner console, enable WebDAV for the Storage Box and note its WebDAV address, username and password.
-6. In Hyper Backup, create a data backup task to WebDAV with those credentials. Pick the `restic` folder, run it daily at 03:00 with Smart Recycle rotation, and enable a monthly integrity check.
+5. In Hetzner Console, open the Storage Box and turn on **External Reachability** and **SSH Support**. Without External Reachability, only machines inside Hetzner's network can connect. Note the username, which looks like `u000000`, and the password chosen at creation. If it's lost, use Actions, then Reset Password.
+6. In Hyper Backup, create a "Folders and Packages" task with rsync as the destination, following [Hetzner's tutorial](https://community.hetzner.com/tutorials/synology-hyperbackup-to-storagebox/):
+
+   | Setting | Value |
+   | --- | --- |
+   | Server type | rsync-compatible server |
+   | Server name | `u000000.your-storagebox.de` |
+   | Transfer encryption | On |
+   | Port | `23` |
+   | Backup module | `/home/`, typed by hand. The dropdown always shows a connection error, and the summary later shows the shared folder as "undefined" |
+   | Directory | `jeancloud`, which Hyper Backup creates as `jeancloud.hbk` |
+   | Source | The `restic` shared folder |
+   | Compress backup data | Off, since restic data is already compressed |
+   | Schedule | Daily at 03:00, integrity check Saturdays at 05:00 |
+   | Client-side encryption | On, because Hyper Backup always adds the DSM system configuration |
+   | Rotation | Smart Recycle, 30 versions |
+
+   Click "Back up now" once, then confirm `jeancloud.hbk` exists on the Storage Box:
+
+   ```bash
+   echo 'ls -la' | sftp -b - u000000@u000000.your-storagebox.de
+   ```
 
 On the PC:
 
@@ -212,7 +234,7 @@ mkdir -p /tmp/restic-mount
 ~/.config/restic/backup.sh restic mount /tmp/restic-mount
 ```
 
-If the NAS itself is lost, restore the `restic` folder from Hetzner with Hyper Backup, then point restic at the restored copy:
+If the NAS itself is lost, restore the `restic` folder from Hetzner with Hyper Backup, using its encryption password or key file. Then point restic at the restored copy:
 
 ```bash
 ~/.config/restic/backup.sh restic -r /path/to/restic/archlinux snapshots

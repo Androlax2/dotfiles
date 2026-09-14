@@ -29,7 +29,7 @@ installed_composer = composer --working-dir="$$(composer config --global home)" 
 	    check check-packages check-services check-system check-untracked \
 	    dump dump-packages dump-services dump-system \
 	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
-	    backup backup-status backup-check backup-maintain backup-init
+	    backup backup-list backup-status backup-check backup-maintain backup-init
 
 # Descriptions after `##` and sections after `##@` are rendered by tools/make-help.awk.
 # Tags: [sudo] prompts for a password, [asks] confirms before deleting,
@@ -161,6 +161,10 @@ clean-logs: ## [sudo] Delete journal entries older than 4 weeks
 
 backup: ## Back up home to the NAS now
 	$(backup_script) run
+
+# DEPTH sets how many folder levels below ~ are listed, for example make backup-list DEPTH=2.
+backup-list: ## [read-only] Show the size of each folder a backup includes
+	$(backup_script) list $(DEPTH)
 
 backup-status: ## [read-only] List snapshots and the next scheduled runs
 	$(backup_script) restic snapshots --compact
