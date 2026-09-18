@@ -16,6 +16,7 @@ cups-pdf
 dbeaver
 ddcutil
 docker
+docker-buildx
 docker-compose
 dunst
 efibootmgr
@@ -70,6 +71,7 @@ noto-fonts-extra
 npm
 numlockx
 nwg-look
+openbsd-netcat
 openrgb
 otf-libertinus
 pacman-contrib
