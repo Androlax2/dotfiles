@@ -17,6 +17,8 @@
     "hyprland/submap",
     "custom/hdr",
     "custom/hyprsunset",
+    "image#updates-icon",
+    "custom/updates",
     "image#cpu-icon",
     "custom/cpu",
     "image#gpu-icon",
@@ -121,6 +123,24 @@
     "interval": 5,
     "format": "󰖔 {}",
     "tooltip-format": "Night light active (off while gaming)"
+  },
+
+  // ---- right: pending updates, hidden when there are none. Value blue, orange once the last
+  // upgrade is a week old; click upgrades in a terminal and refreshes the count afterwards.
+  "image#updates-icon": {
+    "exec": "~/.config/waybar/scripts/updates-icon.sh",
+    "interval": 60,
+    "size": 14,
+    "tooltip": false,
+    "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
+  },
+
+  "custom/updates": {
+    "exec": "~/.config/waybar/scripts/updates.sh",
+    "return-type": "json",
+    "interval": 60,
+    "format": "{}",
+    "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
   },
 
   // ---- right: stats. Icons are stroke SVGs drawn by the image module (the font's Material glyphs are filled);

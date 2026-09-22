@@ -153,6 +153,7 @@ window#waybar {
 }
 
 /* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
+#image.updates-icon,
 #image.cpu-icon,
 #image.gpu-icon,
 #image.net-icon,
@@ -160,6 +161,21 @@ window#waybar {
 #image.vol-icon {
     margin: 0 6px 0 0;
     padding: 0;
+}
+
+/* Hidden image modules keep their box; drop the margin so nothing is left behind. */
+#image.updates-icon.empty {
+    margin: 0;
+}
+
+#custom-updates {
+    color: @blue;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+#custom-updates.stale {
+    color: @orange;
 }
 
 #custom-cpu {
