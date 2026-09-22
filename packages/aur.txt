@@ -5,6 +5,7 @@ apple_hyprcursor
 arc-gtk-theme
 bibata-cursor-theme
 bitwarden-bin
+bitwarden-bin-debug
 bluetooth-autoconnect
 docker-rootless-extras
 elephant
@@ -41,6 +42,7 @@ redhat-fonts
 sddm-silent-theme
 steamcmd
 sunshine
+sunshine-debug
 synology-assistant
 synology-drive
 tokyonight-gtk-theme-git

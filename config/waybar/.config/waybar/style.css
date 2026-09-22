@@ -163,6 +163,12 @@ window#waybar {
     padding: 0;
 }
 
+/* Last item of the island: the notification bell, after the volume value. */
+#image.notifications-icon {
+    margin: 0 0 0 10px;
+    padding: 0;
+}
+
 /* Hidden image modules keep their box; drop the margin so nothing is left behind. */
 #image.updates-icon.empty {
     margin: 0;

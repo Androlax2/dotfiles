@@ -1,0 +1,235 @@
+/* SwayNotificationCenter in the desktop's design language (assets/waybar-design/DESIGN.md):
+ * macOS-style cards on the Tokyo Night ground, blurred by Hyprland (apps/swaync.lua). */
+
+@define-color ground   rgba(26, 27, 38, 0.85);
+@define-color line     rgba(192, 202, 245, 0.10);
+@define-color fg       #c0caf5;
+@define-color fg-dark  #a9b1d6;
+@define-color comment  #565f89;
+@define-color blue     #7aa2f7;
+@define-color red      #f7768e;
+
+* {
+  all: unset;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 13px;
+}
+
+/* ---- floating notifications: a stack of cards under the bar's right island ---- */
+.floating-notifications .notification-row {
+  margin: 6px 15px 2px 0;
+}
+
+.notification-row .notification-background {
+  background: transparent;
+  padding: 0;
+}
+
+.notification {
+  background: @ground;
+  border: 1px solid @line;
+  border-radius: 14px;
+  margin: 0 0 8px 0;
+  padding: 0;
+  color: @fg;
+}
+
+.notification.critical {
+  border-color: alpha(@red, 0.6);
+}
+
+.notification-default-action,
+.notification-action {
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.notification-default-action:hover {
+  background: alpha(@fg, 0.04);
+}
+
+.notification-content .image,
+.notification-content .app-icon {
+  border-radius: 10px;
+  margin-right: 12px;
+  -gtk-icon-size: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.notification-content .text-box .summary {
+  color: @fg;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.notification-content .text-box .time {
+  color: @comment;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.notification-content .text-box .body {
+  color: @fg-dark;
+  font-size: 12.5px;
+}
+
+.notification-content .body-image {
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+/* GTK4 progress bar: the track is the trough, the fill is trough > progress */
+.notification-content progressbar {
+  margin-top: 10px;
+}
+
+.notification-content progressbar > trough {
+  min-height: 4px;
+  border-radius: 2px;
+  background: alpha(@fg, 0.10);
+}
+
+.notification-content progressbar > trough > progress {
+  min-height: 4px;
+  border-radius: 2px;
+  background: @blue;
+}
+
+/* action buttons under the body, pill style */
+.notification-alt-actions {
+  margin: 0 14px 12px 14px;
+}
+
+.notification-action > button,
+.notification-action {
+  background: alpha(@fg, 0.08);
+  color: @fg;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-right: 6px;
+}
+
+.notification-action > button:hover {
+  background: alpha(@blue, 0.16);
+}
+
+/* close button: hidden until the card is hovered, like macOS */
+.close-button {
+  background: alpha(@fg, 0.10);
+  color: @fg-dark;
+  border-radius: 100%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 8px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.notification-row:hover .close-button,
+.notification-group:hover .close-button {
+  opacity: 1;
+}
+
+.close-button:hover {
+  background: alpha(@fg, 0.18);
+  color: @fg;
+}
+
+/* grouped notifications from one app */
+.notification-group .notification-group-headers {
+  margin: 0 4px 6px 4px;
+}
+
+.notification-group .notification-group-header {
+  color: @fg-dark;
+  font-weight: 600;
+}
+
+.notification-group .notification-group-icon {
+  -gtk-icon-size: 20px;
+  margin-right: 8px;
+  color: @fg-dark;
+}
+
+.notification-group .notification-group-buttons button {
+  color: @fg-dark;
+  background: alpha(@fg, 0.08);
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+/* ---- control center: the pull-down panel ---- */
+.control-center {
+  background: @ground;
+  border: 1px solid @line;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.control-center .control-center-list {
+  background: transparent;
+}
+
+.control-center .control-center-list-placeholder {
+  color: @comment;
+  padding: 24px;
+}
+
+.control-center .notification {
+  margin-bottom: 8px;
+}
+
+.widget-title {
+  margin: 4px 4px 12px 4px;
+}
+
+.widget-title > label {
+  color: @fg;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.widget-title > button {
+  background: alpha(@fg, 0.08);
+  color: @fg-dark;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.widget-title > button:hover {
+  background: alpha(@blue, 0.16);
+  color: @fg;
+}
+
+.widget-dnd {
+  margin: 0 4px 12px 4px;
+}
+
+.widget-dnd > label {
+  color: @fg-dark;
+}
+
+.widget-dnd switch {
+  background: alpha(@fg, 0.10);
+  border-radius: 12px;
+  min-width: 40px;
+  min-height: 22px;
+}
+
+.widget-dnd switch:checked {
+  background: @blue;
+}
+
+.widget-dnd switch slider {
+  background: @fg;
+  border-radius: 100%;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 2px;
+}

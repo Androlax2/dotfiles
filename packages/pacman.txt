@@ -19,7 +19,6 @@ ddcutil
 docker
 docker-buildx
 docker-compose
-dunst
 efibootmgr
 fastfetch
 feh
@@ -101,6 +100,7 @@ socat
 steam
 stow
 strace
+swaync
 system-config-printer
 tailscale
 tailspin

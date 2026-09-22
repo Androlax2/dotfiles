@@ -4,6 +4,7 @@ hl.on("hyprland.start", function()
     -- The bar first, so it is on screen before the heavier startup jobs compete for the CPU.
     -- Its log goes to the runtime dir so a slow start can be timed against Hyprland's own log.
     hl.exec_cmd('waybar > "$XDG_RUNTIME_DIR/waybar.log" 2>&1')
+    hl.exec_cmd("swaync")
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")
     -- From the session, not a root unit: OpenRGB's udev rules give i2c/hidraw access to the

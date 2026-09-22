@@ -30,6 +30,7 @@
     "image#sep-r2",
     "image#vol-icon",
     "wireplumber",
+    "image#notifications-icon",
     "custom/audio-listener"
   ],
 
@@ -221,6 +222,17 @@
     "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
     "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",
     "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -RTMIN+8 waybar"
+  },
+
+  // ---- right: notification centre (swaync). Click toggles the panel, right-click toggles DND.
+  // SIGRTMIN+12 comes from swaync's own script hook (config/swaync) whenever its state changes.
+  "image#notifications-icon": {
+    "exec": "~/.config/waybar/scripts/notifications-icon.sh",
+    "interval": 10,
+    "signal": 12,
+    "size": 14,
+    "on-click": "swaync-client -t -sw && pkill -RTMIN+12 waybar",
+    "on-click-right": "swaync-client -d -sw && pkill -RTMIN+12 waybar"
   },
 
   // Never renders text; it only forwards pactl sink events to the volume icon as SIGRTMIN+8.
