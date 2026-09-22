@@ -13,6 +13,8 @@
       "custom/hdr",
       "custom/hyprsunset",
       "custom/audio-listener",
+      "custom/cpu",
+      "custom/gpu",
       "tray",
       "custom/audio-icon",
       "pulseaudio"
@@ -82,6 +84,18 @@
       "interval": 5,
       "format": "{}",
       "tooltip-format": "Night light active (off while gaming)"
+    },
+    "custom/cpu": {
+      "exec": "~/.config/waybar/scripts/cpu-stats.sh",
+      "return-type": "json",
+      "interval": 2,
+      "on-click": "kitty -e btop"
+    },
+    "custom/gpu": {
+      "exec": "~/.config/waybar/scripts/gpu-stats.sh",
+      "return-type": "json",
+      "interval": 2,
+      "on-click": "lact gui"
     },
     "network": {
       "format-wifi": "󰤨 {signalStrength}%",

@@ -106,6 +106,27 @@ window#waybar {
 
 /* ===== RIGHT SIDE ===== */
 
+/* System stats island -- CPU and GPU fused into one pill, left of the tray */
+#custom-cpu {
+    background: alpha(@bg, 0.9);
+    border-radius: 10px 0 0 10px;
+    padding: 2px 6px 2px 10px;
+    color: @textActive;
+}
+
+#custom-gpu {
+    background: alpha(@bg, 0.9);
+    border-radius: 0 10px 10px 0;
+    padding: 2px 10px 2px 6px;
+    margin-right: 6px;
+    color: @textActive;
+}
+
+#custom-cpu.hot,
+#custom-gpu.hot {
+    color: @red;
+}
+
 /* Tray - separate floating island */
 #tray {
     background: alpha(@bg, 0.9);
