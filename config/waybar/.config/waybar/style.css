@@ -1,13 +1,22 @@
+/* Waybar: Tokyo Night, tight islands. Spec and reference renders in assets/waybar-design/.
+ * GTK3 CSS: no pseudo-elements, no backdrop-filter (Hyprland blurs the layer),
+ * and no box-shadow (the layer surface is exactly the bar's height, it would clip).
+ * Sizing: text 13 px, icon glyphs 16 px (a Nerd Font glyph at 16 px has the ink of a 14 px stroke icon).
+ * Spacing: CSS margins only; formats carry no padding spaces. */
+
 @import "colors.css";
 
+/* The Propo variant gives icon glyphs their real advance width. In the plain "Nerd Font" variant a 16 px
+   icon keeps a 10 px advance under 15 px of ink, so it overhangs the margin that follows it by ~5 px. */
 * {
-    font-family: "SF Pro";
-    font-weight: bold;
+    font-family: "JetBrainsMono Nerd Font Propo", "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
     font-size: 13px;
+    font-weight: 500;
     min-height: 0;
-    margin: 0;
-    padding: 0;
     border: none;
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 window#waybar {
@@ -15,124 +24,174 @@ window#waybar {
     color: @textActive;
 }
 
-/* ===== MODULE GROUPS ===== */
+/* ===== ISLANDS: one per module group ===== */
+.modules-left,
+.modules-center,
+.modules-right {
+    background: alpha(@bg, 0.85);
+    border: 1px solid @line;
+    border-radius: 10px;
+    padding: 0 10px;
+}
+
+/* Workspaces only: the chips sit 4 px from the island edge. */
 .modules-left {
-    margin: 8px 8px 0 8px;
+    padding: 0 4px;
 }
 
 .modules-center {
-    margin-top: 8px;
+    padding: 0 12px;
 }
 
-.modules-right {
-    margin: 8px 8px 0 8px;
+/* ===== DIVIDERS: sep.svg is 12 x 12 with a 1 px line in the middle, 5.5 px of air built in ===== */
+#image.sep-r1,
+#image.sep-r2 {
+    margin: 0 4px;
+    padding: 0;
 }
 
-/* ===== LEFT ISLAND - Workspaces ===== */
+/* ===== LEFT: workspaces ===== */
 #workspaces {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px;
-    padding: 2px 4px;
+    padding: 0;
+    margin: 0;
 }
 
+/* 24 px chip inside the 30 px inner height, 2 px between chips */
 #workspaces button {
-    color: @text;
-    background: transparent;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    margin: 3px 1px;
     border-radius: 6px;
-    padding: 2px 4px;
-    margin: 0 1px;
+    background: transparent;
+    color: @textActive;
+    font-size: 16px;
+    transition: background 120ms ease, color 120ms ease;
 }
 
-#workspaces button label {
-    font-size: 15px;
-    font-family: "JetBrainsMono NF";
+/* dark5 rather than the comment colour: the filled Material glyphs carry too much ink for #565f89 to read as quiet. */
+#workspaces button.empty {
+    color: @dark5;
 }
 
-#workspaces button:hover {
+#workspaces button.active {
+    background: @blue;
+    color: @bg;
+}
+
+#workspaces button.urgent {
     color: @blue;
 }
 
-#workspaces button.visible,
-#workspaces button.active {
-    color: @cyan;
-}
-
-#workspaces button.special,
-#workspaces button.urgent {
-    color: @red;
-}
-
-/* ===== CENTER - Gamemode & Clock ===== */
-#submap,
-#hyprland-submap {
-    background-color: rgba(26, 27, 38, 0.9);
-    border-radius: 10px;
-    padding: 2px 10px;
-    margin-right: 6px;
-    color: @green;
-}
-
-#submap label,
-#hyprland-submap label {
-    background-color: rgba(26, 27, 38, 0.9);
-    border-radius: 10px;
-    padding: 3px 6px 1px 6px;
-    color: @green;
-}
-
-#clock,
-#custom-clock {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px;
-    padding: 2px 10px;
+#workspaces button:hover {
+    background: alpha(@textActive, 0.08);
     color: @textActive;
+}
+
+#workspaces button.active:hover {
+    background: @blue;
+    color: @bg;
+}
+
+/* ===== CENTRE: clock and next event ===== */
+#clock {
+    color: @blue;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#clock.date {
+    color: @textDim;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+/* A 16 px gap on the icon rather than a divider, so nothing is left behind when the event hides.
+   Colours of the time and countdown come from the script's Pango markup. */
+#image.cal-icon {
+    margin: 0 6px 0 16px;
+    padding: 0;
+}
+
+/* The image module keeps its box (class "empty") when the script prints no path; drop the margins too. */
+#image.cal-icon.empty {
+    margin: 0;
 }
 
 #custom-calendar {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px;
-    padding: 2px 10px;
-    margin-left: 6px;
     color: @textActive;
 }
 
-#custom-calendar.has-events {
-    color: @green;
+/* ===== RIGHT: mode chips, tinted 24 px boxes shown only while a mode is active ===== */
+#custom-recording,
+#submap,
+#hyprland-submap,
+#custom-hdr,
+#custom-hyprsunset {
+    min-height: 24px;
+    padding: 0 7px;
+    margin: 3px 10px 3px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: alpha(@textActive, 0.10);
+    color: @textDim;
 }
 
-#custom-calendar.no-events {
-    color: @text;
-}
-
-/* ===== RIGHT SIDE ===== */
-
-/* System stats island -- CPU and GPU fused into one pill, left of the tray */
-#custom-cpu {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px 0 0 10px;
-    padding: 2px 6px 2px 10px;
-    color: @textActive;
-}
-
-#custom-gpu {
-    background: alpha(@bg, 0.9);
-    border-radius: 0 10px 10px 0;
-    padding: 2px 10px 2px 6px;
-    margin-right: 6px;
-    color: @textActive;
-}
-
-#custom-cpu.hot,
-#custom-gpu.hot {
+/* Red: someone can see your screen. */
+#custom-recording {
+    background: alpha(@red, 0.16);
     color: @red;
 }
 
-/* Tray - separate floating island */
+/* Green: keybinds are rerouted to the gamemode submap. */
+#submap,
+#hyprland-submap {
+    background: alpha(@green, 0.16);
+    color: @green;
+}
+
+/* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
+#image.cpu-icon,
+#image.gpu-icon,
+#image.net-icon,
+#image.bt-icon,
+#image.vol-icon {
+    margin: 0 6px 0 0;
+    padding: 0;
+}
+
+#custom-cpu {
+    color: @blue;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+#custom-gpu {
+    color: @magenta;
+    font-weight: 600;
+}
+
+#custom-cpu.warning,
+#custom-gpu.warning {
+    color: @orange;
+}
+
+#custom-cpu.critical,
+#custom-gpu.critical {
+    color: @red;
+}
+
+/* ===== RIGHT: network and bluetooth icons keep the 10 px module gap; tray ===== */
+#image.net-icon,
+#image.bt-icon {
+    margin-right: 10px;
+}
+
 #tray {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px;
-    padding: 2px 10px;
-    margin-right: 6px;
+    padding: 0;
+    margin: 0;
 }
 
 #tray > .passive {
@@ -143,64 +202,30 @@ window#waybar {
     -gtk-icon-effect: highlight;
 }
 
-/* Volume island */
-#custom-audio-icon {
-    background: alpha(@bg, 0.9);
-    border-radius: 10px 0 0 10px;
-    padding: 2px 6px 2px 10px;
-    color: @textActive;
-    font-family: "JetBrainsMono NF";
-    font-size: 15px;
-}
-
+/* ===== RIGHT: volume ===== */
 #pulseaudio {
-    background: alpha(@bg, 0.9);
-    border-radius: 0 10px 10px 0;
-    padding: 4px 10px 0px 4px;
-    color: @textActive;
+    color: @yellow;
+    font-weight: 600;
 }
 
 #pulseaudio.muted {
     color: @text;
 }
 
-/* Recording indicator */
-#custom-recording {
-    color: @red;
-    font-size: 14px;
-    animation: blink 1s linear infinite;
-    margin-right: 6px;
-}
-
-/* HDR indicator -- only emits text when Monitor is in HDR mode, so the
-   pill only appears in HDR. Click toggles via ~/.local/bin/hdr-toggle.sh. */
-#custom-hdr {
-    background: alpha(@yellow, 0.9);
-    color: @bg;
-    border-radius: 10px;
-    padding: 2px 8px;
-    margin-right: 6px;
-    font-size: 11px;
-}
-
-/* Night light indicator -- moon shows while hyprsunset is running
-   (killed during gaming by hyprsunset-if-not-gaming.sh). */
-#custom-hyprsunset {
-    color: @orange;
-    font-family: "JetBrainsMono NF";
-    font-size: 15px;
-    margin-right: 6px;
-}
-
-/* Hidden audio listener */
 #custom-audio-listener {
     margin: 0;
     padding: 0;
     font-size: 0;
 }
 
-@keyframes blink {
-    to {
-        opacity: 0;
-    }
+/* ===== TOOLTIPS ===== */
+tooltip {
+    background: @bg;
+    border: 1px solid @line;
+    border-radius: 8px;
+}
+
+tooltip label {
+    color: @textActive;
+    padding: 4px;
 }

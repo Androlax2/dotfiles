@@ -4,7 +4,10 @@
 @define-color bgHighlight #292e42;
 @define-color border #3d59a1;
 @define-color text #565f89;
+@define-color dark5 #737aa2;
+@define-color textDim #a9b1d6;
 @define-color textActive #C0CAF5;
+@define-color line rgba(192, 202, 245, 0.10);
 @define-color blue #7AA2F7;
 @define-color cyan #7dcfff;
 @define-color magenta #BB9AF7;

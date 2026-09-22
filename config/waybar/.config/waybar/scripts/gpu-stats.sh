@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Waybar custom module: dGPU usage in the bar, temps/VRAM/power/clocks in the
 # tooltip. Everything is read from sysfs, no amdgpu_top/rocm-smi needed.
+# The icon lives in the module's format string; the script only returns the value
+# and a warning/critical class for the bar to colour it.
 # The Raphael iGPU is also an amdgpu card, so the dGPU is picked by PCI id
 # rather than by card index (card0/card1 and hwmonN can swap across boots).
 GPU_PCI_ID="1002:7550" # RX 9070 XT
@@ -10,7 +12,7 @@ for uevent in /sys/class/drm/card*/device/uevent; do
     grep -q "^PCI_ID=$GPU_PCI_ID" "$uevent" && device=$(dirname "$uevent") && break
 done
 if [ -z "$device" ]; then
-    echo "{\"text\": \"GPU ?\", \"tooltip\": \"No amdgpu card with PCI id $GPU_PCI_ID\", \"class\": \"hot\"}"
+    echo "{\"text\": \"?\", \"tooltip\": \"No amdgpu card with PCI id $GPU_PCI_ID\", \"class\": \"critical\"}"
     exit 0
 fi
 hwmon=$(echo "$device"/hwmon/hwmon*)
@@ -31,7 +33,11 @@ fan=$(read_or_zero "$hwmon/fan1_input")
 vram=$(awk -v used="$vram_used" -v total="$vram_total" 'BEGIN { printf "%.1f / %.1f GiB", used / 1073741824, total / 1073741824 }')
 
 class=""
-[ "$junction" -ge 95 ] || [ "$edge" -ge 85 ] && class="hot"
+if [ "$usage" -ge 90 ] || [ "$junction" -ge 95 ] || [ "$edge" -ge 85 ]; then
+    class="critical"
+elif [ "$usage" -ge 70 ]; then
+    class="warning"
+fi
 
 tooltip="<b>GPU  ${GPU_NAME}</b>\nUsage ${usage}%\nTemp ${edge}°C edge · ${junction}°C junction\nVRAM ${vram}\nPower ${power} W\nClocks ${sclk} / ${mclk} MHz\nFan ${fan} rpm"
-echo "{\"text\": \"<span font_family='JetBrainsMono NF' size='11pt'>󰢮</span> ${usage}%\", \"tooltip\": \"${tooltip}\", \"class\": \"${class}\"}"
+echo "{\"text\": \"${usage}%\", \"tooltip\": \"${tooltip}\", \"class\": \"${class}\"}"

@@ -7,7 +7,8 @@ local inactiveBorderColor = "rgb(1A1B26)"
 hl.config({
     general = {
         gaps_in = 5,
-        gaps_out = 15,
+        -- Top gap equals Waybar's 6 px top margin, so the space under the bar matches the space above it.
+        gaps_out = { top = 6, right = 15, bottom = 15, left = 15 },
 
         border_size = 2,
 
@@ -70,10 +71,12 @@ hl.config({
             color = "rgba(1a1a1aee)",
         },
 
+        -- Only the Waybar islands are blurred: apps/waybar.lua turns blur off for every window.
         blur = {
-            enabled = false,
-            size = 3,
+            enabled = true,
+            size = 6,
             passes = 3,
+            new_optimizations = true,
 
             -- vibrancy = 0.1696,
         },

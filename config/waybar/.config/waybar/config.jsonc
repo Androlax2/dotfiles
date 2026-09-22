@@ -1,130 +1,216 @@
-[
-  {
-    "modules-left": [
-      "hyprland/workspaces"
-    ],
-    "modules-center": [
-      "hyprland/submap",
-      "clock",
-      "custom/calendar"
-    ],
-    "modules-right": [
-      "custom/recording",
-      "custom/hdr",
-      "custom/hyprsunset",
-      "custom/audio-listener",
-      "custom/cpu",
-      "custom/gpu",
-      "tray",
-      "custom/audio-icon",
-      "pulseaudio"
-    ],
-    "tray": {
-      "spacing": 8
+// Waybar: Tokyo Night, tight islands. Spec and reference renders in assets/waybar-design/.
+// Glyphs are Nerd Fonts v3 (nf-md-*); codepoints are listed in the spec. Icon glyphs are drawn at 16 px
+// (Pango size 12288 = 12 pt) next to 13 px text. Spacing comes from CSS margins, never from spaces in formats.
+{
+  "layer": "top",
+  "position": "top",
+  "height": 32,
+  "margin-top": 6,
+  "margin-left": 15,
+  "margin-right": 15,
+  "spacing": 0,
+
+  "modules-left": ["hyprland/workspaces"],
+  "modules-center": ["clock", "clock#date", "image#cal-icon", "custom/calendar"],
+  "modules-right": [
+    "custom/recording",
+    "hyprland/submap",
+    "custom/hdr",
+    "custom/hyprsunset",
+    "image#cpu-icon",
+    "custom/cpu",
+    "image#gpu-icon",
+    "custom/gpu",
+    "image#sep-r1",
+    "image#net-icon",
+    "image#bt-icon",
+    "tray",
+    "image#sep-r2",
+    "image#vol-icon",
+    "pulseaudio",
+    "custom/audio-listener"
+  ],
+
+  // ---- left ---------------------------------------------------------------
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": {
+      "1": "󰅩",
+      "2": "󰞷",
+      "3": "󰖟",
+      "4": "󰉖",
+      "5": "󰮃",
+      "6": "󱓟",
+      "7": "󰋋",
+      "default": "󰅩"
     },
-    "hyprland/workspaces": {
-      "format": "{icon}",
-      "format-icons": {
-        "1": "󰅩",
-        "2": "󰆍",
-        "3": "󰖟",
-        "4": "󰉋",
-        "5": "󰓓",
-        "6": "󱓞",
-        "7": "󰋋"
-      },
-      "persistent-workspaces": {
-        "*": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7
-        ]
-      }
-    },
-    "hyprland/submap": {
-      "format": "<span font_family='JetBrainsMono NF' size='15pt'>󰊴</span>",
-      "max-length": 20,
-      "tooltip": false
-    },
-    "clock": {
-      "timezone": "Europe/Paris",
-      "locale": "fr_FR.utf8",
-      "format": "{:L%d %B, %H:%M}"
-    },
-    "custom/calendar": {
-      "exec": "~/.config/waybar/scripts/calendar.sh",
-      "return-type": "json",
-      "interval": 60,
-      "signal": 9,
-      "on-click": "~/.config/waybar/scripts/calendar-open.sh"
-    },
-    "custom/recording": {
-      "exec": "pgrep -x wl-screenrec > /dev/null && echo '󰻂' || echo ''",
-      "interval": 1,
-      "format": "{}",
-      "tooltip": false,
-      "on-click": "~/.config/screen-record.sh"
-    },
-    "custom/hdr": {
-      "exec": "~/.config/waybar/scripts/hdr-indicator.sh",
-      "exec-on-event": false,
-      "interval": "once",
-      "signal": 10,
-      "format": "{}",
-      "tooltip": true,
-      "tooltip-format": "Monitor is in HDR mode -- click to toggle",
-      "on-click": "~/.local/bin/hdr-toggle.sh"
-    },
-    "custom/hyprsunset": {
-      "exec": "~/.config/waybar/scripts/hyprsunset-indicator.sh",
-      "interval": 5,
-      "format": "{}",
-      "tooltip-format": "Night light active (off while gaming)"
-    },
-    "custom/cpu": {
-      "exec": "~/.config/waybar/scripts/cpu-stats.sh",
-      "return-type": "json",
-      "interval": 2,
-      "on-click": "kitty -e btop"
-    },
-    "custom/gpu": {
-      "exec": "~/.config/waybar/scripts/gpu-stats.sh",
-      "return-type": "json",
-      "interval": 2,
-      "on-click": "lact gui"
-    },
-    "network": {
-      "format-wifi": "󰤨 {signalStrength}%",
-      "format-ethernet": "󰈀",
-      "format-disconnected": "󰤭",
-      "tooltip-format-wifi": "{essid}\n{ipaddr}",
-      "tooltip-format-ethernet": "{ifname}\n{ipaddr}",
-      "on-click": "nm-connection-editor"
-    },
-    "custom/audio-icon": {
-      "exec": "~/.config/waybar/scripts/audio-icon.sh",
-      "exec-on-event": false,
-      "interval": "once",
-      "signal": 8,
-      "on-click": "pavucontrol",
-      "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
-      "tooltip": false
-    },
-    "custom/audio-listener": {
-      "exec": "~/.config/waybar/scripts/audio-listener.sh",
-      "tooltip": false
-    },
-    "pulseaudio": {
-      "format": "{volume}%",
-      "format-muted": "muted",
-      "on-click": "pavucontrol",
-      "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
-      "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",
-      "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -RTMIN+8 waybar"
-    }
-  }
-]
+    "persistent-workspaces": { "*": [1, 2, 3, 4, 5, 6, 7] },
+    "sort-by-number": true,
+    // No on-click "activate": Waybar sends the classic "dispatch workspace N", which Hyprland rejects under the Lua config.
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+
+  // ---- centre -------------------------------------------------------------
+  "clock": {
+    "timezone": "Europe/Paris",
+    "format": "{:%H:%M}",
+    "interval": 30,
+    "tooltip-format": "<tt>{calendar}</tt>",
+    "calendar": { "mode": "month", "weeks-pos": "left", "on-scroll": 1 }
+  },
+
+  // The L flag makes fmt honour "locale"; without it the day and month names come out in English.
+  "clock#date": {
+    "timezone": "Europe/Paris",
+    "locale": "fr_FR.utf8",
+    "format": "{:L%a %d %b}",
+    "interval": 60,
+    "tooltip": false
+  },
+
+  // The calendar icon is an image module so it can be a stroke icon like the others; its script prints
+  // the icon path only while an event is upcoming, so the icon hides together with the event text.
+  "image#cal-icon": {
+    "exec": "~/.config/waybar/scripts/cal-icon.sh",
+    "interval": 60,
+    "signal": 9,
+    "size": 14,
+    "tooltip": false,
+    "on-click": "~/.config/waybar/scripts/calendar-open.sh"
+  },
+
+  "custom/calendar": {
+    "exec": "~/.config/waybar/scripts/calendar.sh",
+    "return-type": "json",
+    "format": "{}",
+    "escape": false,
+    "interval": 60,
+    "signal": 9,
+    "on-click": "~/.config/waybar/scripts/calendar-open.sh"
+  },
+
+  // ---- right: mode chips, each empty (hidden) unless its mode is active ----
+  "custom/recording": {
+    "exec": "~/.config/waybar/scripts/recording.sh",
+    "interval": 1,
+    "format": "󰑊 {}",
+    "tooltip": false,
+    "on-click": "~/.config/screen-record.sh"
+  },
+
+  // The only submap is "gamemode" and the module has no per-submap format, so the label is fixed.
+  "hyprland/submap": {
+    "format": "󰮂 GAME",
+    "tooltip": false
+  },
+
+  "custom/hdr": {
+    "exec": "~/.config/waybar/scripts/hdr-indicator.sh",
+    "exec-on-event": false,
+    "interval": "once",
+    "signal": 10,
+    "format": "{}",
+    "tooltip-format": "Monitor is in HDR mode -- click to toggle",
+    "on-click": "~/.local/bin/hdr-toggle.sh"
+  },
+
+  "custom/hyprsunset": {
+    "exec": "~/.config/waybar/scripts/hyprsunset-indicator.sh",
+    "interval": 5,
+    "format": "󰖔 {}",
+    "tooltip-format": "Night light active (off while gaming)"
+  },
+
+  // ---- right: stats. Icons are stroke SVGs drawn by the image module (the font's Material glyphs are filled);
+  // the scripts return the value and a warning/critical class. Image modules need an explicit interval:
+  // without one Waybar 0.15's image worker spins and the bar never gets configured.
+  "image#cpu-icon": {
+    "path": "/home/theo/.config/waybar/icons/cpu.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "kitty -e btop"
+  },
+
+  "custom/cpu": {
+    "exec": "~/.config/waybar/scripts/cpu-stats.sh",
+    "return-type": "json",
+    "interval": 3,
+    "format": "{}",
+    "escape": false,
+    "on-click": "kitty -e btop"
+  },
+
+  "image#gpu-icon": {
+    "path": "/home/theo/.config/waybar/icons/gpu.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "lact gui"
+  },
+
+  "custom/gpu": {
+    "exec": "~/.config/waybar/scripts/gpu-stats.sh",
+    "return-type": "json",
+    "interval": 5,
+    "format": "{}",
+    "escape": false,
+    "on-click": "lact gui"
+  },
+
+  // Stateful icons: each script prints the icon path on line 1 and the tooltip on line 2.
+  "image#net-icon": {
+    "exec": "~/.config/waybar/scripts/net-icon.sh",
+    "interval": 5,
+    "size": 14,
+    "on-click": "nm-connection-editor"
+  },
+
+  "image#bt-icon": {
+    "exec": "~/.config/waybar/scripts/bt-icon.sh",
+    "interval": 5,
+    "size": 14,
+    "on-click": "blueman-manager"
+  },
+
+  "tray": {
+    "icon-size": 14,
+    "spacing": 10
+  },
+
+  // ---- right: volume. Headphones icon while the headset is the default sink, otherwise mute / level icons.
+  "image#vol-icon": {
+    "exec": "~/.config/waybar/scripts/vol-icon.sh",
+    "interval": 1,
+    "signal": 8,
+    "size": 14,
+    "tooltip": false,
+    "on-click": "pavucontrol",
+    "on-click-right": "~/.config/waybar/scripts/switch-audio.sh"
+  },
+
+  "pulseaudio": {
+    "format": "{volume}%",
+    "format-muted": "{volume}%",
+    "tooltip-format": "{desc}",
+    "on-click": "pavucontrol",
+    "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
+    "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",
+    "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -RTMIN+8 waybar"
+  },
+
+  // Never renders text; it only forwards pactl sink events to the volume icon as SIGRTMIN+8.
+  "custom/audio-listener": {
+    "exec": "~/.config/waybar/scripts/audio-listener.sh",
+    "tooltip": false
+  },
+
+  // ---- dividers: sep.svg is a 12 x 12 image with a 1 px line in the middle, drawn by the image module.
+  // The image module does not expand ~, hence the absolute path. Only the right island has dividers:
+  // a divider must never sit next to a module that can hide (the event module), or it leaves a phantom gap.
+  // "interval" is required: without it Waybar 0.15's image worker spins and the bar never gets configured.
+  "image#sep-r1": { "path": "/home/theo/.config/waybar/sep.svg", "size": 12, "interval": 3600, "tooltip": false },
+  "image#sep-r2": { "path": "/home/theo/.config/waybar/sep.svg", "size": 12, "interval": 3600, "tooltip": false }
+}
