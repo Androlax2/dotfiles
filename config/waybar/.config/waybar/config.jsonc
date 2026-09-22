@@ -27,7 +27,7 @@
     "tray",
     "image#sep-r2",
     "image#vol-icon",
-    "pulseaudio",
+    "wireplumber",
     "custom/audio-listener"
   ],
 
@@ -191,10 +191,12 @@
     "on-click-right": "~/.config/waybar/scripts/switch-audio.sh"
   },
 
-  "pulseaudio": {
+  // wireplumber rather than pulseaudio: the pulseaudio module stops updating during a burst of
+  // volume steps (a held key) and stays on a stale value.
+  "wireplumber": {
     "format": "{volume}%",
     "format-muted": "{volume}%",
-    "tooltip-format": "{desc}",
+    "tooltip-format": "{node_name}",
     "on-click": "pavucontrol",
     "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
     "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",

@@ -7,7 +7,8 @@
     width = 350
     height = (0, 150)
     origin = top-right
-    offset = (12, 12)
+    # 15 px from the right edge, 6 px below the bar (dunst already starts under the bar's exclusive zone).
+    offset = (15, 6)
     scale = 0
     notification_limit = 5
 
@@ -25,14 +26,14 @@
     padding = 12
     horizontal_padding = 12
     text_icon_padding = 12
-    frame_width = 2
+    frame_width = 1
     gap_size = 8
     separator_color = frame
     sort = yes
-    corner_radius = 12
+    corner_radius = 10
 
     # Text
-    font = SF Pro 12, JetBrainsMono NF 11
+    font = JetBrainsMono Nerd Font 13
     line_height = 0
     markup = full
     format = "<b>%s</b>\n%b"
@@ -49,7 +50,7 @@
     icon_position = left
     min_icon_size = 32
     max_icon_size = 64
-    icon_corner_radius = 8
+    icon_corner_radius = 6
 
     # History
     sticky_history = yes
@@ -66,26 +67,28 @@
     mouse_middle_click = do_action, close_current
     mouse_right_click = close_all
 
+# Ground at 85 % and a 10 % hairline like the bar islands; Hyprland blurs the "notifications" layer.
 [urgency_low]
     # Tokyo Night - subtle
-    background = "#1a1b26"
-    foreground = "#a9b1d6"
-    frame_color = "#3d59a1"
+    background = "#1a1b26d9"
+    foreground = "#c0caf5"
+    frame_color = "#c0caf51a"
     timeout = 5
     highlight = "#7aa2f7"
 
 [urgency_normal]
     # Tokyo Night - normal
-    background = "#1a1b26"
+    background = "#1a1b26d9"
     foreground = "#c0caf5"
-    frame_color = "#7aa2f7"
+    frame_color = "#c0caf51a"
     timeout = 10
     highlight = "#7aa2f7"
 
 [urgency_critical]
     # Tokyo Night - critical (red accent)
-    background = "#1a1b26"
+    background = "#1a1b26d9"
     foreground = "#c0caf5"
     frame_color = "#f7768e"
     timeout = 0
     highlight = "#f7768e"
+    format = "<b><span foreground='#f7768e'>%s</span></b>\n%b"

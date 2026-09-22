@@ -1,6 +1,7 @@
 -- Autostart necessary processes (like notifications daemons, status bars, etc.)
 -- See https://wiki.hypr.land/Configuring/Basics/Autostart/
 hl.on("hyprland.start", function()
+    hl.exec_cmd("hyprpm reload -n")
     hl.exec_cmd("waybar")
     hl.exec_cmd("~/.config/hypr/scripts/hyprsunset-if-not-gaming.sh")
     hl.exec_cmd("hypridle")

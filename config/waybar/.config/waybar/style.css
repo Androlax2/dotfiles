@@ -203,12 +203,12 @@ window#waybar {
 }
 
 /* ===== RIGHT: volume ===== */
-#pulseaudio {
+#wireplumber {
     color: @yellow;
     font-weight: 600;
 }
 
-#pulseaudio.muted {
+#wireplumber.muted {
     color: @text;
 }
 

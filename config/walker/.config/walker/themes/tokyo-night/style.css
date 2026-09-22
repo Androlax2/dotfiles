@@ -1,19 +1,19 @@
-@define-color selected-text #7dcfff;
-@define-color text #cfc9c2;
-@define-color base #1a1b26;
-@define-color border #33ccff;
-@define-color foreground #cfc9c2;
-@define-color background #1a1b26;
+/* Tokyo Night (night) island, same tokens as the bar: assets/waybar-design/DESIGN.md */
+@define-color fg #c0caf5;
+@define-color fg-dark #a9b1d6;
+@define-color comment #565f89;
+@define-color ground #1a1b26;
+@define-color blue #7aa2f7;
 
 * {
   all: unset;
 }
 
 * {
-  font-family: "SF Pro";
+  font-family: "JetBrainsMono Nerd Font";
   font-weight: 500;
-  font-size: 18px;
-  color: @text;
+  font-size: 13px;
+  color: @fg-dark;
 }
 
 scrollbar {
@@ -21,7 +21,7 @@ scrollbar {
 }
 
 .normal-icons {
-  -gtk-icon-size: 16px;
+  -gtk-icon-size: 18px;
 }
 
 .large-icons {
@@ -29,9 +29,10 @@ scrollbar {
 }
 
 .box-wrapper {
-  background: alpha(@base, 0.95);
-  padding: 20px;
-  border: 2px solid @border;
+  background: alpha(@ground, 0.85);
+  padding: 10px;
+  border: 1px solid alpha(@fg, 0.10);
+  border-radius: 10px;
 }
 
 .preview-box {
@@ -41,15 +42,15 @@ scrollbar {
 }
 
 .search-container {
-  background: @base;
-  padding: 10px;
+  padding: 6px 10px;
 }
 
 .input placeholder {
-  opacity: 0.5;
+  color: @comment;
 }
 
 .input {
+  color: @fg;
 }
 
 .input:focus,
@@ -77,20 +78,24 @@ child > * {
 child:hover .item-box {
 }
 
+/* Selected entry gets the workspace-chip treatment: fg on blue at 16 %, radius 6. */
 child:selected .item-box {
+  background: alpha(@blue, 0.16);
+  border-radius: 6px;
 }
 
 child:selected .item-box * {
-  color: @selected-text;
+  color: @fg;
 }
 
 .item-box {
-  padding-left: 14px;
+  padding: 0 10px;
+  border-radius: 6px;
 }
 
 .item-text-box {
   all: unset;
-  padding: 14px 0;
+  padding: 8px 0;
 }
 
 .item-text {
@@ -104,8 +109,8 @@ child:selected .item-box * {
 }
 
 .item-image {
-  margin-right: 14px;
-  -gtk-icon-transform: scale(0.9);
+  -gtk-icon-size: 18px;
+  margin-right: 10px;
 }
 
 .current {
@@ -113,11 +118,10 @@ child:selected .item-box * {
 }
 
 .keybind-hints {
-  background: @background;
   padding: 10px;
   margin-top: 10px;
+  color: @comment;
 }
 
 .preview {
-  background: @background;
 }

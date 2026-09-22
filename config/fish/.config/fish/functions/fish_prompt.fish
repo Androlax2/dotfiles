@@ -1,0 +1,18 @@
+# Prompt: user cyan, host blue, cwd green, git purple, arrow blue (root marker red);
+# the separators stay muted (#a9b1d6). Pipestatus keeps fish_color_status.
+function fish_prompt --description 'Write out the prompt'
+    set -l last_pipestatus $pipestatus
+    set -lx __fish_last_status $status
+    set -l normal (set_color normal)
+    set -l muted (set_color a9b1d6)
+
+    set -l arrow (set_color 7aa2f7)'❯'
+    if functions -q fish_is_root_user; and fish_is_root_user
+        set arrow (set_color f7768e)'#'
+    end
+
+    set -l status_color (set_color $fish_color_status)
+    set -l prompt_status (__fish_print_pipestatus "[" "]" "|" "$status_color" "$status_color" $last_pipestatus)
+
+    echo -n -s (set_color 7dcfff) $USER $muted '@' (set_color 7aa2f7) (prompt_hostname) ' ' (set_color 9ece6a) (prompt_pwd) (set_color bb9af7) (fish_vcs_prompt) $normal ' ' $prompt_status $arrow $normal ' '
+end

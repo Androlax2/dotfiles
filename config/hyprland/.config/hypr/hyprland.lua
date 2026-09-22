@@ -87,3 +87,9 @@ require("bindings")
 ------------------------------
 
 require("windows")
+
+---------------
+--- PLUGINS ---
+---------------
+
+require("plugins")

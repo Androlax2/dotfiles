@@ -1,6 +1,8 @@
--- Cursor
+-- Cursor: ful1e5's macOS set. Hyprland draws the hyprcursor build (apple_hyprcursor),
+-- XWayland and toolkits use the XCursor build of the same theme (apple_cursor).
+hl.env("XCURSOR_THEME", "macOS")
 hl.env("XCURSOR_SIZE", "24")
-hl.env("HYPRCURSOR_THEME", "McMojave")
+hl.env("HYPRCURSOR_THEME", "macOS-hypr")
 hl.env("HYPRCURSOR_SIZE", "24")
 
 hl.config({
@@ -12,7 +14,8 @@ hl.config({
 -- Force all apps to use Wayland
 hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
-hl.env("QT_STYLE_OVERRIDE", "kvantum")
+-- Qt follows qt6ct: Fusion style with the Tokyo Night palette in ~/.config/qt6ct.
+hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 hl.env("SDL_VIDEODRIVER", "wayland")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")

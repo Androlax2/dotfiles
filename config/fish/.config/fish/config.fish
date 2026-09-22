@@ -20,15 +20,17 @@ function fish_greeting
         set days $data[1]
         set count $data[2]
 
+        # Bar rule: icons and labels muted (#a9b1d6), only the values carry colour.
+        set -l muted (set_color a9b1d6)
+        set -l normal (set_color normal)
         if test $days -ge 7 -o $count -gt 50
-            echo (set_color yellow)"󰚰 System Status:"
+            echo $muted"󰚰 System Status:"$normal
             if test $days -ge 7
-                echo (set_color red)"  󱠔 Last updated $days days ago"
+                echo $muted"  󱠔 Last updated "(set_color e0af68)"$days days"$muted" ago"$normal
             end
             if test $count -gt 0
-                echo (set_color blue)"  󰏗 $count packages pending"
+                echo $muted"  󰏗 "(set_color 7aa2f7)"$count"$muted" packages pending"$normal
             end
-            set_color normal
         end
     end
 end

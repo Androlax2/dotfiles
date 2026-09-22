@@ -1,0 +1,36 @@
+/* Tokyonight-Dark hardcodes #323449 on views, sidebars and toolbars instead of using its named
+   colours. User CSS outranks the theme, so every surface sits on the same ground as the bar and
+   kitty: assets/waybar-design/DESIGN.md. */
+@define-color theme_base_color #1a1b26;
+@define-color theme_bg_color #1a1b26;
+
+.view,
+iconview,
+textview,
+textview text,
+treeview.view,
+.sidebar,
+.side-panel .view,
+scrolledwindow viewport.frame,
+.toolbar,
+.inline-toolbar,
+infobar > revealer > box {
+  background-color: #1a1b26;
+}
+
+/* The ground override above also outranks the theme's selected and hovered rows; restore them
+   with the workspace-chip treatment (fg on blue at 16 %). */
+.view:selected,
+iconview:selected,
+treeview.view:selected,
+.sidebar:selected,
+.sidebar row:selected {
+  background-color: alpha(#7aa2f7, 0.16);
+  color: #c0caf5;
+}
+
+.view:hover,
+iconview:hover,
+treeview.view:hover {
+  background-color: alpha(#c0caf5, 0.06);
+}

@@ -4,7 +4,7 @@ local mainMod = "ALT"
 
 -- Set programs that you use
 local terminal = "kitty"
-local fileManager = "dolphin" ---@diagnostic disable-line: unused-local
+local fileManager = "io.elementary.files" ---@diagnostic disable-line: unused-local
 local menu = "walker"
 
 -- --- GAME MODE LOGIC ---

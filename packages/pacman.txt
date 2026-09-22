@@ -31,6 +31,7 @@ git
 github-cli
 go
 grim
+gvfs
 helix
 hplip
 htop
@@ -40,6 +41,7 @@ hyprland
 hyprlock
 hyprpaper
 hyprpicker
+hyprpm
 hyprshot
 hyprsunset
 intel-media-driver
@@ -75,6 +77,8 @@ openbsd-netcat
 openrgb
 otf-libertinus
 pacman-contrib
+pantheon-files
+papirus-icon-theme
 pavucontrol
 php
 php-sqlite
@@ -86,6 +90,7 @@ pv
 python-pip
 qt5-wayland
 qt6-wayland
+qt6ct
 restic
 rust
 sddm
@@ -102,13 +107,13 @@ tcpdump
 tesseract
 tesseract-data-eng
 tex-gyre-fonts
-thunar
 tk
 tmux
 ttf-cascadia-mono-nerd
 ttf-dejavu
 ttf-fira-code
 ttf-hack
+ttf-ibm-plex
 ttf-jetbrains-mono
 ttf-jetbrains-mono-nerd
 ttf-liberation

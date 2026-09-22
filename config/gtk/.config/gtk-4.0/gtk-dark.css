@@ -1,1 +1,28 @@
-/usr/share/themes/Arc-Darker/gtk-4.0/gtk-dark.css
+/* Tokyonight-Dark theme, then every surface on the same ground as the bar and kitty
+   (the theme paints views, cards and dialogs on #323449): assets/waybar-design/DESIGN.md. */
+@import url("/usr/share/themes/Tokyonight-Dark/gtk-4.0/gtk-dark.css");
+@define-color window_bg_color #1a1b26;
+@define-color view_bg_color #1a1b26;
+@define-color card_bg_color #1a1b26;
+@define-color dialog_bg_color #1a1b26;
+@define-color sidebar_bg_color #1a1b26;
+@define-color theme_base_color #1a1b26;
+@define-color theme_bg_color #1a1b26;
+
+.view,
+textview text,
+listview,
+columnview,
+.sidebar,
+.navigation-sidebar,
+scrolledwindow viewport.frame {
+  background-color: #1a1b26;
+}
+
+.view:selected,
+listview row:selected,
+columnview row:selected,
+.navigation-sidebar row:selected {
+  background-color: alpha(#7aa2f7, 0.16);
+  color: #c0caf5;
+}

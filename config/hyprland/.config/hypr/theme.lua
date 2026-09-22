@@ -1,8 +1,9 @@
 -- https://wiki.hypr.land/Configuring/Basics/Variables/
 
--- TokyoNight
-local activeBorderColor = { colors = { "rgba(33ccffee)", "rgba(00ff99ee)" }, angle = 45 }
-local inactiveBorderColor = "rgb(1A1B26)"
+-- Tokyo Night (night): blue -> purple hairline on the focused window, bg_highlight on the rest.
+-- Tokens and rules in assets/waybar-design/DESIGN.md.
+local activeBorderColor = { colors = { "rgba(7aa2f7cc)", "rgba(bb9af7cc)" }, angle = 45 }
+local inactiveBorderColor = "rgba(292e4299)"
 
 hl.config({
     general = {
@@ -10,7 +11,7 @@ hl.config({
         -- Top gap equals Waybar's 6 px top margin, so the space under the bar matches the space above it.
         gaps_out = { top = 6, right = 15, bottom = 15, left = 15 },
 
-        border_size = 2,
+        border_size = 1,
 
         col = {
             active_border = activeBorderColor,
@@ -64,12 +65,18 @@ hl.config({
         active_opacity = 1.0,
         inactive_opacity = 1.0,
 
+        -- Soft drop shadow; the gamemode bind turns it off while gaming.
         shadow = {
-            enabled = false,
-            range = 2,
+            enabled = true,
+            range = 20,
             render_power = 3,
-            color = "rgba(1a1a1aee)",
+            color = "rgba(00000059)",
+            offset = { 0, 4 },
         },
+
+        -- Barely-there dim so the focused window reads without a loud border.
+        dim_inactive = true,
+        dim_strength = 0.08,
 
         -- Only the Waybar islands are blurred: apps/waybar.lua turns blur off for every window.
         blur = {
