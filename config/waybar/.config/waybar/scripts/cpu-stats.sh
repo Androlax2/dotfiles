@@ -14,9 +14,9 @@ current=$(read_cpu_line)
 if [ -f "$prev_sample" ]; then
     previous=$(cat "$prev_sample")
 else
+    # First run after login: no window to average over yet, report 0 % instead of sleeping
+    # a second, so the bar does not wait on this module; the next poll has a real delta.
     previous=$current
-    sleep 1
-    current=$(read_cpu_line)
 fi
 echo "$current" > "$prev_sample"
 

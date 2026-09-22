@@ -8,6 +8,10 @@ User=root
 WorkingDirectory=/home/theo/.local/share/thermalright-lcd-control
 Environment=PYTHONPATH=/home/theo/.local/share/thermalright-lcd-control
 ExecStart=thermalright-lcd-control-service
+# It renders the case LCD continuously; keep it from competing with interactive work.
+Nice=15
+CPUWeight=20
+IOSchedulingClass=idle
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# Waybar image module: the calendar icon while calendar.sh has an event to show, nothing otherwise
-# (empty output hides the icon). Same khal window and filters as calendar.sh.
-HOURS_AHEAD=2
-
-next_event=$(khal list now "${HOURS_AHEAD}h" --format "{title}" 2>/dev/null \
-    | grep -v -e "^error" -e "^Today" -e "^$" | head -1)
-
-[[ -n "$next_event" ]] && echo "$HOME/.config/waybar/icons/calendar.svg"
+# Waybar image module: the calendar icon while calendar.sh has an event to show. It reads the
+# marker calendar.sh writes rather than asking khal itself: image scripts run synchronously at
+# bar startup and khal takes ~0.2 s. calendar.sh signals SIGRTMIN+11 when the marker changes.
+marker="${XDG_RUNTIME_DIR:-/tmp}/waybar-next-event"
+[[ -s "$marker" ]] && echo "$HOME/.config/waybar/icons/calendar.svg"
 exit 0

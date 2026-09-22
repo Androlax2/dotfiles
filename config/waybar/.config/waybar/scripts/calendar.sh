@@ -26,6 +26,13 @@ escape_json() {
 next_event=$(khal list now "${HOURS_AHEAD}h" --format "{start}|{end}|{title}" 2>/dev/null \
     | grep -v -e "^error" -e "^Today" -e "^$" | head -1)
 
+# The calendar icon (image#cal-icon) shows while this marker is non-empty; poke it on change.
+marker="${XDG_RUNTIME_DIR:-/tmp}/waybar-next-event"
+if [[ "$(cat "$marker" 2>/dev/null)" != "$next_event" ]]; then
+    printf '%s' "$next_event" > "$marker"
+    pkill -RTMIN+11 waybar 2>/dev/null
+fi
+
 if [[ -z "$next_event" ]]; then
     echo '{"text": ""}'
     exit 0

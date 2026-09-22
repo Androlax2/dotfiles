@@ -1,5 +1,4 @@
 NetworkManager-dispatcher.service
-NetworkManager-wait-online.service
 NetworkManager.service
 avahi-daemon.service
 avahi-daemon.socket
@@ -8,12 +7,11 @@ bluetooth.service
 cups.path
 cups.service
 cups.socket
-docker.service
+docker.socket
 fstrim.timer
 keyd.service
 lactd.service
 nftables.service
-openrgb.service
 piavpn.service
 sddm.service
 seatd.service

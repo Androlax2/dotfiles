@@ -77,7 +77,7 @@
   "image#cal-icon": {
     "exec": "~/.config/waybar/scripts/cal-icon.sh",
     "interval": 60,
-    "signal": 9,
+    "signal": 11,
     "size": 14,
     "tooltip": false,
     "on-click": "~/.config/waybar/scripts/calendar-open.sh"

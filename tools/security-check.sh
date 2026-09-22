@@ -47,7 +47,9 @@ unowned_executables() {
 }
 
 kernel_modules() {
-    lsmod | awk 'NR > 1 {print $1}' | sort
+    # Netfilter, bridge and veth modules come and go with the firewall ruleset and with Docker
+    # containers, so they only add noise; an unexpected module is anything outside those.
+    lsmod | awk 'NR > 1 && $1 !~ /^(nf_|nft_|xt_|veth$|bridge$|br_netfilter$|overlay$|ip_tables$|ip6_tables$|iptable_|ip6table_)/ {print $1}' | sort
 }
 
 enabled_user_units() {

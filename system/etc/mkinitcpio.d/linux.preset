@@ -4,7 +4,9 @@
 ALL_kver="/boot/vmlinuz-linux"
 #ALL_kerneldest="/boot/vmlinuz-linux"
 
-PRESETS=('default')
+# The fallback image (no autodetect, every module) is what the linux-fallback boot entry
+# loads when the default initramfs cannot mount root.
+PRESETS=('default' 'fallback')
 #PRESETS=('default' 'fallback')
 
 #default_config="/etc/mkinitcpio.conf"
@@ -13,6 +15,6 @@ default_image="/boot/initramfs-linux.img"
 #default_options="--splash /usr/share/systemd/bootctl/splash-arch.bmp"
 
 #fallback_config="/etc/mkinitcpio.conf"
-#fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_image="/boot/initramfs-linux-fallback.img"
 #fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
-#fallback_options="-S autodetect"
+fallback_options="-S autodetect"

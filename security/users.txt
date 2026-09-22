@@ -1,3 +1,0 @@
-git:966:/usr/bin/git-shell
-root:0:/usr/bin/bash
-theo:1000:/usr/bin/fish
