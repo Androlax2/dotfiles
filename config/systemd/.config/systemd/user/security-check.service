@@ -1,0 +1,6 @@
+[Unit]
+Description=Compare the machine with its security baseline
+
+[Service]
+Type=oneshot
+ExecStart=%h/dotfiles/tools/security-check.sh notify

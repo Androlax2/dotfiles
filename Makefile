@@ -26,8 +26,8 @@ installed_go = for binary in "$$(go env GOPATH)"/bin/*; do if [ -f "$$binary" ];
 installed_composer = composer --working-dir="$$(composer config --global home)" show --direct --name-only
 
 .PHONY: help setup packages dotfiles global-packages system locale services initramfs install \
-	    check check-packages check-services check-system check-untracked \
-	    dump dump-packages dump-services dump-system \
+	    check check-packages check-services check-system check-untracked check-security \
+	    dump dump-packages dump-services dump-system dump-security \
 	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
 	    backup backup-list backup-status backup-check backup-maintain backup-init
 
@@ -82,7 +82,7 @@ install: packages global-packages ## [sudo] Install packages only, without touch
 
 ##@ Keep the repo in sync
 
-check: check-packages check-services check-system check-untracked ## [read-only] Show everything that differs from the repo
+check: check-packages check-services check-system check-untracked check-security ## [read-only] Show everything that differs from the repo
 
 check-packages: ## Packages listed but not installed, or the reverse
 	@echo "== packages =="
@@ -106,6 +106,12 @@ check-untracked: ## Edited /etc files in neither system/ nor system-ignore.txt
 	      | sort -u | grep -vEf <(grep -vE '^[[:space:]]*(#|$$)' system-ignore.txt) || true) \
 	    <(printf '/%s\n' $(system_files) | sort)
 
+# Ports, users, SUID files, unowned binaries, kernel modules, persistence spots and SSH keys, plus
+# package integrity, firewall state and known-vulnerable packages. The daily security-check.timer
+# runs the same script and notifies on findings.
+check-security: ## [read-only] Compare the machine with the security baseline in security/
+	@tools/security-check.sh check || true
+
 dump: dump-packages dump-services dump-system ## Save packages, services and system files into the repo
 
 dump-packages: ## Rewrite packages/*.txt from what is installed
@@ -113,6 +119,9 @@ dump-packages: ## Rewrite packages/*.txt from what is installed
 
 dump-services: ## Rewrite services.txt from the enabled units
 	$(enabled_units) > services.txt
+
+dump-security: ## Rewrite security/ from the live machine (only when its findings are legitimate)
+	@tools/security-check.sh dump
 
 dump-system: ## Copy live edits of system/ files back into the repo
 	@for path in $(system_files); do \

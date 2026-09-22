@@ -12,6 +12,7 @@ docker.service
 fstrim.timer
 keyd.service
 lactd.service
+nftables.service
 openrgb.service
 piavpn.service
 sddm.service

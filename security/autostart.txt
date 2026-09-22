@@ -1,0 +1,4 @@
+jetbrains-toolbox.desktop
+librepods.desktop
+mimeinfo.cache
+synology-drive-autostart.desktop

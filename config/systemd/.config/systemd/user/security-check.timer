@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily security check
+
+[Timer]
+OnBootSec=15min
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

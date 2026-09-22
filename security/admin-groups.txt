@@ -1,0 +1,3 @@
+wheel: theo
+sudo: <none>
+docker: theo
