@@ -50,6 +50,7 @@ ttf-apple-emoji
 ttf-symbola
 vscode-langservers-extracted
 walker-bin
+whitesur-icon-theme
 wl-screenrec
 wlrctl
 xwin

@@ -21,3 +21,6 @@ function claude
     set -lx CLAUDE_AUTO_RETRY_ACTIVE 1
     node (npm root -g)/claude-auto-retry/src/launcher.js $argv
 end
+
+# fzf colours (Tokyo Night, from folke/tokyonight.nvim extras/fzf)
+source ~/.config/fzf/tokyonight_night.sh

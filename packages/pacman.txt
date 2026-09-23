@@ -5,6 +5,7 @@ appmenu-gtk-module
 arch-audit
 base
 base-devel
+bat
 blueman
 bluez
 bluez-utils
@@ -22,12 +23,14 @@ docker-compose
 efibootmgr
 fastfetch
 feh
+ffmpegthumbnailer
 fish
 fisher
 font-manager
 fzf
 gamescope
 git
+git-delta
 github-cli
 go
 grim
@@ -60,8 +63,10 @@ libreoffice-fresh
 libva-intel-driver
 linux
 linux-firmware
+loupe
 man-db
 mariadb-clients
+mpv
 nano
 network-manager-applet
 networkmanager
@@ -100,6 +105,7 @@ socat
 steam
 stow
 strace
+swappy
 swaync
 system-config-printer
 tailscale
@@ -119,6 +125,7 @@ ttf-jetbrains-mono
 ttf-jetbrains-mono-nerd
 ttf-liberation
 ttf-roboto
+tumbler
 vdirsyncer
 vulkan-intel
 vulkan-nouveau
@@ -140,5 +147,6 @@ xf86-video-nouveau
 xorg-server
 xorg-xinit
 xterm
+yazi
 ydotool
 zram-generator

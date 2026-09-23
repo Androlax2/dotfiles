@@ -87,6 +87,7 @@ require("bindings")
 ------------------------------
 
 require("windows")
+require("scratchpads")
 
 ---------------
 --- PLUGINS ---

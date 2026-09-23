@@ -10,7 +10,7 @@
   "margin-right": 15,
   "spacing": 0,
 
-  "modules-left": ["hyprland/workspaces"],
+  "modules-left": ["hyprland/workspaces", "custom/mpris"],
   "modules-center": ["clock", "clock#date", "image#cal-icon", "custom/calendar"],
   "modules-right": [
     "custom/recording",
@@ -31,10 +31,24 @@
     "image#vol-icon",
     "wireplumber",
     "image#notifications-icon",
+    "image#keys-icon",
     "custom/audio-listener"
   ],
 
   // ---- left ---------------------------------------------------------------
+  // Now-playing island, 8 px after the workspaces. playerctld picks the last active
+  // player, so this follows whichever Zen tab or the Apple Music window played last.
+  // Hidden when nothing is playing or paused (the script prints an empty text).
+  "custom/mpris": {
+    "exec": "~/.config/waybar/scripts/now-playing.sh",
+    "return-type": "json",
+    "format": "{}",
+    "escape": false,
+    "on-click": "~/.config/mpris-card/card.py toggle",
+    "on-click-middle": "playerctl --player=playerctld play-pause",
+    "on-click-right": "playerctl --player=playerctld next"
+  },
+
   "hyprland/workspaces": {
     "format": "{icon}",
     "format-icons": {
@@ -47,7 +61,7 @@
       "7": "󰋋",
       "default": "󰅩"
     },
-    "persistent-workspaces": { "*": [1, 2, 3, 4, 5, 6, 7] },
+    "persistent-workspaces": { "*": [1, 2, 3, 4, 5] },
     "sort-by-number": true,
     // No on-click "activate": Waybar sends the classic "dispatch workspace N", which Hyprland rejects under the Lua config.
     "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
@@ -98,6 +112,7 @@
   "custom/recording": {
     "exec": "~/.config/waybar/scripts/recording.sh",
     "interval": 1,
+    "signal": 13,
     "format": "󰑊 {}",
     "tooltip": false,
     "on-click": "~/.config/screen-record.sh"
@@ -226,6 +241,14 @@
 
   // ---- right: notification centre (swaync). Click toggles the panel, right-click toggles DND.
   // SIGRTMIN+12 comes from swaync's own script hook (config/swaync) whenever its state changes.
+  // Keybinding cheat sheet (same list as Super+Shift+K).
+  "image#keys-icon": {
+    "exec": "~/.config/waybar/scripts/keys-icon.sh",
+    "interval": 3600,
+    "size": 14,
+    "on-click": "~/.config/walker/scripts/keybinds.sh"
+  },
+
   "image#notifications-icon": {
     "exec": "~/.config/waybar/scripts/notifications-icon.sh",
     "interval": 10,

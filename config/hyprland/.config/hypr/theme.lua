@@ -2,8 +2,9 @@
 
 -- Tokyo Night (night): blue -> purple hairline on the focused window, bg_highlight on the rest.
 -- Tokens and rules in assets/waybar-design/DESIGN.md.
-local activeBorderColor = { colors = { "rgba(7aa2f7cc)", "rgba(bb9af7cc)" }, angle = 45 }
-local inactiveBorderColor = "rgba(292e4299)"
+local colors = require("colors") -- generated from the palette, see tools/palette.sh
+local activeBorderColor = { colors = { "rgba(" .. colors.blue .. "cc)", "rgba(" .. colors.magenta .. "cc)" }, angle = 45 }
+local inactiveBorderColor = "rgba(" .. colors.bgHighlight .. "99)"
 
 hl.config({
     general = {
@@ -47,10 +48,10 @@ hl.config({
             gaps_in = 0,
             gaps_out = 0,
 
-            text_color = "rgb(C0CAF5)",
+            text_color = "rgb(" .. colors.fg .. ")",
             col = {
-                active = "rgb(2f3344)",
-                inactive = "rgba(2f334466)",
+                active = "rgb(" .. colors.bgActive .. ")",
+                inactive = "rgba(" .. colors.bgActive .. "66)",
             },
 
             gradients = true,

@@ -1,52 +1,39 @@
 #!/bin/bash
+# Change the focused monitor's brightness over DDC/CI and show it on the OSD.
+# Usage: brightness-adjust-focused.sh +10 | -10 | =100
+# The I2C bus is read from sysfs under the monitor's DRM connector: bus numbers
+# (and DP-N names) shuffle across kernel and driver updates, so nothing is hardcoded.
 
-CHANGE=$1
-if [ -z "$CHANGE" ]; then exit 1; fi
+change=$1
+if [ -z "$change" ]; then exit 1; fi
 
-# --- 1. Star Citizen / Gaming Check ---
-WINDOW_DATA=$(hyprctl activewindow -j)
-IS_FULLSCREEN=$(echo "$WINDOW_DATA" | jq -r '.fullscreen')
-
-if [ "$IS_FULLSCREEN" -ne 0 ]; then
+# Skip while a fullscreen window (a game) is focused.
+if [ "$(hyprctl activewindow -j | jq -r '.fullscreen')" != "0" ]; then
     exit 0
 fi
 
-# --- 2. Monitor Detection ---
-# Match by EDID description, not connector name -- DP-N names shuffle
-# across kernel/driver updates.
-MONITOR_DESC=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true) | .description')
-case $MONITOR_DESC in
-    "LG Electronics LG ULTRAWIDE 505NTJJDU468") BUS=8 ;;
-    *) exit 1 ;;
-esac
+connector=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+bus=$(ls /sys/class/drm/card*-"$connector"/ 2>/dev/null | sed -n 's/^i2c-\([0-9]*\)$/\1/p' | head -n1)
+if [ -z "$bus" ]; then
+    notify-send -a "Brightness" -u critical "No DDC bus for $connector"
+    exit 1
+fi
 
-CACHE_FILE="/tmp/brightness_cache_${MONITOR_DESC// /_}"
-
-# --- 3. Instant Brightness Logic ---
-if [ -f "$CACHE_FILE" ]; then
-    CURRENT=$(cat "$CACHE_FILE")
+# Reading over DDC is slow, so the last value is cached per boot.
+cache_file="${XDG_RUNTIME_DIR:-/tmp}/brightness-$connector"
+if [ -f "$cache_file" ]; then
+    current=$(cat "$cache_file")
 else
-    CURRENT=$(ddcutil getvcp 10 --bus "$BUS" --terse --sleep-multiplier 0 | cut -d' ' -f4)
+    current=$(ddcutil getvcp 10 --bus "$bus" --terse --sleep-multiplier 0 | cut -d' ' -f4)
 fi
 
-# Calculate new value
-NEW=$((CURRENT + CHANGE))
+case $change in
+=*) new=${change#=} ;;
+*) new=$((current + change)) ;;
+esac
+[ "$new" -lt 0 ] && new=0
+[ "$new" -gt 100 ] && new=100
 
-# Clamp 0-100
-[ $NEW -lt 0 ] && NEW=0
-[ $NEW -gt 100 ] && NEW=100
-
-# Update cache immediately
-echo "$NEW" > "$CACHE_FILE"
-
-# --- 4. The Notification Fix ---
-# Ensure NEW is a number before sending to notify-send
-if [[ "$NEW" =~ ^[0-9]+$ ]]; then
-    notify-send -h string:x-canonical-private-synchronous:brightness \
-                -h int:value:"$NEW" \
-                -t 1000 \
-                "Brightness" "$NEW%"
-fi
-
-# Send to hardware in background
-ddcutil setvcp 10 $NEW --bus "$BUS" --sleep-multiplier 0 --skip-ddc-checks &
+echo "$new" > "$cache_file"
+~/.local/bin/osd-show brightness "$new"
+ddcutil setvcp 10 "$new" --bus "$bus" --sleep-multiplier 0 --skip-ddc-checks &

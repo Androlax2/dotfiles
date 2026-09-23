@@ -14,3 +14,5 @@ hl.animation({ leaf = "windowsOut", enabled = true, speed = 3, bezier = "ease", 
 hl.animation({ leaf = "fade",       enabled = true, speed = 2, bezier = "ease" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 1.5, bezier = "ease", style = "fade" })
 hl.animation({ leaf = "layers",     enabled = true, speed = 2, bezier = "ease", style = "fade" })
+-- Scratchpads slide down from under the bar.
+hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 3, bezier = "ease", style = "slidefadevert -100%" })

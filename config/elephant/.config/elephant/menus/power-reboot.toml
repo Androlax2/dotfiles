@@ -1,0 +1,8 @@
+name = "power-reboot"
+name_pretty = "Reboot?"
+icon = "system-reboot"
+
+[[entries]]
+text = "Yes, reboot"
+icon = "system-reboot"
+actions = { "reboot" = "systemctl reboot" }

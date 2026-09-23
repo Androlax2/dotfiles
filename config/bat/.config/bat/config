@@ -1,0 +1,4 @@
+# Theme from folke/tokyonight.nvim extras/sublime, vendored in themes/.
+# New or changed themes need `bat cache --build` once.
+--theme="tokyonight_night"
+--style="numbers,changes,header"

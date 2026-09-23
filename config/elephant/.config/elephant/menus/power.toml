@@ -1,0 +1,35 @@
+# Power menu, opened with `walker -m menus:power` (Super+Shift+Q). Reboot and
+# shutdown go through a one-entry confirmation submenu.
+name = "power"
+name_pretty = "Power"
+icon = "system-shutdown"
+
+[[entries]]
+text = "Lock"
+icon = "system-lock-screen"
+keywords = ["lock"]
+actions = { "lock" = "hyprlock" }
+
+[[entries]]
+text = "Suspend"
+icon = "system-suspend"
+keywords = ["sleep", "suspend"]
+actions = { "suspend" = "systemctl suspend" }
+
+[[entries]]
+text = "Log out"
+icon = "system-log-out"
+keywords = ["logout", "exit"]
+actions = { "logout" = "hyprctl dispatch exit" }
+
+[[entries]]
+text = "Reboot"
+icon = "system-reboot"
+keywords = ["reboot", "restart"]
+submenu = "power-reboot"
+
+[[entries]]
+text = "Shut down"
+icon = "system-shutdown"
+keywords = ["shutdown", "poweroff"]
+submenu = "power-shutdown"

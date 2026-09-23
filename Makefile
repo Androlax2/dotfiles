@@ -25,8 +25,8 @@ installed_cargo = cargo install --list | awk '/^[^ ].* v[0-9]/ {print $$1}'
 installed_go = for binary in "$$(go env GOPATH)"/bin/*; do if [ -f "$$binary" ]; then go version -m "$$binary" | awk '$$1 == "path" {print $$2}'; fi; done
 installed_composer = composer --working-dir="$$(composer config --global home)" show --direct --name-only
 
-.PHONY: help setup packages dotfiles global-packages system locale services initramfs install \
-	    check check-packages check-services check-system check-untracked check-security \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install \
+	    check check-packages check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-services dump-system dump-security \
 	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
 	    backup backup-list backup-status backup-check backup-maintain backup-init
@@ -46,20 +46,39 @@ packages: ## [sudo] Install pacman and AUR packages
 	sudo pacman -S --needed - < packages/pacman.txt
 	yay -S --needed - < packages/aur.txt
 
-dotfiles: ## Link every config/ package into your home
+dotfiles: palette zen ## Link every config/ package into your home
 	$(stow) --restow */
 	~/.config/wireplumber/wireplumber.conf.d/generate-config.sh
+	tools/desktop-settings.sh
+
+# Colours live in one file (config/waybar/.config/waybar/colors.css); the other themed
+# files are rendered from tools/palette/*.tpl so a token change reaches every surface.
+palette: ## Render kitty, GTK, qt6ct, swaync, walker, Hyprland, fish, lazygit, fzf, btop, OSD, slurp and Zen colours from colors.css
+	@tools/palette.sh
+
+# Zen profiles have random names, so stow cannot reach them: link the chrome and
+# prefs from config/zen into the default profile named in ~/.zen/installs.ini.
+zen: ## Link the Zen userChrome and prefs into the default Zen profile
+	@profile="$$(sed -n 's/^Default=//p' ~/.zen/installs.ini | head -n1)"; \
+	if [ -z "$$profile" ] || [ ! -d ~/.zen/"$$profile" ]; then echo "zen: no default profile in ~/.zen/installs.ini, skipped"; exit 0; fi; \
+	mkdir -p ~/.zen/"$$profile"/chrome; \
+	ln -sfn ~/.config/zen/userChrome.css ~/.zen/"$$profile"/chrome/userChrome.css; \
+	ln -sfn ~/.config/zen/user.js ~/.zen/"$$profile"/user.js; \
+	echo "zen: linked into ~/.zen/$$profile"
 
 # Needs `make dotfiles` first: ~/.npmrc points npm's global prefix at ~/.local/npm.
 # pip needs --break-system-packages because Arch marks the system Python as externally
 # managed; --user keeps these out of the system site-packages.
+# Only what is listed but missing gets installed (same comparison as check-packages),
+# so a second run changes nothing.
+missing = comm -23 <(sort packages/$(1).txt) <($(installed_$(1)) | sort)
 global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages
-	xargs --no-run-if-empty npm install -g < packages/npm.txt
-	xargs --no-run-if-empty $(pnpm_global) add -g < packages/pnpm.txt
-	xargs --no-run-if-empty python3 -m pip install --user --break-system-packages < packages/pip.txt
-	xargs --no-run-if-empty cargo install < packages/cargo.txt
-	xargs --no-run-if-empty -I{} go install {}@latest < packages/go.txt
-	xargs --no-run-if-empty composer global require < packages/composer.txt
+	$(call missing,npm) | xargs --no-run-if-empty npm install -g
+	$(call missing,pnpm) | xargs --no-run-if-empty $(pnpm_global) add -g
+	$(call missing,pip) | xargs --no-run-if-empty python3 -m pip install --user --break-system-packages
+	$(call missing,cargo) | xargs --no-run-if-empty cargo install
+	$(call missing,go) | xargs --no-run-if-empty -I{} go install {}@latest
+	$(call missing,composer) | xargs --no-run-if-empty composer global require
 
 system: ## [sudo] Copy system/ into /, replacing changed files
 	@for path in $(system_files); do \
@@ -80,9 +99,15 @@ initramfs: ## [sudo] Rebuild the initramfs after boot changes
 
 install: packages global-packages ## [sudo] Install packages only, without touching config
 
+# Files (pantheon-files) with packages/pantheon-files/finder-clicks.patch: no folder
+# deep count in the overlay bar, single click anywhere on a folder row opens it.
+# pacman replaces it on the next pantheon-files update, so run this again afterwards.
+files-patch: ## [sudo] Build and install the patched Files file manager
+	packages/pantheon-files/build.sh
+
 ##@ Keep the repo in sync
 
-check: check-packages check-services check-system check-untracked check-security ## [read-only] Show everything that differs from the repo
+check: check-packages check-services check-system check-untracked check-security check-palette ## [read-only] Show everything that differs from the repo
 
 check-packages: ## Packages listed but not installed, or the reverse
 	@echo "== packages =="
@@ -111,6 +136,10 @@ check-untracked: ## Edited /etc files in neither system/ nor system-ignore.txt
 # runs the same script and notifies on findings.
 check-security: ## [read-only] Compare the machine with the security baseline in security/
 	@tools/security-check.sh check || true
+
+check-palette: ## [read-only] Diff every themed file against its palette template
+	@echo "== palette =="
+	@tools/palette.sh --check || true
 
 dump: dump-packages dump-services dump-system ## Save packages, services and system files into the repo
 

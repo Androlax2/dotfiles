@@ -1,0 +1,8 @@
+name = "power-shutdown"
+name_pretty = "Shut down?"
+icon = "system-shutdown"
+
+[[entries]]
+text = "Yes, shut down"
+icon = "system-shutdown"
+actions = { "poweroff" = "systemctl poweroff" }

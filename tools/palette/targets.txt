@@ -1,0 +1,17 @@
+# template<TAB>target, rendered by tools/palette.sh from colors.css
+kitty.conf.tpl	config/kitty/.config/kitty/kitty.conf
+gtk-3.css.tpl	config/gtk/.config/gtk-3.0/gtk.css
+gtk-4.css.tpl	config/gtk/.config/gtk-4.0/gtk.css
+gtk-4-dark.css.tpl	config/gtk/.config/gtk-4.0/gtk-dark.css
+qt6ct-TokyoNight.conf.tpl	config/qt6ct/.config/qt6ct/colors/TokyoNight.conf
+swaync-style.css.tpl	config/swaync/.config/swaync/style.css
+walker-style.css.tpl	config/walker/.config/walker/themes/tokyo-night/style.css
+hypr-colors.lua.tpl	config/hyprland/.config/hypr/colors.lua
+fish-prompt.fish.tpl	config/fish/.config/fish/functions/fish_prompt.fish
+lazygit-config.yml.tpl	config/lazygit/.config/lazygit/config.yml
+fzf.sh.tpl	config/fzf/.config/fzf/tokyonight_night.sh
+btop-theme.tpl	config/btop/.config/btop/themes/tokyonight_night.theme
+osd-style.css.tpl	config/osd/.config/osd/style.css
+slurp-colors.tpl	config/screen-record/.config/slurp-colors
+zen-userChrome.css.tpl	config/zen/.config/zen/userChrome.css
+mpris-card-style.css.tpl	config/mpris-card/.config/mpris-card/style.css

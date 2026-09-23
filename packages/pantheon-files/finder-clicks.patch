@@ -1,0 +1,30 @@
+Files (pantheon-files) 7.3.2, two behaviour fixes for a Finder-style column view:
+
+1. No deep count in the overlay bar. Selecting a folder made Files walk its whole
+   tree to print "N sub-folders, M files, size"; on a projects folder with millions
+   of files that keeps the main loop busy for a long time and swallows clicks.
+2. A single click anywhere on a folder's row opens it. Only the icon and the name
+   activated; the blank part of the row (most of a 280 px column) only selected.
+
+--- a/src/View/Widgets/OverlayBar.vala
++++ b/src/View/Widgets/OverlayBar.vala
+@@ -162,7 +162,6 @@
+                     }
+                 } else { /* This is a folder. */
+                     str = "%s - %s".printf (goffile.info.get_name (), goffile.formated_type);
+-                    schedule_deep_count ();
+                 }
+             } else { /* Multiple selection. */
+                 var fsize = format_size (files_size);
+--- a/src/View/AbstractDirectoryView.vala
++++ b/src/View/AbstractDirectoryView.vala
+@@ -3520,7 +3520,8 @@
+                             /* Determine whether should activate on key release (unless pointer moved)*/
+                             /* Only activate single files with unmodified button when not on blank unless double-clicked */
+                             if (no_mods && one_or_less) {
+-                                should_activate = (on_directory && !on_blank && !singleclick_select) || double_click_event;
++                                bool on_row = click_zone != ClickZone.BLANK_NO_PATH;
++                                should_activate = (on_directory && on_row && !singleclick_select) || double_click_event;
+                             }
+ 
+                             /* We need to decide whether to rubberband or drag&drop.

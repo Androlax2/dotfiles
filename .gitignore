@@ -10,3 +10,6 @@ security/
 
 # OpenRGB device enumeration logs (USB paths, serial numbers)
 config/OpenRGB/.config/OpenRGB/logs/
+
+# IntelliJ project files
+.idea/

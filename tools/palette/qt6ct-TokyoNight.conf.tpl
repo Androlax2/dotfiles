@@ -1,0 +1,4 @@
+[ColorScheme]
+active_colors={{fg}}, #24283b, {{terminalBlack}}, {{bgHighlight}}, {{bgDark}}, {{bgRaised}}, {{fg}}, {{fg}}, {{fg}}, {{bg}}, {{bg}}, {{bgDarker}}, {{blue}}, {{bg}}, {{blue}}, {{magenta}}, {{bgRaised}}, {{fg}}, {{bgRaised}}, {{fg}}, {{comment}}
+disabled_colors={{comment}}, #24283b, {{terminalBlack}}, {{bgHighlight}}, {{bgDark}}, {{bgRaised}}, {{comment}}, {{comment}}, {{comment}}, {{bg}}, {{bg}}, {{bgDarker}}, {{bgHighlight}}, {{comment}}, {{comment}}, {{magenta}}, {{bgRaised}}, {{comment}}, {{bgRaised}}, {{comment}}, {{terminalBlack}}
+inactive_colors={{fg}}, #24283b, {{terminalBlack}}, {{bgHighlight}}, {{bgDark}}, {{bgRaised}}, {{fg}}, {{fg}}, {{fgDark}}, {{bg}}, {{bg}}, {{bgDarker}}, {{bgHighlight}}, {{fg}}, {{blue}}, {{magenta}}, {{bgRaised}}, {{fg}}, {{bgRaised}}, {{fg}}, {{comment}}

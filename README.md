@@ -2,7 +2,7 @@
 
 Everything needed to rebuild my Arch Linux desktop running Hyprland: user dotfiles, system files under `/etc`, package lists for eight package managers, and a Makefile that provisions, audits and cleans the machine.
 
-![Hyprland desktop with fastfetch, btop and helix tiled under Waybar](assets/desktop.jpg)
+![Two windows tiled under the Waybar islands](assets/layout.png)
 
 > [!WARNING]
 > This is a personal setup for one machine: AMD CPU, Realtek RTL8922AE Wi-Fi, LG ultrawide, French keyboard.
@@ -19,19 +19,108 @@ Everything needed to rebuild my Arch Linux desktop running Hyprland: user dotfil
 | [`services.txt`](services.txt) | System units enabled beyond their vendor preset |
 | [`system-ignore.txt`](system-ignore.txt) | `/etc` paths deliberately left out of the repo, each with a reason |
 | [`Makefile`](Makefile) | Provision, capture, audit and clean the machine; `make help` lists every target |
-| [`tools/`](tools) | Helpers for the Makefile, such as the `make help` renderer |
+| [`tools/`](tools) | Helpers for the Makefile: the `make help` renderer, the palette generator, the security check, the README screenshots |
 
 The desktop itself:
 
 - **Hyprland** with hypridle, hyprlock, hyprsunset and a wallpaper that rotates every 30 minutes
-- **Waybar**, the **Walker** launcher with Elephant providers, and **dunst** notifications
-- **kitty**, **fish** and **helix**, plus lazygit, btop and fzf
+- **Waybar**, the **Walker** launcher with Elephant providers, and **swaync** notifications
+- **kitty**, **fish** and **helix**, plus lazygit, btop, fzf, bat, delta, yazi and tmux, all on the same palette
 - **Mac-style shortcuts** through keyd, with Ctrl and Command swapped
 - **Calendars** synced by vdirsyncer, shown in khal, with desktop notifications
 - **Hardware extras**: an OpenRGB profile at boot, the Thermalright LCD, AirPods kept as the default audio sink
 - **Boot**: Plymouth `motion` theme and the SDDM `silent` theme with an on-screen keyboard
 
-![Walker launcher open over the wallpaper](assets/walker.jpg)
+![Walker launcher open over the wallpaper](assets/launcher.png)
+
+## Design
+
+One palette, Tokyo Night (night), applied the same way everywhere:
+
+- **Tokens** live in [`config/waybar/.config/waybar/colors.css`](config/waybar/.config/waybar/colors.css). `make palette` renders kitty, GTK, qt6ct, swaync, Walker, Hyprland, fish, lazygit, fzf, btop, the OSD, slurp and Zen from the templates in [`tools/palette`](tools/palette); `make check-palette` reports drift.
+- **Ground** `#1a1b26` at 85 % behind blurred islands, a `rgba(192, 202, 245, 0.10)` hairline, radius 10.
+- **Icons are muted** (`#a9b1d6`), **values carry the colour**: blue for CPU, purple for GPU, yellow for volume, red for recording.
+- **One colour family per element**, no gradients across families.
+- **The grid**: 15 px outer gaps, 6 px between the bar and the windows, 8 px between islands.
+- **Type**: JetBrainsMono Nerd Font in the bar and terminals, IBM Plex Sans in notifications.
+
+![Bar](assets/bar.png)
+
+![Notifications](assets/notification.png)
+
+![Apple Music scratchpad](assets/music.png)
+
+![Bar with a recording running](assets/recording.png)
+
+## Keybindings
+
+`Super` is the physical Command key: keyd swaps it with Ctrl, so Hyprland sees these as `CTRL`. `Super + Ctrl + K` (or the keyboard icon at the end of the bar) shows this list on screen, and choosing an entry runs it; it comes from `hyprctl binds` and the `description` of each bind in [`bindings.lua`](config/hyprland/.config/hypr/bindings.lua).
+
+| Keys | Action |
+| --- | --- |
+| `Alt + 0` | Workspace 10 |
+| `Alt + 1` | Workspace 1 |
+| `Alt + 2` | Workspace 2 |
+| `Alt + 3` | Workspace 3 |
+| `Alt + 4` | Workspace 4 |
+| `Alt + 5` | Workspace 5 |
+| `Alt + 6` | Workspace 6 |
+| `Alt + 7` | Workspace 7 |
+| `Alt + 8` | Workspace 8 |
+| `Alt + 9` | Workspace 9 |
+| `Alt + F` | Fullscreen |
+| `Alt + G` | Game mode (eye candy off) |
+| `Alt + J` | Toggle window split |
+| `Alt + Q` | Terminal |
+| `Alt + Scroll down` | Next workspace |
+| `Alt + Scroll up` | Previous workspace |
+| `Alt + Shift + 0` | Move window to workspace 10 |
+| `Alt + Shift + 1` | Move window to workspace 1 |
+| `Alt + Shift + 2` | Move window to workspace 2 |
+| `Alt + Shift + 3` | Move window to workspace 3 |
+| `Alt + Shift + 4` | Move window to workspace 4 |
+| `Alt + Shift + 5` | Move window to workspace 5 |
+| `Alt + Shift + 6` | Move window to workspace 6 |
+| `Alt + Shift + 7` | Move window to workspace 7 |
+| `Alt + Shift + 8` | Move window to workspace 8 |
+| `Alt + Shift + 9` | Move window to workspace 9 |
+| `Alt + Shift + H` | Toggle HDR |
+| `Alt + Shift + S` | Scratch workspace |
+| `Alt + Shift + TAB` | Previous workspace |
+| `Alt + TAB` | Next workspace |
+| `Alt + W` | Close window |
+| `Ctrl + down` | Focus down |
+| `Ctrl + left` | Focus left |
+| `Ctrl + right` | Focus right |
+| `Ctrl + Shift + down` | Move window down |
+| `Ctrl + Shift + left` | Move window left |
+| `Ctrl + Shift + right` | Move window right |
+| `Ctrl + Shift + up` | Move window up |
+| `Ctrl + up` | Focus up |
+| `Super + ²` | Dropdown terminal |
+| `Super + Ctrl + B` | Bluetooth picker |
+| `Super + Ctrl + C` | Calculator |
+| `Super + Ctrl + E` | Emoji picker |
+| `Super + Ctrl + K` | Keybinding cheat sheet |
+| `Super + Ctrl + Q` | Power menu |
+| `Super + Ctrl + SPACE` | Emoji picker |
+| `Super + Ctrl + V` | Clipboard history |
+| `Super + Ctrl + W` | Wi-Fi picker |
+| `Super + M` | Apple Music |
+| `Super + Shift + 3` | Screenshot the monitor |
+| `Super + Shift + 4` | Screenshot an area or a window |
+| `Super + Shift + 5` | Start / stop recording |
+| `Super + SPACE` | Launcher |
+| `XF86AudioLowerVolume` | Volume down |
+| `XF86AudioMicMute` | Mute the microphone |
+| `XF86AudioMute` | Mute |
+| `XF86AudioNext` | Next track |
+| `XF86AudioPause` | Play / pause |
+| `XF86AudioPlay` | Play / pause |
+| `XF86AudioPrev` | Previous track |
+| `XF86AudioRaiseVolume` | Volume up |
+| `XF86MonBrightnessDown` | Brightness down |
+| `XF86MonBrightnessUp` | Brightness up |
 
 ## Quickstart
 
@@ -51,7 +140,6 @@ The desktop itself:
   | --- | --- |
   | `~/.secrets/airpods` | `make dotfiles`, to generate the WirePlumber AirPods rule |
   | `~/.secrets/icloud.env` | vdirsyncer, iCloud calendar |
-  | `~/.secrets/google_hartprint.env` | vdirsyncer, Google calendar |
   | `~/.secrets/restic` | Backups: the password of both repositories, see [Backups](#backups) |
 
   `~/.secrets/airpods` holds a single line: `AIRPODS_MAC="XX:XX:XX:XX:XX:XX"`.
