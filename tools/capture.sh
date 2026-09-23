@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Take the README screenshots into assets/: the bar, the launcher, a notification
-# stack, two tiled windows, the music scratchpad and the bar with the REC chip.
+# Take the README screenshots into assets/: a floating terminal over the wallpaper,
+# three tiled terminals, the bar, the launcher, a notification stack, two tiled
+# windows, the music scratchpad and the bar with the REC chip.
 # Runs on an empty persistent workspace (1-5) so nothing else shows, then returns.
 set -uo pipefail
 
@@ -12,17 +13,25 @@ monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused)')
 width=$(jq -r .width <<<"$monitor")
 height=$(jq -r .height <<<"$monitor")
 previous_workspace=$(hyprctl activeworkspace -j | jq -r .id)
-spawned=()
-
 focus() { hyprctl dispatch "hl.dsp.focus({ workspace = $1 })" >/dev/null; }
 shot() { grim -g "$1" "$out/$2.png" && echo "assets/$2.png"; }
+# Full-screen shots at half size: the README does not need 3840 px wide images.
+shot_screen() { grim -s 0.5 "$out/$1.png" && echo "assets/$1.png"; }
 spawn() {
     setsid "$@" >/dev/null 2>&1 </dev/null &
-    spawned+=($!)
     sleep 1.2
 }
+# Floating, centred, through Hyprland's spawn rules.
+spawn_floating() {
+    hyprctl eval "hl.exec_cmd([[$1]], { float = true, center = true, size = \"$2\" })" >/dev/null
+    sleep 1.5
+}
+close_scratch_windows() {
+    hyprctl clients -j | jq -r --argjson ws "$scratch" '.[] | select(.workspace.id == $ws) | .pid' | xargs -r kill 2>/dev/null
+    sleep 0.6
+}
 cleanup() {
-    for pid in "${spawned[@]}"; do kill "$pid" 2>/dev/null; done
+    close_scratch_windows
     focus "$previous_workspace"
 }
 trap cleanup EXIT
@@ -30,6 +39,25 @@ trap cleanup EXIT
 scratch=$(hyprctl workspaces -j | jq -r '[.[] | select(.id > 0 and .id <= 5 and .windows > 0) | .id] as $busy | [range(1; 6)] - $busy | .[0] // 5')
 focus "$scratch"
 sleep 0.5
+
+# 0. A floating terminal with fastfetch over the wallpaper
+spawn_floating "kitty --hold -e fastfetch" "1500 820"
+sleep 1
+shot_screen desktop
+close_scratch_windows
+
+# 0b. Tiled terminals: fish + fastfetch on the left, btop top right, yazi bottom right.
+# Dwindle would put the third window beside btop (the right half is wider than tall),
+# so its split is toggled to stack them.
+# fastfetch queries the terminal and the replies arrive after it exits, so they are
+# flushed before fish starts, or fish would echo them as "\033\033" at the top.
+spawn kitty -e sh -c 'fastfetch; sleep 0.3; python3 -c "import sys, termios; termios.tcflush(sys.stdin, termios.TCIFLUSH)"; exec fish'
+spawn kitty -e btop
+spawn kitty -e yazi ~/dotfiles
+hyprctl dispatch "hl.dsp.layout('togglesplit')" >/dev/null
+sleep 2.5
+shot_screen terminals
+close_scratch_windows
 
 # 1. The bar alone
 shot "0,0 ${width}x44" bar

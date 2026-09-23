@@ -2,7 +2,7 @@
 
 Everything needed to rebuild my Arch Linux desktop running Hyprland: user dotfiles, system files under `/etc`, package lists for eight package managers, and a Makefile that provisions, audits and cleans the machine.
 
-![Two windows tiled under the Waybar islands](assets/layout.png)
+![kitty with fastfetch, btop and yazi tiled under the bar](assets/terminals.png)
 
 > [!WARNING]
 > This is a personal setup for one machine: AMD CPU, Realtek RTL8922AE Wi-Fi, LG ultrawide, French keyboard.
@@ -43,6 +43,10 @@ One palette, Tokyo Night (night), applied the same way everywhere:
 - **One colour family per element**, no gradients across families.
 - **The grid**: 15 px outer gaps, 6 px between the bar and the windows, 8 px between islands.
 - **Type**: JetBrainsMono Nerd Font in the bar and terminals, IBM Plex Sans in notifications.
+
+![A floating terminal with fastfetch over the wallpaper](assets/desktop.png)
+
+![Two windows tiled under the Waybar islands](assets/layout.png)
 
 ![Bar](assets/bar.png)
 
