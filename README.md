@@ -29,7 +29,7 @@ The desktop itself:
 - **Mac-style shortcuts** through keyd, with Ctrl and Command swapped
 - **Calendars** synced by vdirsyncer, shown in khal, with desktop notifications
 - **Hardware extras**: an OpenRGB profile at boot, the Thermalright LCD, AirPods kept as the default audio sink
-- **Boot**: Plymouth `motion` theme and the SDDM `silent` theme with an on-screen keyboard
+- **Boot**: the SDDM `silent` theme with an on-screen keyboard
 
 ![Walker launcher open over the wallpaper](assets/launcher.png)
 
@@ -164,7 +164,7 @@ make setup
 4. `system` copies `system/` into `/` as root
 5. `locale` generates the locales enabled in `/etc/locale.gen`
 6. `services` enables the units in `services.txt`
-7. `initramfs` rebuilds the initramfs for the Plymouth hooks
+7. `initramfs` rebuilds the initramfs after the `system/etc/mkinitcpio.conf` copy
 
 Then finish the [manual steps](#manual-steps) and reboot.
 
@@ -329,7 +329,6 @@ These can't be automated safely, so they stay manual.
 
 ### Boot parameters
 
-Plymouth needs `quiet splash` on the kernel command line.
 Loader entries contain the disk's PARTUUID, so they are not versioned:
 
 ```bash
@@ -337,8 +336,13 @@ sudoedit /boot/loader/entries/<date>_linux.conf
 ```
 
 ```text
-options root=PARTUUID=... quiet splash
+options root=PARTUUID=... rw rootfstype=ext4 quiet thermal.off=1 acpi_enforce_resources=lax
 ```
+
+- `quiet`: no boot splash, so this only hides kernel chatter.
+- `thermal.off=1`: the board exposes one ACPI thermal zone reporting 17 °C, and probing it
+  costs 2 s at every boot (`initcall_debug`). CPU temperatures come from k10temp, unaffected.
+- `acpi_enforce_resources=lax`: lets OpenRGB and the Thermalright LCD reach the SMBus.
 
 ### Fonts
 

@@ -35,7 +35,6 @@ librepods
 lug-helper
 papirus-folders
 plex-desktop
-plymouth-theme-motion-git
 proton-ge-custom-bin
 python-clickgen
 redhat-fonts

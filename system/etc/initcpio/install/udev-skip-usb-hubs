@@ -1,0 +1,29 @@
+#!/bin/bash
+# udev's usb_id builtin reads a hub's descriptors, and the kernel holds that read until it has
+# enumerated everything behind the hub: up to 7 s for the chipset root hub with the RGB
+# controllers (udev.log_level=debug, Sep 2026). The initramfs waits for udevd to stop before
+# switching root, so it paid that every boot. Nothing in the initramfs needs USB identification,
+# so ship it a copy of 50-udev-default.rules whose USB line skips hubs (bDeviceClass 09).
+# Must come after the systemd hook in HOOKS, which adds the original file.
+
+build() {
+    local rules
+    rules="$(mktemp)"
+    sed 's/^\(SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", \)IMPORT{builtin}="usb_id"/\1ATTR{bDeviceClass}!="09", IMPORT{builtin}="usb_id"/' \
+        /usr/lib/udev/rules.d/50-udev-default.rules > "$rules"
+    if ! grep -q 'ATTR{bDeviceClass}!="09", IMPORT{builtin}="usb_id"' "$rules"; then
+        error "udev-skip-usb-hubs: the usb_id line in 50-udev-default.rules no longer matches"
+        rm -f "$rules"
+        return 1
+    fi
+    add_file "$rules" /usr/lib/udev/rules.d/50-udev-default.rules 644
+    rm -f "$rules"
+}
+
+help() {
+    cat <<HELPEOF
+Replaces 50-udev-default.rules in the initramfs with a copy that skips the usb_id builtin for
+USB hubs, so udevd in the initramfs can stop without waiting for the whole USB tree to
+enumerate. Place it right after the systemd hook.
+HELPEOF
+}

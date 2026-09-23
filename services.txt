@@ -1,5 +1,6 @@
 NetworkManager-dispatcher.service
 NetworkManager.service
+amdgpu-load.service
 avahi-daemon.service
 avahi-daemon.socket
 bluetooth-autoconnect.service

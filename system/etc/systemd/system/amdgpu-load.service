@@ -1,0 +1,17 @@
+[Unit]
+Description=Load the amdgpu driver
+# Loading amdgpu takes ~2.3 s and stalls other module loads meanwhile (see
+# modules-load.d/early-boot.conf); it also stalled unrelated unit starts inside that window
+# (docker.socket took 1.5 s, delaying basic.target, Sep 2026). modprobe.d/amdgpu-manual-load.conf
+# keeps udev from loading it by alias, so this unit is the only loader. It runs once
+# basic.target is reached, so the login path is already set up, and sddm.service is ordered
+# after it.
+After=basic.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/modprobe amdgpu
+
+[Install]
+WantedBy=multi-user.target
