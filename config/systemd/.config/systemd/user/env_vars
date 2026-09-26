@@ -1,0 +1,12 @@
+export battlenetshortcutdirectory="/home/theo/.local/share/Steam/steamapps/compatdata/NonSteamLaunchers/pfx/drive_c/Program Files (x86)/Battle.net/Battle.net Launcher.exe" 
+export battlenetlaunchoptions=STEAM_COMPAT_DATA_PATH="/home/theo/.local/share/Steam/steamapps/compatdata/NonSteamLaunchers/" %command%
+export battlenetstartingdir="/home/theo/.local/share/Steam/steamapps/compatdata/NonSteamLaunchers/pfx/drive_c/Program Files (x86)/Battle.net"
+export bnet_launcher=NonSteamLaunchers
+export separate_appids=false
+export steamid3=810249290
+export logged_in_home=/home/theo
+export compat_tool_name=GE-Proton11-7-x86_64
+export python_version=3.14
+export chromedirectory="/usr/bin/flatpak"
+export chrome_startdir="/usr/bin"
+NSL_SCAN_STATE=ON

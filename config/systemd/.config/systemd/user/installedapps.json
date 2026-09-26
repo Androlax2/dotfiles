@@ -1,0 +1,16 @@
+{
+    "Launcher": {
+        "Battle.net": {
+            "first_seen": "2026-09-25T09:59:10.486371Z",
+            "last_seen": "2026-09-25T10:08:37.674567Z",
+            "still_installed": true
+        }
+    },
+    "Battle.net": {
+        "World of Warcraft": {
+            "first_seen": "2026-09-25T10:08:41.315270Z",
+            "last_seen": "2026-09-25T10:08:41.315270Z",
+            "still_installed": true
+        }
+    }
+}

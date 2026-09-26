@@ -1,4 +1,5 @@
 NetworkManager-dispatcher.service
+NetworkManager-wait-online.service
 NetworkManager.service
 amdgpu-load.service
 avahi-daemon.service

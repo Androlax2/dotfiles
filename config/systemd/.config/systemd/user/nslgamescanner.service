@@ -1,0 +1,13 @@
+
+[Unit]
+Description=NSL Game Scanner
+
+[Service]
+ExecStart=/usr/bin/python3 '/home/theo/.config/systemd/user/NSLGameScanner.py'
+Restart=always
+RestartSec=20
+StartLimitBurst=40
+StartLimitInterval=240
+
+[Install]
+WantedBy=default.target
