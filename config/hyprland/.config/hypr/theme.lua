@@ -38,7 +38,7 @@ hl.config({
 
         groupbar = {
             font_size = 12,
-            font_family = "monospace",
+            font_family = "SF Pro Text",
             font_weight_active = "ultraheavy",
             font_weight_inactive = "normal",
 

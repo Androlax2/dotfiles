@@ -42,7 +42,7 @@ One palette, Tokyo Night (night), applied the same way everywhere:
 - **Icons are muted** (`#a9b1d6`), **values carry the colour**: blue for CPU, purple for GPU, yellow for volume, red for recording.
 - **One colour family per element**, no gradients across families.
 - **The grid**: 15 px outer gaps, 6 px between the bar and the windows, 8 px between islands.
-- **Type**: JetBrainsMono Nerd Font in the bar and terminals, IBM Plex Sans in notifications.
+- **Type**: SF Pro Text in the interface and notifications, JetBrainsMono Nerd Font in the bar and terminals.
 
 ![A floating terminal with fastfetch over the wallpaper](assets/desktop.png)
 

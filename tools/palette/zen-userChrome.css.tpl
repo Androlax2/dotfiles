@@ -62,7 +62,7 @@
     border-color: var(--tn-line) !important;
 }
 
-/* URL bar: raised ground, hairline, blue ring on focus, monospace input */
+/* URL bar: raised ground, hairline, blue ring on focus, SF Pro input at the UI size */
 #urlbar-background {
     background: var(--tn-ground-raised) !important;
     border: 1px solid var(--tn-line) !important;
@@ -74,8 +74,7 @@
 }
 #urlbar-input,
 #urlbar-input::placeholder {
-    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace !important;
-    font-size: 12.5px !important;
+    font-family: -apple-system, "SF Pro Text", sans-serif !important;
     color: var(--tn-fg) !important;
 }
 #urlbar-input::placeholder {

@@ -10,7 +10,7 @@
 window.card-window,
 window.card-window.background {
     background: transparent;
-    font-family: "IBM Plex Sans", sans-serif;
+    font-family: "SF Pro Text", sans-serif;
 }
 
 window.card-window decoration {

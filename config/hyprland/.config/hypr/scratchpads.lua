@@ -2,7 +2,9 @@
 -- shell round trip): the first toggle spawns the window with exec rules that put
 -- it on its special workspace silently, so the current workspace never changes.
 --   term   dropdown kitty, 60 % x 45 %, top-centred 6 px under the bar (32 + 6 + 6)
---   music  Apple Music in its own Zen profile ("music", compact mode), 1400x900 centred
+--   music  Apple Music in its own Zen profile ("music", compact mode), 1400x900 centred.
+--          A cold start takes seconds, so a spinner placeholder window opens first and is
+--          closed once the Zen window is there.
 
 local function has_window(predicate)
     for _, window in ipairs(hl.get_windows()) do
@@ -36,19 +38,26 @@ local scratchpads = {
     },
     music = {
         present = function(window) return has_tag(window, "music") end,
+        placeholder = function(window) return window.class == "dotfiles.music-placeholder" end,
         spawn = function()
-            hl.exec_cmd("~/.config/hypr/scripts/music-launch.sh", {
-                workspace = "special:music silent",
-                float = true,
-                center = true,
-                size = "1400 900",
-            })
+            local rules = { workspace = "special:music silent", float = true, center = true, size = "1400 900" }
+            hl.exec_cmd("~/.config/hypr/scripts/music-placeholder.py", rules)
+            hl.exec_cmd("~/.config/hypr/scripts/music-launch.sh", rules)
         end,
     },
 }
 
+local function close_windows(predicate)
+    for _, window in ipairs(hl.get_windows()) do
+        if predicate(window) then
+            hl.dispatch(hl.dsp.window.close({ window = window }))
+        end
+    end
+end
+
 -- An empty special workspace is closed by Hyprland before the window maps, so the
--- first toggle only spawns; the special is shown from the window.open event below.
+-- first toggle only spawns; the special is shown from the window.open event below, by
+-- the scratchpad's window or by its placeholder, whichever opens first.
 local pending = {}
 
 local function toggle(name)
@@ -90,9 +99,11 @@ end
 hl.on("window.open", function(window)
     if is_music_window(window) then
         hl.dispatch(hl.dsp.window.tag({ window = window, tag = "+music" }))
+        close_windows(scratchpads.music.placeholder)
     end
     for name, scratchpad in pairs(scratchpads) do
-        if pending[name] and scratchpad.present(window) then
+        local opened = scratchpad.present(window) or (scratchpad.placeholder ~= nil and scratchpad.placeholder(window))
+        if pending[name] and opened then
             pending[name] = nil
             hl.dispatch(hl.dsp.workspace.toggle_special(name))
         end
@@ -109,3 +120,4 @@ hl.on("window.fullscreen", function(window)
 end)
 
 hl.window_rule({ match = { tag = "music" }, opacity = "1 1" })
+hl.window_rule({ match = { class = "^(dotfiles\\.music-placeholder)$" }, opacity = "1 1" })

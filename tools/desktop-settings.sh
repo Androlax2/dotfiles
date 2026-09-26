@@ -5,6 +5,9 @@ set -euo pipefail
 
 # Icons: WhiteSur (macOS-style folders), also set in gtk settings.ini and xsettingsd.conf.
 gsettings set org.gnome.desktop.interface icon-theme WhiteSur-dark
+# Interface font, also set in gtk settings.ini, xsettingsd.conf and qt6ct.conf. Zen and other
+# GTK apps on Wayland read it from here.
+gsettings set org.gnome.desktop.interface font-name 'SF Pro Text 11'
 
 # elementary Files: Finder-like column view, thumbnails, readable row height.
 gsettings set io.elementary.files.preferences default-viewmode miller_columns

@@ -12,7 +12,7 @@
 
 * {
   all: unset;
-  font-family: "IBM Plex Sans", sans-serif;
+  font-family: "SF Pro Text", sans-serif;
   font-size: 13px;
 }
 
