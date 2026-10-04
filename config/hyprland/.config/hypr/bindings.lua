@@ -15,10 +15,7 @@ bind(mainMod .. " + G", game_mode.enter, { description = "Game mode (eye candy o
 
 hl.define_submap("gamemode", function()
     -- ALT + G exits: the reload restores the config values changed on entry.
-    hl.bind(mainMod .. " + G", function()
-        hl.dispatch(hl.dsp.exec_cmd("hyprctl reload"))
-        hl.dispatch(hl.dsp.submap("reset"))
-    end)
+    hl.bind(mainMod .. " + G", game_mode.exit)
 
     -- Multimedia (Volume/Brightness)
     hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.config/hypr/scripts/volume.sh raise"), { locked = true, repeating = true })
