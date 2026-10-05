@@ -115,7 +115,9 @@
     "signal": 13,
     "format": "󰑊 {}",
     "tooltip": false,
-    "on-click": "~/.config/screen-record.sh"
+    // Detached: Waybar waits for on-click children before the next exec, so the
+    // compression pass would freeze the chip on its last value.
+    "on-click": "setsid -f ~/.config/screen-record.sh"
   },
 
   // The only submap is "gamemode" and the module has no per-submap format, so the label is fixed.

@@ -49,7 +49,9 @@ if pgrep -x wl-screenrec >/dev/null; then
 
     if [[ $compress == true ]] && command -v ffmpeg >/dev/null; then
         compressed="${file%.mp4}_compressed.mp4"
-        if ffmpeg -i "$file" -c:v libx264 -crf 23 -preset medium -c:a copy -movflags +faststart "$compressed" -y 2>/dev/null; then
+        # -nostdin: ffmpeg grabs the tty otherwise, and from a background process group
+        # (a Waybar click) that stops the script for good.
+        if ffmpeg -nostdin -i "$file" -c:v libx264 -crf 23 -preset medium -c:a copy -movflags +faststart "$compressed" -y 2>/dev/null; then
             mv "$compressed" "$file"
         else
             rm -f "$compressed"
