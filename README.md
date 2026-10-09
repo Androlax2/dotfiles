@@ -383,9 +383,10 @@ These came from vendor installers, so `make` can't reinstall them:
 
 | Software | Location | Notes |
 | --- | --- | --- |
-| Claude Code | `~/.local/bin/claude` | Updates itself |
+| Claude Code | `~/.local/bin/claude` | Updates itself; CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
+| Codex CLI | `~/.local/npm/bin/codex` | CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
 | CodeRabbit CLI | `~/.local/bin/coderabbit` | `cr` is a symlink to it |
-| greywall, greyproxy | `~/.local/bin` | The `opencode` wrapper in `config/bin` runs through greywall; greyproxy is a user service |
+| greywall, greyproxy | `~/.local/bin` | The `opencode`, `codex`, and `claude` launchers in `config/bin` run through greywall; greyproxy is a user service |
 | opencode | `~/.opencode/bin` | Started through `~/.local/bin/opencode` |
 | Herd Lite | `~/.config/herd-lite` | PHP, Composer and the Laravel installer, added to `PATH` by `~/.profile` |
 | uv | `/usr/local/bin` | `make clean-caches` uses it |

@@ -17,6 +17,9 @@ function fish_greeting
 end
 export PATH="$HOME/.local/bin:$PATH"
 
+# Route AI CLI commands and Claude auto-retry launches through Greywall.
+set -gx PATH "$HOME/.local/bin/greywall-agents" $PATH
+
 function claude
     set -lx CLAUDE_AUTO_RETRY_ACTIVE 1
     node (npm root -g)/claude-auto-retry/src/launcher.js $argv
