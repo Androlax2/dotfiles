@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-exec /home/theo/.local/bin/greywall -- /home/theo/.opencode/bin/opencode "$@"
+# Chrome writes its crash reports under the config dir even headless; give it one the sandbox allows.
+export CHROME_CONFIG_HOME="$HOME/.cache/chrome-sandbox"
+mkdir -p "$CHROME_CONFIG_HOME"
+exec /home/theo/.local/bin/greywall --allow-path "$CHROME_CONFIG_HOME" -- /home/theo/.opencode/bin/opencode "$@"
 #/home/theo/.opencode/bin/opencode "$@"

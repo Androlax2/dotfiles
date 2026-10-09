@@ -2,5 +2,5 @@
   "autoupdate": true,
   "plugins": [
     "@ex-machina/opencode-anthropic-auth@next"
-  ]
+  ],
 }

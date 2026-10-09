@@ -1,40 +1,8 @@
-// Learned profile for "opencode"
-// Updated by greywall after profile drift resolution
 {
   "network": {
     "rules": [
       {
-        "destination": "api.openai.com",
-        "port": "443",
-        "action": "allow"
-      },
-      {
-        "destination": "*.frame.claudeusercontent.com",
-        "port": "443",
-        "action": "allow"
-      },
-      {
-        "destination": "assets-proxy.anthropic.com",
-        "port": "443",
-        "action": "allow"
-      },
-      {
         "destination": "api.anthropic.com",
-        "port": "443",
-        "action": "allow"
-      },
-      {
-        "destination": "opencode.ai",
-        "port": "443",
-        "action": "allow"
-      },
-      {
-        "destination": "models.dev",
-        "port": "443",
-        "action": "allow"
-      },
-      {
-        "destination": "github.com",
         "port": "443",
         "action": "allow"
       },
@@ -49,17 +17,37 @@
         "action": "allow"
       },
       {
+        "destination": "console.anthropic.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "statsig.anthropic.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "assets-proxy.anthropic.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
         "destination": "*.claudeusercontent.com",
         "port": "443",
         "action": "allow"
       },
       {
-        "destination": "fonts.googleapis.com",
+        "destination": "*.frame.claudeusercontent.com",
         "port": "443",
         "action": "allow"
       },
       {
-        "destination": "fonts.gstatic.com",
+        "destination": "storage.googleapis.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "github.com",
         "port": "443",
         "action": "allow"
       },
@@ -75,6 +63,31 @@
       },
       {
         "destination": "registry.npmjs.org",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "fonts.googleapis.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "fonts.gstatic.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "drivemcp.googleapis.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "calendarmcp.googleapis.com",
+        "port": "443",
+        "action": "allow"
+      },
+      {
+        "destination": "gmailmcp.googleapis.com",
         "port": "443",
         "action": "allow"
       }
@@ -93,23 +106,27 @@
       "~/.ssh/allowed_signers",
       "~/.skills",
       "~/.agents",
-      "~/.claude/agents",
-      "~/.claude/skills",
+      "~/.claude",
+      "~/.claude.json",
+      "~/.local/share/claude",
+      "~/.cache/claude",
       "~/.config/gh",
-      "~/.config/glab-cli",
-      "~/.opencode",
-      "~/.opencode.json",
-      "~/.config/opencode",
-      "~/.cache/opencode",
-      "~/.local/share/opencode",
-      "~/.local/share/opentui",
-      "~/.local/state/opencode",
-      "~/.config/github-copilot",
-      "~/dotfiles/config/opencode"
+      "~/.cache/chrome-sandbox"
     ],
     "denyRead": [
       "~/.ssh/id_*",
       "~/.gnupg/**",
+      "~/.aws/**",
+      "~/.kube/**",
+      "~/.docker/config.json",
+      "~/.netrc",
+      "~/.git-credentials",
+      "~/.password-store/**",
+      "~/.local/share/keyrings/**",
+      "~/.mozilla/**",
+      "~/.config/chromium/**",
+      "~/.config/google-chrome/**",
+      "~/.config/.wrangler/**",
       ".env",
       ".env.*"
     ],
@@ -118,18 +135,16 @@
       "~/.skills",
       "~/.agents",
       "~/AGENTS.md",
+      "~/.claude",
+      "~/.claude.json",
+      "~/.local/share/claude",
+      "~/.cache/claude",
       "~/.config/gh",
       "~/.cache/gh",
       "~/.local/share/gh",
       "~/.local/state/gh",
       "~/.ssh/known_hosts",
-      "~/.opencode",
-      "~/.opencode.json",
-      "~/.config/opencode",
-      "~/.cache/opencode",
-      "~/.local/share/opencode",
-      "~/.local/share/opentui",
-      "~/.local/state/opencode"
+      "~/.cache/chrome-sandbox"
     ],
     "denyWrite": [
       "~/.bashrc",
@@ -137,12 +152,30 @@
       "~/.zshrc",
       "~/.zprofile",
       "~/.profile",
+      "~/.config/fish",
+      "~/.local/bin",
+      "~/.config/greywall",
+      "~/dotfiles/config/greywall",
+      "~/.config/systemd",
+      "~/.config/autostart",
+      "~/.gitconfig",
       "~/.ssh",
-      "~/.gnupg"
+      "~/.gnupg",
+      ".git/hooks"
     ]
   },
   "command": {
-    "deny": null,
+    "deny": [
+      "sudo",
+      "git push --force",
+      "git push -f",
+      "git push origin main",
+      "npm publish",
+      "pnpm publish",
+      "gh pr merge",
+      "gh repo delete",
+      "gh secret"
+    ],
     "allow": null,
     "useDefaults": true
   },

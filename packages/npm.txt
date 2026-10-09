@@ -1,1 +1,2 @@
+@openai/codex
 claude-auto-retry

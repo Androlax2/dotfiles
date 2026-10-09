@@ -6,6 +6,7 @@ arch-audit
 base
 base-devel
 bat
+bind
 blueman
 bluez
 bluez-utils
@@ -64,6 +65,7 @@ libva-intel-driver
 linux
 linux-firmware
 loupe
+lychee
 man-db
 mariadb-clients
 mpv
