@@ -12,6 +12,7 @@ hl.on("hyprland.start", function()
     -- From the session, not a root unit: OpenRGB's udev rules give i2c/hidraw access to the
     -- logged-in seat, which is what detects the RAM sticks; root at boot missed them.
     hl.exec_cmd("openrgb --noautoconnect --profile 'Vive le bleu'")
+    hl.exec_cmd("~/.local/bin/trcc gui --resume")
     hl.exec_cmd("~/.config/hypr/scripts/hyprsunset-if-not-gaming.sh")
     hl.exec_cmd("hypridle")
     -- Routes the media keys and the bar's mpris island to the last active player.
