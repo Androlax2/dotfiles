@@ -21,4 +21,3 @@ sshd.service
 systemd-resolved-monitor.socket
 systemd-resolved-varlink.socket
 tailscaled.service
-thermalright-lcd-control.service
