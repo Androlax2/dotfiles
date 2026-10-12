@@ -15,7 +15,7 @@ Everything needed to rebuild my Arch Linux desktop running Hyprland: user dotfil
 | --- | --- |
 | [`config/`](config) | One [GNU Stow](https://www.gnu.org/software/stow/) package per program, symlinked into `~` |
 | [`system/`](system) | Files installed under `/` as root: boot, initramfs, locales, pacman, networking, Bluetooth, SDDM, keyd |
-| [`packages/`](packages) | Package lists for pacman, AUR, npm, pnpm, pip, cargo, go and composer |
+| [`packages/`](packages) | Package lists for pacman, AUR, npm, pnpm, pip, cargo, go, composer and agent skills |
 | [`services.txt`](services.txt) | System units enabled beyond their vendor preset |
 | [`system-ignore.txt`](system-ignore.txt) | `/etc` paths deliberately left out of the repo, each with a reason |
 | [`Makefile`](Makefile) | Provision, capture, audit and clean the machine; `make help` lists every target |
@@ -160,7 +160,7 @@ make setup
 
 1. `packages` installs the pacman and AUR packages
 2. `dotfiles` links every `config/` package into `~`
-3. `global-packages` installs the npm, pnpm, pip, cargo, go and composer packages
+3. `global-packages` installs the npm, pnpm, pip, cargo, go and composer packages, and the agent skills in `packages/skills.txt`
 4. `system` copies `system/` into `/` as root
 5. `locale` generates the locales enabled in `/etc/locale.gen`
 6. `services` enables the units in `services.txt`

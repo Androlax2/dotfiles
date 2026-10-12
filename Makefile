@@ -15,7 +15,7 @@ pnpm_global = env PATH="$(pnpm_home)/bin:$$PATH" pnpm
 
 # One command per package manager, each printing its globally installed packages one per line.
 # packages/<manager>.txt is the versioned copy of that output.
-package_managers = pacman aur npm pnpm pip cargo go composer
+package_managers = pacman aur npm pnpm pip cargo go composer skills
 installed_pacman = pacman -Qqen
 installed_aur = pacman -Qqm
 installed_npm = npm ls -g --depth=0 --parseable | tail -n +2 | sed "s|^$$(npm root -g)/||"
@@ -24,6 +24,8 @@ installed_pip = python3 -m pip list --user --not-required --format=freeze | cut 
 installed_cargo = cargo install --list | awk '/^[^ ].* v[0-9]/ {print $$1}'
 installed_go = for binary in "$$(go env GOPATH)"/bin/*; do if [ -f "$$binary" ]; then go version -m "$$binary" | awk '$$1 == "path" {print $$2}'; fi; done
 installed_composer = composer --working-dir="$$(composer config --global home)" show --direct --name-only
+# Agent skills installed with `npx skills add -g`, as "owner/repo skill-name".
+installed_skills = jq -r '.skills | to_entries[] | "\(.value.source) \(.key)"' ~/.agents/.skill-lock.json
 
 .PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install \
 	    check check-packages check-services check-system check-untracked check-security check-palette \
@@ -71,14 +73,18 @@ zen: ## Link the Zen userChrome and prefs into the default Zen profile
 # managed; --user keeps these out of the system site-packages.
 # Only what is listed but missing gets installed (same comparison as check-packages),
 # so a second run changes nothing.
+# Skills are grouped per source repo so each repo is cloned once, and target claude-code
+# because it is the only agent here that needs links outside ~/.agents/skills.
 missing = comm -23 <(sort packages/$(1).txt) <($(installed_$(1)) | sort)
-global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages
+global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages and agent skills
 	$(call missing,npm) | xargs --no-run-if-empty npm install -g
 	$(call missing,pnpm) | xargs --no-run-if-empty $(pnpm_global) add -g
 	$(call missing,pip) | xargs --no-run-if-empty python3 -m pip install --user --break-system-packages
 	$(call missing,cargo) | xargs --no-run-if-empty cargo install
 	$(call missing,go) | xargs --no-run-if-empty -I{} go install {}@latest
 	$(call missing,composer) | xargs --no-run-if-empty composer global require
+	$(call missing,skills) | awk '{skills[$$1] = skills[$$1] " --skill " $$2} END {for (source in skills) print source skills[source]}' \
+	    | xargs --no-run-if-empty -L1 npx --yes skills add --global --agent claude-code --yes
 
 system: ## [sudo] Copy system/ into /, replacing changed files
 	@for path in $(system_files); do \
