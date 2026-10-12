@@ -1,6 +1,7 @@
 # /etc paths deliberately left out of system/. One extended regex per line,
 # matched against the absolute path by `make check-untracked`.
 # Do not add .pacnew files or editor leftovers here: those need a human.
+# A .pacnew is listed even when a regex below covers its path.
 
 # Machine identity, accounts and disks: generated per install, never copied between machines.
 ^/etc/(fstab|crypttab|hostname|machine-id|adjtime)$
@@ -35,7 +36,3 @@
 ^/etc/modprobe\.d/trcc-lcd\.conf$
 ^/etc/modules-load\.d/trcc-(rapl|sg)\.conf$
 ^/etc/udev/rules\.d/99-trcc-lcd\.rules$
-
-# Older package defaults that were never merged, not local edits.
-^/etc/makepkg\.conf\.d/fortran\.conf$
-^/etc/tpm2-tss/

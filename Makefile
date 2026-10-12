@@ -141,12 +141,17 @@ check-system: ## Diff each system/ file against the live one
 	    diff -u --label "repo: system/$$path" --label "live: /$$path" "system/$$path" "/$$path" || true; \
 	done
 
-check-untracked: ## Edited /etc files in neither system/ nor system-ignore.txt
+# A .pacnew is listed even under an ignored path: it is a pending merge, and an ignore
+# written for a whole directory must not hide it.
+unignored_etc_paths = NR == FNR { if ($$0 !~ /^[[:space:]]*(\#|$$)/) ignored[$$0]; next } \
+	/\.pacnew$$/ { print; next } \
+	{ for (pattern in ignored) if ($$0 ~ pattern) next; print }
+check-untracked: ## Edited /etc files in neither system/ nor system-ignore.txt, and every .pacnew
 	@echo "== /etc files configured on this machine but not versioned =="
 	@comm -23 \
 	    <({ find /etc -xdev -type f -print0 2>/dev/null | xargs -0 pacman -Qo 2>&1 >/dev/null | sed -n 's/^error: No package owns //p'; \
 	        pacman -Qii | grep -oE '/[^[:space:]]+ \[modified\]' | cut -d' ' -f1; } \
-	      | sort -u | grep -vEf <(grep -vE '^[[:space:]]*(#|$$)' system-ignore.txt) || true) \
+	      | sort -u | awk '$(unignored_etc_paths)' system-ignore.txt -) \
 	    <(printf '/%s\n' $(system_files) | sort)
 
 # Ports, users, SUID files, unowned binaries, kernel modules, persistence spots and SSH keys, plus
