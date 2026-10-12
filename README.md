@@ -180,6 +180,7 @@ Each section should be empty. Anything listed is drift between the machine and t
 
 ```bash
 make update   # upgrade pacman and AUR packages
+make update-skills   # upgrade the agent skills installed with the skills CLI
 make check    # what changed on this machine that the repo doesn't know about?
 make dump     # write those changes into the repo, then review them with git diff
 make disk     # where is the disk space going?
@@ -198,6 +199,7 @@ make clean-trash    # empty the desktop trash for good
 After installing something or editing a config, run `make check`, then `make dump`, and commit what `git diff` shows.
 
 `make dump` rewrites the package lists, `services.txt` and the files already in `system/`.
+It also captures [agent skills](#agent-skills).
 It never picks up a new `/etc` file by itself. `make check` lists those instead, and each one needs a decision:
 
 - **Track it** by copying it into `system/` at the same path:
@@ -221,6 +223,31 @@ make dotfiles
 ```
 
 Don't stow files that programs rewrite by replacing them, such as `mimeapps.list`: the program replaces the symlink with a plain file.
+
+### Agent skills
+
+Skills for Claude Code and the other coding agents come from three places, and only the first two are versioned:
+
+| Kind | Lives in | Versioned as | Restored by |
+| --- | --- | --- | --- |
+| Installed with the [skills CLI](https://github.com/vercel-labs/skills) | `~/.agents/skills`, linked into `~/.claude/skills` | One `owner/repo skill-name` line in [`packages/skills.txt`](packages/skills.txt) | `make global-packages` |
+| Written by hand | `~/.claude/skills` | The files themselves, in [`config/claude/.claude/skills`](config/claude/.claude/skills) | `make dotfiles` |
+| Synced from the Claude account | `~/.claude/skills/synced` | Not versioned | Claude Code, on login |
+
+Install a skill from a repository, then record it:
+
+```bash
+npx skills add owner/repo --skill skill-name -g -a claude-code
+make dump
+```
+
+`-a claude-code` is enough: the other agents read `~/.agents/skills` directly, and Claude Code is the only one that needs links elsewhere.
+
+For a skill written by hand, create it in `~/.claude/skills/<name>` and run `make dump`: it moves the folder into `config/claude` and links it back, so later edits land in the repo.
+
+`make check` reports both kinds: CLI skills under `packages`, hand-written ones under their own section.
+
+The list records where each skill comes from, not its version. A fresh machine gets the latest version of each, and `make update-skills` upgrades them here. It is separate from `make update` on purpose: skills are instructions agents act on, pulled unpinned from many repositories.
 
 ## Backups
 

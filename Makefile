@@ -27,10 +27,17 @@ installed_composer = composer --working-dir="$$(composer config --global home)" 
 # Agent skills installed with `npx skills add -g`, as "owner/repo skill-name".
 installed_skills = jq -r '.skills | to_entries[] | "\(.value.source) \(.key)"' ~/.agents/.skill-lock.json
 
+# Skills written by hand are versioned as files in the claude stow package. In ~/.claude/skills
+# they are the real directories owned by neither the skills CLI (its lock file) nor Claude's
+# account sync (synced/); once versioned they become links into the repo.
+versioned_skills = config/claude/.claude/skills
+unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
+unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
+
 .PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install \
-	    check check-packages check-services check-system check-untracked check-security check-palette \
-	    dump dump-packages dump-services dump-system dump-security \
-	    update disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
+	    check check-packages check-skills check-services check-system check-untracked check-security check-palette \
+	    dump dump-packages dump-skills dump-services dump-system dump-security \
+	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
 	    backup backup-list backup-status backup-check backup-maintain backup-init
 
 # Descriptions after `##` and sections after `##@` are rendered by tools/make-help.awk.
@@ -113,11 +120,16 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 ##@ Keep the repo in sync
 
-check: check-packages check-services check-system check-untracked check-security check-palette ## [read-only] Show everything that differs from the repo
+check: check-packages check-skills check-services check-system check-untracked check-security check-palette ## [read-only] Show everything that differs from the repo
 
 check-packages: ## Packages listed but not installed, or the reverse
 	@echo "== packages =="
 	@$(foreach manager,$(package_managers),diff <(sort packages/$(manager).txt) <($(installed_$(manager)) | sort) | sed -n 's/^< /  $(manager): listed, not installed: /p; s/^> /  $(manager): installed, not listed: /p' || true;)
+
+check-skills: ## Hand-written skills in ~/.claude/skills missing from the repo, or the reverse
+	@echo "== hand-written skills =="
+	@$(unversioned_skills) | sed 's/^/  in ~\/.claude\/skills, not versioned: /'
+	@$(unlinked_skills) | sed 's/^/  versioned, not linked into ~\/.claude\/skills: /'
 
 check-services: ## Enabled units missing from services.txt, or the reverse
 	@echo "== services =="
@@ -147,10 +159,17 @@ check-palette: ## [read-only] Diff every themed file against its palette templat
 	@echo "== palette =="
 	@tools/palette.sh --check || true
 
-dump: dump-packages dump-services dump-system ## Save packages, services and system files into the repo
+dump: dump-packages dump-skills dump-services dump-system ## Save packages, skills, services and system files into the repo
 
 dump-packages: ## Rewrite packages/*.txt from what is installed
 	@$(foreach manager,$(package_managers),$(installed_$(manager)) | sort > packages/$(manager).txt; echo "wrote packages/$(manager).txt";)
+
+dump-skills: ## Move hand-written skills from ~/.claude/skills into the repo and link them back
+	@$(unversioned_skills) | while read -r skill; do \
+	    mv ~/.claude/skills/"$$skill" $(versioned_skills)/; \
+	    echo "moved ~/.claude/skills/$$skill into $(versioned_skills)"; \
+	done
+	@if [ -n "$$($(unlinked_skills))" ]; then $(stow) --restow claude; fi
 
 dump-services: ## Rewrite services.txt from the enabled units
 	$(enabled_units) > services.txt
@@ -170,6 +189,11 @@ dump-system: ## Copy live edits of system/ files back into the repo
 update: ## [sudo] Upgrade pacman and AUR packages
 	sudo pacman -Syu
 	yay -Syu
+
+# Kept out of `update`: skills are instructions agents act on, pulled unpinned from many
+# repositories, so upgrading them is a deliberate step.
+update-skills: ## Upgrade the agent skills installed with the skills CLI
+	npx --yes skills update --global --yes
 
 disk: ## [read-only] Show what is using disk space
 	@echo "== largest user caches =="
