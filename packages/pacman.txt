@@ -1,3 +1,4 @@
+7zip
 act
 adobe-source-code-pro-fonts
 amd-ucode
@@ -96,6 +97,7 @@ pnpm
 polkit-kde-agent
 pv
 python-pip
+python-pipx
 qt5-wayland
 qt6-wayland
 qt6ct
@@ -152,4 +154,5 @@ xorg-xinit
 xterm
 yazi
 ydotool
+zip
 zram-generator
