@@ -71,6 +71,7 @@ loupe
 lychee
 man-db
 mariadb-clients
+mitmproxy
 mpv
 nano
 network-manager-applet
