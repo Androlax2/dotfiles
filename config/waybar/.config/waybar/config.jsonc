@@ -19,6 +19,8 @@
     "custom/hyprsunset",
     "image#updates-icon",
     "custom/updates",
+    "image#jobpilot-icon",
+    "custom/jobpilot",
     "image#cpu-icon",
     "custom/cpu",
     "image#gpu-icon",
@@ -159,6 +161,30 @@
     "interval": 60,
     "format": "{}",
     "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
+  },
+
+  // ---- right: jobpilot. Sent automatically today, then (N) awaiting manual intervention; the class tracks the hourly
+  // jobpilot-apply run (running / error / critical = credentials to refresh). Click opens the triage TUI
+  // and refreshes the module on exit; right-click shows the latest run's log (make last).
+  // Detached with setsid: Waybar waits for on-click children before the next exec.
+  "image#jobpilot-icon": {
+    "path": "/home/theo/.config/waybar/icons/briefcase.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -RTMIN+14 waybar'",
+    "on-click-right": "setsid -f kitty --class floating -e sh -c 'make -C /home/theo/IdeaProjects/jobpilot last | less -R +G'"
+  },
+
+  "custom/jobpilot": {
+    "exec": "~/.config/waybar/scripts/jobpilot.sh",
+    "return-type": "json",
+    "interval": 60,
+    "signal": 14,
+    "format": "{}",
+    "escape": false,
+    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -RTMIN+14 waybar'",
+    "on-click-right": "setsid -f kitty --class floating -e sh -c 'make -C /home/theo/IdeaProjects/jobpilot last | less -R +G'"
   },
 
   // ---- right: stats. Icons are stroke SVGs drawn by the image module (the font's Material glyphs are filled);

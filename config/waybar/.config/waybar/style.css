@@ -164,6 +164,7 @@ window#waybar {
 
 /* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
 #image.updates-icon,
+#image.jobpilot-icon,
 #image.cpu-icon,
 #image.gpu-icon,
 #image.net-icon,
@@ -197,6 +198,37 @@ window#waybar {
 
 #custom-updates.stale {
     color: @orange;
+}
+
+/* jobpilot: several classes can apply at once; later rules win, so the most urgent state is last. */
+#custom-jobpilot {
+    color: @green1;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+#custom-jobpilot.attention {
+    color: @yellow;
+}
+
+#custom-jobpilot.running {
+    color: @cyan;
+}
+
+#custom-jobpilot.error {
+    color: @orange;
+}
+
+/* A red chip like the recording one: credentials must be refreshed before the next run can send. */
+#custom-jobpilot.critical {
+    padding: 0 7px;
+    border-radius: 6px;
+    background: alpha(@red, 0.16);
+    color: @red;
+}
+
+#custom-jobpilot.unknown {
+    color: @text;
 }
 
 #custom-cpu {
