@@ -189,6 +189,28 @@ dump-system: ## Copy live edits of system/ files back into the repo
 	    echo "updated system/$$path"; \
 	done
 
+agent_docker = tools/agent-docker.sh
+
+.PHONY: agent-docker-setup agent-docker-add agent-docker-remove agent-docker-status
+
+##@ Isolate coding agents
+
+# One rootless Docker daemon per project for agents running in greywall (tools/agent-docker.sh).
+# The units and the agent_docker_egress firewall table come from system/.
+agent-docker-setup: system ## [sudo] Install the agent units and the agent-docker group (log out and back in after the first run)
+	sudo $(agent_docker) setup
+
+agent-docker-add: ## [sudo] Give a project its own isolated Docker daemon: make agent-docker-add PROJECT=runway
+	@test -n "$(PROJECT)" || { echo "usage: make agent-docker-add PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
+	sudo $(agent_docker) add "$(PROJECT)"
+
+agent-docker-remove: ## [no undo] Delete a project's agent daemon, its user, images and containers: make agent-docker-remove PROJECT=runway
+	@test -n "$(PROJECT)" || { echo "usage: make agent-docker-remove PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
+	sudo $(agent_docker) remove "$(PROJECT)"
+
+agent-docker-status: ## [read-only] List the agent Docker daemons and whether their sockets are up
+	@$(agent_docker) status
+
 ##@ Maintain
 
 update: ## [sudo] Upgrade pacman and AUR packages
