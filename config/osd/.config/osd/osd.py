@@ -15,8 +15,9 @@ by the Claude Code hook ~/.claude/hooks/session-state.sh:
     sessions-clear          forget every session (claude-sessions reset)
     focus-next              show the most urgent Claude session in the manager
 
-A session report carries session, state (working | waiting | needs-you | gone),
-project, and optionally cwd, task, message, sticky and the focus target of the
+A session report carries session, project, usually a state (working | waiting |
+needs-you | gone; absent for an informational event that leaves the state as it
+is), and optionally cwd, task, message, sticky and the focus target of the
 session's window: kitty_pid, kitty_window, kitty_listen, tmux_pane. The kitty
 fields are only a fallback: claude-auto-retry keeps a session alive in tmux when
 its kitty window closes, so the environment the hook sees can name a window that
@@ -72,9 +73,18 @@ WAYBAR_SESSIONS_SIGNAL = "-RTMIN+16"
 SESSION_PRUNE_INTERVAL_S = 5
 STATE_URGENCY = {"working": 0, "waiting": 1, "needs-you": 2}
 TARGET_FIELDS = ("kitty_pid", "kitty_window", "kitty_listen", "tmux_pane")
-# What Claude Code prints at the bottom of its pane while busy, and while a permission dialog is open.
-BUSY_MARKERS = ("esc to interrupt", "to interrupt and send")
-PERMISSION_MARKER = "Do you want to proceed?"
+# What Claude Code prints at the bottom of its pane: while busy, while a permission dialog is open,
+# and the input prompt line it shows when idle (also shown while busy, so busy wins over it).
+# Busy: the spinner line, "✻ Spinning… (8m 31s · ↓ 29.7k tokens)", or the interrupt hint as a whole
+# line. The bare phrases are not enough: they can scroll by inside ordinary conversation text.
+BUSY_PATTERNS = (
+    re.compile(r"^\s*\S{0,2}\s*[A-Z][a-z]+… \(\d+[smh]", re.MULTILINE),
+    re.compile(r"^\s*(?:esc|enter) to interrupt(?: and send)?(?:\s*·.*)?$", re.MULTILINE),
+)
+# The permission dialog: its question alone on a line, then its first option within a few lines.
+# The phrase alone is not enough: it can scroll by inside ordinary conversation text.
+PERMISSION_DIALOG = re.compile(r"^[\s│]*Do you want to proceed\?\s*$(?:\n.*){0,3}?\n[\s│❯]*1\.\s*Yes", re.MULTILINE)
+PROMPT_LINE = re.compile(r"^\s*❯[ \u00a0]", re.MULTILINE)  # Claude pads its prompt with a no-break space
 PANE_TAIL_LINES = 20
 
 TMUX_PANE_PATTERN = re.compile(r"^%\d+$")
@@ -122,10 +132,10 @@ def parse_session(raw: str) -> dict:
     report = json.loads(raw)
     if not isinstance(report, dict):
         raise ValueError("session report is not an object")
-    for key in ("session", "state", "project"):
+    for key in ("session", "project"):
         if not isinstance(report.get(key), str) or not report[key]:
             raise ValueError(f"session.{key} missing")
-    if report["state"] not in STATE_URGENCY and report["state"] != "gone":
+    if "state" in report and report["state"] not in STATE_URGENCY and report["state"] != "gone":
         raise ValueError(f"session.state {report['state']!r} unknown")
     for key in ("cwd", "task", "message"):
         if key in report and not isinstance(report[key], str):
@@ -184,6 +194,17 @@ def claude_panes() -> set[str]:
         if pane:
             panes.add(pane)
     return panes
+
+
+def pane_state(tail: str):
+    """needs-you on a permission dialog, working on the spinner, waiting at the idle prompt, else None."""
+    if PERMISSION_DIALOG.search(tail):
+        return "needs-you"
+    if any(pattern.search(tail) for pattern in BUSY_PATTERNS):
+        return "working"
+    if PROMPT_LINE.search(tail):
+        return "waiting"
+    return None
 
 
 def resolve_target(target: dict) -> dict:
@@ -316,13 +337,13 @@ class SessionRegistry:
 
     def update(self, report: dict):
         session = report["session"]
-        if report["state"] == "gone":
+        if report.get("state") == "gone":
             self.remove(session)
             return
         entry = self.sessions.get(session)
         previous_state = entry["state"] if entry else None
         if entry is None:
-            entry = {"state": report["state"], "project": report["project"], "cwd": "", "task": "",
+            entry = {"state": report.get("state", "waiting"), "project": report["project"], "cwd": "", "task": "",
                      "since": time.time(), "target": {}}
             self.sessions[session] = entry
             changed = True
@@ -448,16 +469,17 @@ class SessionRegistry:
         return GLib.SOURCE_CONTINUE
 
     def reconcile_with_panes(self):
-        """Hooks say "needs you" when a permission dialog shows and nothing until the tool ends; in auto
-        mode the classifier's thinking time trips that too. The pane shows whether Claude is busy."""
-        for session, entry in self.sessions.items():
+        """Hooks can mislead or go missing: "needs you" fires on a permission dialog and nothing follows
+        until the tool ends (in auto mode the classifier's thinking time trips it too), and a Stop that
+        fires while the daemon restarts is lost. The pane's last lines say what Claude is doing now."""
+        for session, entry in list(self.sessions.items()):
             tmux_pane = entry["target"].get("tmux_pane")
-            if entry["state"] not in ("needs-you", "waiting") or not tmux_pane:
+            if not tmux_pane:
                 continue
             tail = tmux_output(["capture-pane", "-p", "-t", tmux_pane, "-S", f"-{PANE_TAIL_LINES}"]) or ""
-            if PERMISSION_MARKER in tail or not any(marker in tail for marker in BUSY_MARKERS):
-                continue
-            self.update({"session": session, "state": "working", "project": entry["project"], "sticky": False})
+            observed = pane_state(tail)
+            if observed and observed != entry["state"]:
+                self.update({"session": session, "state": observed, "project": entry["project"], "sticky": False})
 
     def clear(self):
         for session in list(self.sessions):
