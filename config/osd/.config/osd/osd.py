@@ -87,8 +87,11 @@ PERMISSION_DIALOG = re.compile(r"^[\s│]*Do you want to proceed\?\s*$(?:\n.*){0
 PROMPT_LINE = re.compile(r"^\s*❯[ \u00a0]", re.MULTILINE)  # Claude pads its prompt with a no-break space
 PANE_TAIL_LINES = 20
 
-TMUX_PANE_PATTERN = re.compile(r"^%\d+$")
-KITTY_LISTEN_PATTERN = re.compile(r"^unix:[@/][\w./@-]+$")
+TMUX_PANE_PATTERN = re.compile(r"%[0-9]{1,10}")
+KITTY_LISTEN_PATTERN = re.compile(r"unix:[@/][A-Za-z0-9_./@-]{1,200}")
+ASCII_NUMBER_PATTERN = re.compile(r"[0-9]{1,10}")
+SESSION_ID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+MAX_TEXT_LENGTH = 300
 
 
 def layer_window(app: Gtk.Application, edge: LayerShell.Edge, margin: int) -> Gtk.Window:
@@ -120,12 +123,22 @@ def volume_icon(level: int) -> str:
 def validate_focus_target(fields: dict):
     """The focus fields end up in shell arguments and a Lua string, so they are strict."""
     for key in ("kitty_pid", "kitty_window"):
-        if key in fields and not str(fields[key]).isdigit():
+        if key in fields and not ASCII_NUMBER_PATTERN.fullmatch(str(fields[key])):
             raise ValueError(f"{key} is not a number")
-    if "kitty_listen" in fields and not KITTY_LISTEN_PATTERN.match(str(fields["kitty_listen"])):
+    if "kitty_listen" in fields and not KITTY_LISTEN_PATTERN.fullmatch(str(fields["kitty_listen"])):
         raise ValueError("kitty_listen is not a unix socket address")
-    if "tmux_pane" in fields and not TMUX_PANE_PATTERN.match(str(fields["tmux_pane"])):
+    if "tmux_pane" in fields and not TMUX_PANE_PATTERN.fullmatch(str(fields["tmux_pane"])):
         raise ValueError("tmux_pane is not a pane id")
+
+
+def validate_text(key: str, value: str):
+    """Session text reaches tmux and the session manager, where #( and #{ are live tmux formats."""
+    if len(value) > MAX_TEXT_LENGTH:
+        raise ValueError(f"session.{key} is too long")
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        raise ValueError(f"session.{key} contains control characters")
+    if "#(" in value or "#{" in value:
+        raise ValueError(f"session.{key} contains a tmux format sequence")
 
 
 def parse_session(raw: str) -> dict:
@@ -140,6 +153,11 @@ def parse_session(raw: str) -> dict:
     for key in ("cwd", "task", "message"):
         if key in report and not isinstance(report[key], str):
             raise ValueError(f"session.{key} is not a string")
+    if not SESSION_ID_PATTERN.fullmatch(report["session"]):
+        raise ValueError("session is not a Claude session id")
+    for key in ("session", "project", "cwd", "task", "message"):
+        if key in report:
+            validate_text(key, report[key])
     report["sticky"] = bool(report.get("sticky", False))
     validate_focus_target(report)
     return report

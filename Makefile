@@ -211,6 +211,24 @@ agent-docker-remove: ## [no undo] Delete a project's agent daemon, its user, ima
 agent-docker-status: ## [read-only] List the agent Docker daemons and whether their sockets are up
 	@$(agent_docker) status
 
+agent_github = tools/agent-github.sh
+
+.PHONY: agent-github-token agent-github-relogin agent-github-protect agent-github-check
+
+agent-github-token: ## Create and store a GitHub token that reaches only this project's repo: make agent-github-token PROJECT=runway
+	@test -n "$(PROJECT)" || { echo "usage: make agent-github-token PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
+	@$(agent_github) token "$(PROJECT)"
+
+agent-github-relogin: ## Revoke your old GitHub CLI login and log in again with keyring storage
+	@$(agent_github) relogin
+
+agent-github-protect: ## Require pull requests and block force pushes on the project's default branch: make agent-github-protect PROJECT=runway
+	@test -n "$(PROJECT)" || { echo "usage: make agent-github-protect PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
+	@$(agent_github) protect "$(PROJECT)"
+
+agent-github-check: ## [read-only] Check that each agent token reaches only its repo and that gh keeps no token in hosts.yml
+	@$(agent_github) check
+
 ##@ Maintain
 
 update: ## [sudo] Upgrade pacman and AUR packages
