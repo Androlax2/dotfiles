@@ -6,6 +6,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd('waybar > "$XDG_RUNTIME_DIR/waybar.log" 2>&1')
     hl.exec_cmd("swaync")
     hl.exec_cmd("~/.config/osd/osd.py")
+    hl.exec_cmd("claude-sessions prepare")
     hl.exec_cmd("~/.config/mpris-card/card.py") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")

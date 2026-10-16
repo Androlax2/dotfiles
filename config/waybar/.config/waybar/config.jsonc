@@ -12,16 +12,22 @@
 
   "modules-left": ["hyprland/workspaces", "custom/mpris"],
   "modules-center": ["clock", "clock#date", "image#cal-icon", "custom/calendar"],
-  "modules-right": [
+  // Two islands on the right: Claude (usage on its workspace, the sessions chip everywhere), then the
+  // rest. The .modules-right container itself is transparent; each group draws its own island.
+  "modules-right": ["group/claude", "group/right"],
+
+  "group/claude": {
+    "orientation": "inherit",
+    "modules": ["custom/claude-5h", "custom/claude-7d", "custom/claude-sessions"]
+  },
+
+  "group/right": {
+    "orientation": "inherit",
+    "modules": [
     "custom/recording",
     "hyprland/submap",
     "custom/hdr",
     "custom/hyprsunset",
-    "image#claude-icon",
-    "image#claude-5h-icon",
-    "custom/claude-5h",
-    "image#claude-7d-icon",
-    "custom/claude-7d",
     "image#updates-icon",
     "custom/updates",
     "image#jobpilot-icon",
@@ -39,8 +45,10 @@
     "wireplumber",
     "image#notifications-icon",
     "image#keys-icon",
-    "custom/audio-listener"
-  ],
+    "custom/audio-listener",
+    "custom/workspace-listener"
+    ]
+  },
 
   // ---- left ---------------------------------------------------------------
   // Now-playing island, 8 px after the workspaces. playerctld picks the last active
@@ -64,11 +72,12 @@
       "3": "󰖟",
       "4": "󰉖",
       "5": "󰮃",
-      "6": "󱓟",
-      "7": "󰋋",
+      "6": "󰚩",
+      "7": "󱓟",
+      "8": "󰋋",
       "default": "󰅩"
     },
-    "persistent-workspaces": { "*": [1, 2, 3, 4, 5] },
+    "persistent-workspaces": { "*": [1, 2, 3, 4, 5, 6] },
     "sort-by-number": true,
     // No on-click "activate": Waybar sends the classic "dispatch workspace N", which Hyprland rejects under the Lua config.
     "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
@@ -168,26 +177,25 @@
     "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
   },
 
-  // ---- right: Claude usage. The asterisk marks the group, then clock = current 5-hour window and
-  // calendar = 7-day window, each value coloured by its own threshold (orange at 70 %, red at 90 %).
-  // One script serves both, caching the response so the endpoint /usage reads is polled once per 5 min.
-  // Click opens the usage page on claude.ai.
-  "image#claude-icon": {
-    "path": "/home/theo/.config/waybar/icons/claude.svg",
-    "size": 14,
-    "interval": 3600,
-    "tooltip": false,
-    "on-click": "xdg-open https://claude.ai/settings/usage"
+  // ---- Claude island: sessions chip, on every workspace: ● working  ○ waiting  ! needs you; a dim
+  // robot glyph with no session so the island never shows empty. ~/.config/osd/osd.py rewrites $XDG_RUNTIME_DIR/claude-sessions.json and sends
+  // RTMIN+16 on every change; the interval only refreshes the ages in the tooltip. Click opens the
+  // most urgent session in the manager.
+  "custom/claude-sessions": {
+    "exec": "~/.config/waybar/scripts/claude-sessions.sh",
+    "return-type": "json",
+    "interval": 60,
+    "signal": 16,
+    "format": "{}",
+    "escape": false,
+    "on-click": "osd-show focus-next"
   },
 
-  "image#claude-5h-icon": {
-    "path": "/home/theo/.config/waybar/icons/clock.svg",
-    "size": 14,
-    "interval": 3600,
-    "tooltip": false,
-    "on-click": "xdg-open https://claude.ai/settings/usage"
-  },
-
+  // ---- Claude island: usage, only while workspace 6 is active (scripts/on-claude-workspace.sh;
+  // custom/workspace-listener sends RTMIN+15 on every workspace switch). Clock glyph = current 5-hour
+  // window, calendar glyph = 7-day window, each value coloured by its own threshold (orange at 70 %,
+  // red at 90 %). The glyphs are in the text so they hide with the values. One script serves both,
+  // caching the response so the endpoint /usage reads is polled once per 5 min. Click opens claude.ai.
   "custom/claude-5h": {
     "exec": "~/.config/waybar/scripts/claude-usage.sh five_hour",
     "return-type": "json",
@@ -195,14 +203,6 @@
     "signal": 15,
     "format": "{}",
     "escape": false,
-    "on-click": "xdg-open https://claude.ai/settings/usage"
-  },
-
-  "image#claude-7d-icon": {
-    "path": "/home/theo/.config/waybar/icons/calendar.svg",
-    "size": 14,
-    "interval": 3600,
-    "tooltip": false,
     "on-click": "xdg-open https://claude.ai/settings/usage"
   },
 
@@ -342,6 +342,12 @@
   // Never renders text; it only forwards pactl sink events to the volume icon as SIGRTMIN+8.
   "custom/audio-listener": {
     "exec": "~/.config/waybar/scripts/audio-listener.sh",
+    "tooltip": false
+  },
+
+  // Never renders text; it forwards Hyprland workspace switches to the Claude usage modules as SIGRTMIN+15.
+  "custom/workspace-listener": {
+    "exec": "~/.config/waybar/scripts/workspace-listener.sh",
     "tooltip": false
   },
 

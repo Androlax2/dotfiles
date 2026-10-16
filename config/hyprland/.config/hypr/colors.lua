@@ -8,6 +8,7 @@ return {
     fgDark = "a9b1d6",
     comment = "565f89",
     blue = "7aa2f7",
+    yellow = "e0af68",
     magenta = "bb9af7",
     red = "f7768e",
 }

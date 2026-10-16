@@ -24,14 +24,21 @@ window#waybar {
     color: @textActive;
 }
 
-/* ===== ISLANDS: one per module group ===== */
+/* ===== ISLANDS: one per module group; the right slot holds two (group/claude, group/right) ===== */
 .modules-left,
 .modules-center,
-.modules-right {
+#claude,
+#right {
     background: alpha(@bg, 0.85);
     border: 1px solid @line;
     border-radius: 10px;
     padding: 0 10px;
+}
+
+.modules-right {
+    background: transparent;
+    border: none;
+    padding: 0;
 }
 
 /* Workspaces only: the chips sit 4 px from the island edge. */
@@ -41,6 +48,11 @@ window#waybar {
 
 .modules-center {
     padding: 0 12px;
+}
+
+/* The Claude island keeps 8 px of air before the main right island. */
+#claude {
+    margin-right: 8px;
 }
 
 /* ===== DIVIDERS: sep.svg is 12 x 12 with a 1 px line in the middle, 5.5 px of air built in ===== */
@@ -138,7 +150,8 @@ window#waybar {
 #submap,
 #hyprland-submap,
 #custom-hdr,
-#custom-hyprsunset {
+#custom-hyprsunset,
+#custom-claude-sessions {
     min-height: 24px;
     padding: 0 7px;
     margin: 3px 10px 3px 0;
@@ -162,11 +175,17 @@ window#waybar {
     color: @green;
 }
 
+/* Claude sessions: the counts carry their own colours, the chip tint follows the most urgent state. */
+#custom-claude-sessions.waiting {
+    background: alpha(@yellow, 0.16);
+}
+
+#custom-claude-sessions.needs-you {
+    background: alpha(@red, 0.16);
+}
+
 /* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
 #image.updates-icon,
-#image.claude-icon,
-#image.claude-5h-icon,
-#image.claude-7d-icon,
 #image.jobpilot-icon,
 #image.cpu-icon,
 #image.gpu-icon,
@@ -203,12 +222,23 @@ window#waybar {
     color: @orange;
 }
 
-/* Claude usage: clock = 5-hour window, calendar = 7-day window, each value coloured by its own threshold. */
+/* Claude usage (Claude island, Claude workspace only): clock glyph = 5-hour window, calendar glyph =
+   7-day window, each value coloured by its own threshold. */
 #custom-claude-5h,
 #custom-claude-7d {
     color: @purple;
     font-weight: 600;
     margin-right: 10px;
+}
+
+/* Last module of its island: no trailing gap. */
+#custom-claude-sessions {
+    margin-right: 0;
+}
+
+#custom-claude-sessions.idle {
+    background: transparent;
+    color: @textDim;
 }
 
 #custom-claude-5h.warning,
@@ -309,7 +339,8 @@ window#waybar {
     color: @text;
 }
 
-#custom-audio-listener {
+#custom-audio-listener,
+#custom-workspace-listener {
     margin: 0;
     padding: 0;
     font-size: 0;

@@ -22,6 +22,15 @@ set -gx PATH "$HOME/.local/bin/greywall-agents" $PATH
 
 function claude
     set -lx CLAUDE_AUTO_RETRY_ACTIVE 1
+    # An interactive `claude` from any terminal opens in the session manager on its workspace
+    # (~/.local/bin/claude-sessions). The manager's own viewer pane (CLAUDE_SESSIONS_INSIDE),
+    # print mode and the informational flags run claude right here.
+    if test -z "$CLAUDE_SESSIONS_INSIDE"; and isatty stdin; and isatty stdout
+        and not contains -- -p $argv; and not contains -- --print $argv
+        and not contains -- --help $argv; and not contains -- --version $argv
+        claude-sessions new (pwd) $argv; and claude-sessions show
+        return
+    end
     node (npm root -g)/claude-auto-retry/src/launcher.js $argv
 end
 

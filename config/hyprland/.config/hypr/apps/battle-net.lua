@@ -10,7 +10,7 @@ hl.window_rule({ match = { class = STEAM_APP, title = "^(Battle\\.net)$" }, work
 -- The game gets the workspace Star Citizen uses and every gaming rule at once.
 hl.window_rule({
     match = { class = STEAM_APP, title = "^(World of Warcraft)$" },
-    workspace = "6",
+    workspace = "7",
     fullscreen = true,
     opacity = "1 1",
     no_blur = true,

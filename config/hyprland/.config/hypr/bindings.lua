@@ -76,6 +76,9 @@ for i = 1, 10 do
     bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }), { description = "Move window to workspace " .. i })
 end
 
+-- The Claude session manager: a sidebar of every session plus the selected one (~/.local/bin/claude-sessions).
+bind(mainMod .. " + C", hl.dsp.exec_cmd("claude-sessions show"), { description = "Claude sessions" })
+
 -- The dropdown terminal and Apple Music scratchpads are bound in scratchpads.lua.
 bind(mainMod .. " + SHIFT + S", hl.dsp.workspace.toggle_special("magic"), { description = "Scratch workspace" })
 -- hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))

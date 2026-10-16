@@ -1,24 +1,36 @@
 #!/usr/bin/env python3
-"""On-screen display: a volume/brightness island and per-session Claude banners.
+"""On-screen display: a volume/brightness island, Claude banners and the Claude session registry.
 
 Bottom centre: a 320x36 island for volume, mute and brightness changes.
-Top centre: a stack of banners, one per Claude Code session, raised by
-~/.claude/hooks/notify.sh. Both are GTK4 + layer shell windows, namespace "osd".
+Top centre: a stack of banners, one per Claude Code session. Both are GTK4 + layer
+shell windows, namespace "osd".
 
-Reads one command per line from $XDG_RUNTIME_DIR/osd.fifo, written by osd-show:
+Reads one command per line from $XDG_RUNTIME_DIR/osd.fifo, written by osd-show and
+by the Claude Code hook ~/.claude/hooks/session-state.sh:
 
     volume <0-100>          yellow line, icon by level
     mute                    mute icon, empty line
     brightness <0-100>      blue line, sun icon
-    banner <json>           raise (or replace) the banner of one session
-    banner-clear <session>  drop that session's banner
+    session <json>          a Claude session's state report (see below)
+    sessions-clear          forget every session (claude-sessions reset)
+    focus-next              show the most urgent Claude session in the manager
 
-The banner JSON carries session, title, message, sticky, and the focus target of
-the session: kitty_pid, kitty_window, kitty_listen and tmux_pane, each optional.
-A sticky banner stays until cleared or clicked; the others hide after 6 s.
-Clicking a banner focuses the session's kitty window through Hyprland, its kitty
-tab through kitty remote control, and its tmux pane, then drops the banner.
+A session report carries session, state (working | waiting | needs-you | gone),
+project, and optionally cwd, task, message, sticky and the focus target of the
+session's window: kitty_pid, kitty_window, kitty_listen, tmux_pane. The kitty
+fields are only a fallback: claude-auto-retry keeps a session alive in tmux when
+its kitty window closes, so the environment the hook sees can name a window that
+is gone. The registry asks tmux which client is attached to the pane and reads
+that client's kitty identity instead. A message raises a banner (sticky stays
+until the session reports again or it is clicked); no message drops it. The registry mirrors every change to
+$XDG_RUNTIME_DIR/claude-sessions.json for the waybar chip (signal RTMIN+16) and
+the claude-sessions manager, and to Hyprland through `hyprctl eval`
+(CLAUDE_WINDOW_STATE in ~/.config/hypr/apps/claude.lua), which colours the
+session's terminal border by state. Hooks run inside greywall with no Hyprland or
+tmux socket, so all of that has to happen here.
 
+Clicking a banner shows that session in the manager (`claude-sessions show`) and
+drops the banner.
 The island hides 1.2 s after the last command. Icons are the bar's SVGs.
 """
 import ctypes
@@ -28,6 +40,7 @@ import re
 import stat
 import subprocess
 import sys
+import time
 
 # The layer-shell library must be loaded before GTK opens the Wayland display.
 ctypes.CDLL("libgtk4-layer-shell.so", mode=ctypes.RTLD_GLOBAL)
@@ -41,7 +54,8 @@ from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell as LayerShell, Pango  #
 
 CONFIG_DIR = os.path.dirname(os.path.realpath(__file__))
 ICON_DIR = os.path.expanduser("~/.config/waybar/icons")
-FIFO_PATH = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "osd.fifo")
+RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+FIFO_PATH = os.path.join(RUNTIME_DIR, "osd.fifo")
 HIDE_AFTER_MS = 1200
 WIDTH, HEIGHT = 320, 36
 ISLAND_PADDING, ICON_SIZE, ROW_SPACING = 14, 18, 12
@@ -51,7 +65,17 @@ BANNER_HIDE_AFTER_MS = 6000
 BANNER_MAX_CHARS = 64
 BANNER_SPACING = 8
 BANNER_ICON_SIZE = 22
-FOCUS_COMMAND_TIMEOUT_S = 3
+COMMAND_TIMEOUT_S = 3
+
+SESSIONS_SNAPSHOT_PATH = os.path.join(RUNTIME_DIR, "claude-sessions.json")
+WAYBAR_SESSIONS_SIGNAL = "-RTMIN+16"
+SESSION_PRUNE_INTERVAL_S = 5
+STATE_URGENCY = {"working": 0, "waiting": 1, "needs-you": 2}
+TARGET_FIELDS = ("kitty_pid", "kitty_window", "kitty_listen", "tmux_pane")
+# What Claude Code prints at the bottom of its pane while busy, and while a permission dialog is open.
+BUSY_MARKERS = ("esc to interrupt", "to interrupt and send")
+PERMISSION_MARKER = "Do you want to proceed?"
+PANE_TAIL_LINES = 20
 
 TMUX_PANE_PATTERN = re.compile(r"^%\d+$")
 KITTY_LISTEN_PATTERN = re.compile(r"^unix:[@/][\w./@-]+$")
@@ -83,49 +107,134 @@ def volume_icon(level: int) -> str:
     return "volume-high.svg"
 
 
-def parse_banner(raw: str) -> dict:
-    """Validate a banner command; the focus fields end up in shell and Lua, so they are strict."""
-    banner = json.loads(raw)
-    if not isinstance(banner, dict):
-        raise ValueError("banner is not an object")
-    for key in ("session", "title", "message"):
-        if not isinstance(banner.get(key), str) or not banner[key]:
-            raise ValueError(f"banner.{key} missing")
-    banner["sticky"] = bool(banner.get("sticky", False))
+def validate_focus_target(fields: dict):
+    """The focus fields end up in shell arguments and a Lua string, so they are strict."""
     for key in ("kitty_pid", "kitty_window"):
-        if key in banner and not str(banner[key]).isdigit():
-            raise ValueError(f"banner.{key} is not a number")
-    if "kitty_listen" in banner and not KITTY_LISTEN_PATTERN.match(str(banner["kitty_listen"])):
-        raise ValueError("banner.kitty_listen is not a unix socket address")
-    if "tmux_pane" in banner and not TMUX_PANE_PATTERN.match(str(banner["tmux_pane"])):
-        raise ValueError("banner.tmux_pane is not a pane id")
-    return banner
+        if key in fields and not str(fields[key]).isdigit():
+            raise ValueError(f"{key} is not a number")
+    if "kitty_listen" in fields and not KITTY_LISTEN_PATTERN.match(str(fields["kitty_listen"])):
+        raise ValueError("kitty_listen is not a unix socket address")
+    if "tmux_pane" in fields and not TMUX_PANE_PATTERN.match(str(fields["tmux_pane"])):
+        raise ValueError("tmux_pane is not a pane id")
 
 
-def focus_commands(target: dict) -> list[list[str]]:
-    commands = []
-    if "kitty_pid" in target:
-        commands.append(["hyprctl", "dispatch", f'hl.dsp.focus({{ window = "pid:{target["kitty_pid"]}" }})'])
-    if "kitty_listen" in target and "kitty_window" in target:
-        commands.append([
-            "kitten", "@", "--to", target["kitty_listen"],
-            "focus-window", "--match", f"id:{target['kitty_window']}",
-        ])
-    if "tmux_pane" in target:
-        commands.append(["tmux", "select-window", "-t", target["tmux_pane"]])
-        commands.append(["tmux", "select-pane", "-t", target["tmux_pane"]])
-    return commands
+def parse_session(raw: str) -> dict:
+    report = json.loads(raw)
+    if not isinstance(report, dict):
+        raise ValueError("session report is not an object")
+    for key in ("session", "state", "project"):
+        if not isinstance(report.get(key), str) or not report[key]:
+            raise ValueError(f"session.{key} missing")
+    if report["state"] not in STATE_URGENCY and report["state"] != "gone":
+        raise ValueError(f"session.state {report['state']!r} unknown")
+    for key in ("cwd", "task", "message"):
+        if key in report and not isinstance(report[key], str):
+            raise ValueError(f"session.{key} is not a string")
+    report["sticky"] = bool(report.get("sticky", False))
+    validate_focus_target(report)
+    return report
 
 
-def focus_session(target: dict):
-    for command in focus_commands(target):
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, timeout=FOCUS_COMMAND_TIMEOUT_S)
-        except (OSError, subprocess.TimeoutExpired) as error:
-            print(f"osd: {command[0]} failed: {error}", file=sys.stderr)
+def tmux_output(arguments: list[str]):
+    try:
+        result = subprocess.run(["tmux", *arguments], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def process_environment(pid: str) -> dict[str, str]:
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as environ:
+            entries = environ.read().split(b"\0")
+    except OSError:
+        return {}
+    pairs = (entry.decode(errors="replace").partition("=") for entry in entries if entry)
+    return {name: value for name, _, value in pairs}
+
+
+def process_is_alive(pid: str) -> bool:
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        pass
+    return True
+
+
+def without_dead_kitty(target: dict) -> dict:
+    """A KITTY_PID inherited from a tmux server's environment can name a long closed terminal."""
+    if target.get("kitty_pid") and not process_is_alive(target["kitty_pid"]):
+        return {key: value for key, value in target.items() if not key.startswith("kitty_")}
+    return target
+
+
+def claude_panes() -> set[str]:
+    """The tmux panes in which a claude process is running right now, read from their environment."""
+    try:
+        result = subprocess.run(["pgrep", "-x", "claude"], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    panes = set()
+    for pid in result.stdout.split():
+        pane = process_environment(pid).get("TMUX_PANE")
+        if pane:
+            panes.add(pane)
+    return panes
+
+
+def resolve_target(target: dict) -> dict:
+    """The kitty window currently attached to the session's tmux pane, or the reported one.
+
+    The attached tmux client inherited KITTY_* from the shell of the window it runs in, so
+    its environment names the live window. With no client attached yet (the launcher
+    attaches right after creating the session) the hook's values are the right ones."""
+    tmux_pane = target.get("tmux_pane")
+    if not tmux_pane:
+        return without_dead_kitty(target)
+    session_name = tmux_output(["display-message", "-p", "-t", tmux_pane, "#{session_name}"])
+    if not session_name:
+        return without_dead_kitty(target)
+    client_pids = (tmux_output(["list-clients", "-t", session_name.strip(), "-F", "#{client_pid}"]) or "").split()
+    for client_pid in client_pids:
+        environment = process_environment(client_pid)
+        if not environment.get("KITTY_PID") or not process_is_alive(environment["KITTY_PID"]):
             continue
-        if result.returncode != 0:
-            print(f"osd: {' '.join(command)} exited {result.returncode}: {result.stderr.strip()}", file=sys.stderr)
+        resolved = {"tmux_pane": tmux_pane, "kitty_pid": environment["KITTY_PID"]}
+        for key, variable in (("kitty_window", "KITTY_WINDOW_ID"), ("kitty_listen", "KITTY_LISTEN_ON")):
+            if environment.get(variable):
+                resolved[key] = environment[variable]
+        try:
+            validate_focus_target(resolved)
+        except ValueError as error:
+            print(f"osd: ignoring tmux client {client_pid}: {error}", file=sys.stderr)
+            continue
+        return resolved
+    return without_dead_kitty(target)
+
+
+def run_command(command: list[str], ok_exit_codes=(0,)) -> bool:
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f"osd: {command[0]} failed: {error}", file=sys.stderr)
+        return False
+    if result.returncode not in ok_exit_codes:
+        output = (result.stdout + result.stderr).strip()
+        print(f"osd: {' '.join(command)} exited {result.returncode}: {output}", file=sys.stderr)
+        return False
+    return True
+
+
+def hyprctl_eval(expression: str) -> bool:
+    return run_command(["hyprctl", "eval", expression])
+
+
+def show_in_manager(session: str) -> bool:
+    return run_command(["claude-sessions", "show", session])
 
 
 def build_banner_row(banner: dict) -> Gtk.Box:
@@ -160,7 +269,6 @@ class BannerStack:
         self.column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=BANNER_SPACING)
         self.window.set_child(self.column)
         self.rows: dict[str, Gtk.Box] = {}
-        self.targets: dict[str, dict] = {}
         self.timers: dict[str, int] = {}
 
     def raise_banner(self, banner: dict):
@@ -172,7 +280,6 @@ class BannerStack:
         row.add_controller(click)
         self.column.append(row)
         self.rows[session] = row
-        self.targets[session] = banner
         if not banner["sticky"]:
             self.timers[session] = GLib.timeout_add(BANNER_HIDE_AFTER_MS, self.expire, session)
         self.window.present()
@@ -189,14 +296,185 @@ class BannerStack:
         timer = self.timers.pop(session, 0)
         if timer:
             GLib.source_remove(timer)
-        self.targets.pop(session, None)
         self.column.remove(row)
         if not self.rows:
             self.window.set_visible(False)
 
     def activate(self, session: str):
-        focus_session(self.targets.get(session, {}))
+        show_in_manager(session)
         self.drop(session)
+
+
+class SessionRegistry:
+    """Every live Claude session, keyed by session id, mirrored to the snapshot file and to Hyprland."""
+
+    def __init__(self, banners: BannerStack):
+        self.banners = banners
+        self.sessions: dict[str, dict] = {}
+        self.load_snapshot()
+        GLib.timeout_add_seconds(SESSION_PRUNE_INTERVAL_S, self.prune_dead)
+
+    def update(self, report: dict):
+        session = report["session"]
+        if report["state"] == "gone":
+            self.remove(session)
+            return
+        entry = self.sessions.get(session)
+        previous_state = entry["state"] if entry else None
+        if entry is None:
+            entry = {"state": report["state"], "project": report["project"], "cwd": "", "task": "",
+                     "since": time.time(), "target": {}}
+            self.sessions[session] = entry
+            changed = True
+        else:
+            changed = False
+        for key in ("state", "project", "cwd", "task"):
+            if key in report and entry[key] != report[key]:
+                entry[key] = report[key]
+                changed = True
+        previous_pid = entry["target"].get("kitty_pid")
+        reported_target = {key: str(report[key]) for key in TARGET_FIELDS if key in report}
+        entry["target"] = resolve_target({**entry["target"], **reported_target})
+        kitty_pid = entry["target"].get("kitty_pid")
+        self.drop_pane_predecessors(session, entry["target"].get("tmux_pane"))
+        if previous_state != entry["state"]:
+            entry["since"] = time.time()
+
+        if "message" in report:
+            self.banners.raise_banner({"session": session, "title": f"Claude · {entry['project']}",
+                                       "message": report["message"], "sticky": report["sticky"]})
+        else:
+            self.banners.drop(session)
+
+        # The window a session moved away from (tmux session re-attached elsewhere) loses its
+        # tag unless another session still lives there; the new one is tagged.
+        window_changed = kitty_pid != previous_pid
+        if window_changed and previous_pid:
+            self.apply_window_state(previous_pid)
+        if kitty_pid and (window_changed or previous_state != entry["state"]):
+            self.apply_window_state(kitty_pid)
+        if changed or window_changed:
+            self.publish()
+
+    def drop_pane_predecessors(self, session: str, tmux_pane):
+        """A pane runs one Claude at a time, but /clear, --resume and forks give it a new session
+        id without a SessionEnd for the old one: the previous ids of the same pane are gone."""
+        if not tmux_pane:
+            return
+        for other, entry in list(self.sessions.items()):
+            if other != session and entry["target"].get("tmux_pane") == tmux_pane:
+                print(f"osd: session {other} ({entry['project']}) replaced in {tmux_pane} by {session}", file=sys.stderr)
+                self.remove(other)
+
+    def remove(self, session: str):
+        entry = self.sessions.pop(session, None)
+        if entry is None:
+            return
+        self.banners.drop(session)
+        kitty_pid = entry["target"].get("kitty_pid")
+        if kitty_pid:
+            self.apply_window_state(kitty_pid)
+        self.publish()
+
+    def window_state(self, kitty_pid: str):
+        """Most urgent state among the sessions sharing one kitty window (several tmux windows)."""
+        states = [entry["state"] for entry in self.sessions.values() if entry["target"].get("kitty_pid") == kitty_pid]
+        if not states:
+            return None
+        return max(states, key=STATE_URGENCY.__getitem__)
+
+    def apply_window_state(self, kitty_pid: str):
+        state = self.window_state(kitty_pid)
+        hyprctl_eval(f"CLAUDE_WINDOW_STATE({kitty_pid}, {json.dumps(state) if state else 'nil'})")
+
+    def publish(self):
+        rows = [
+            {"session": session, "state": entry["state"], "project": entry["project"], "cwd": entry["cwd"],
+             "task": entry["task"], "since": int(entry["since"]), **entry["target"]}
+            for session, entry in self.sessions.items()
+        ]
+        rows.sort(key=lambda row: (-STATE_URGENCY[row["state"]], row["since"]))
+        temporary_path = SESSIONS_SNAPSHOT_PATH + ".tmp"
+        with open(temporary_path, "w") as snapshot:
+            json.dump({"sessions": rows}, snapshot)
+        os.replace(temporary_path, SESSIONS_SNAPSHOT_PATH)
+        # Exit 1 is "no waybar running", not an error.
+        run_command(["pkill", WAYBAR_SESSIONS_SIGNAL, "waybar"], ok_exit_codes=(0, 1))
+
+    def load_snapshot(self):
+        """A daemon restart keeps the sessions; the next hook event refreshes their state."""
+        try:
+            with open(SESSIONS_SNAPSHOT_PATH) as snapshot:
+                rows = json.load(snapshot)["sessions"]
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            print(f"osd: ignoring snapshot {SESSIONS_SNAPSHOT_PATH}: {error}", file=sys.stderr)
+            return
+        for row in rows:
+            try:
+                target = {key: str(row[key]) for key in TARGET_FIELDS if row.get(key)}
+                validate_focus_target(target)
+                if row["state"] not in STATE_URGENCY:
+                    raise ValueError(f"state {row['state']!r} unknown")
+                self.sessions[row["session"]] = {
+                    "state": row["state"], "project": row["project"], "cwd": row.get("cwd", ""),
+                    "task": row.get("task", ""), "since": row.get("since", time.time()),
+                    "target": resolve_target(target),
+                }
+            except (KeyError, TypeError, ValueError) as error:
+                print(f"osd: skipping snapshot row {row!r}: {error}", file=sys.stderr)
+        self.prune_dead()
+        for kitty_pid in {entry["target"].get("kitty_pid") for entry in self.sessions.values()} - {None}:
+            self.apply_window_state(kitty_pid)
+        self.publish()
+
+    def is_dead(self, target: dict, live_panes: set[str]) -> bool:
+        """A session with a pane is alive while a claude process runs in that pane (pane ids
+        outlive their programs: a respawned pane keeps its id). Without a pane, the terminal decides."""
+        tmux_pane = target.get("tmux_pane")
+        if tmux_pane:
+            return tmux_pane not in live_panes
+        kitty_pid = target.get("kitty_pid")
+        return bool(kitty_pid) and not process_is_alive(kitty_pid)
+
+    def prune_dead(self):
+        live_panes = claude_panes()
+        for session, entry in list(self.sessions.items()):
+            if self.is_dead(entry["target"], live_panes):
+                print(f"osd: session {session} ({entry['project']}) is gone, dropping it", file=sys.stderr)
+                self.remove(session)
+        self.reconcile_with_panes()
+        return GLib.SOURCE_CONTINUE
+
+    def reconcile_with_panes(self):
+        """Hooks say "needs you" when a permission dialog shows and nothing until the tool ends; in auto
+        mode the classifier's thinking time trips that too. The pane shows whether Claude is busy."""
+        for session, entry in self.sessions.items():
+            tmux_pane = entry["target"].get("tmux_pane")
+            if entry["state"] not in ("needs-you", "waiting") or not tmux_pane:
+                continue
+            tail = tmux_output(["capture-pane", "-p", "-t", tmux_pane, "-S", f"-{PANE_TAIL_LINES}"]) or ""
+            if PERMISSION_MARKER in tail or not any(marker in tail for marker in BUSY_MARKERS):
+                continue
+            self.update({"session": session, "state": "working", "project": entry["project"], "sticky": False})
+
+    def clear(self):
+        for session in list(self.sessions):
+            self.remove(session)
+
+    def focus_most_urgent(self):
+        """Show the most urgent session in the manager; with none, just open the manager."""
+        candidates = [
+            (STATE_URGENCY[entry["state"]], -entry["since"], session)
+            for session, entry in self.sessions.items() if entry["target"].get("tmux_pane")
+        ]
+        if not candidates:
+            run_command(["claude-sessions", "show"])
+            return
+        session = max(candidates)[2]
+        show_in_manager(session)
+        self.banners.drop(session)
 
 
 class Osd:
@@ -205,6 +483,7 @@ class Osd:
         self.window.set_default_size(WIDTH, HEIGHT)
         self.window.set_size_request(WIDTH, HEIGHT)
         self.banners = BannerStack(app)
+        self.registry = SessionRegistry(self.banners)
 
         self.icon = Gtk.Image()
         self.icon.set_pixel_size(ICON_SIZE)
@@ -244,14 +523,17 @@ class Osd:
         command, _, rest = line.partition(" ")
         if not command:
             return
-        if command == "banner":
+        if command == "session":
             try:
-                self.banners.raise_banner(parse_banner(rest))
+                self.registry.update(parse_session(rest))
             except ValueError as error:
-                print(f"osd: bad banner {rest!r}: {error}", file=sys.stderr)
+                print(f"osd: bad session {rest!r}: {error}", file=sys.stderr)
             return
-        if command == "banner-clear":
-            self.banners.drop(rest.strip())
+        if command == "focus-next":
+            self.registry.focus_most_urgent()
+            return
+        if command == "sessions-clear":
+            self.registry.clear()
             return
         try:
             level = max(0, min(100, int(rest))) if rest else 0

@@ -8,6 +8,7 @@ return {
     fgDark = "{{fgDark_hex}}",
     comment = "{{comment_hex}}",
     blue = "{{blue_hex}}",
+    yellow = "{{yellow_hex}}",
     magenta = "{{magenta_hex}}",
     red = "{{red_hex}}",
 }

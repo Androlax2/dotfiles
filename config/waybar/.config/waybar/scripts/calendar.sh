@@ -23,8 +23,10 @@ escape_json() {
     sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+# khal interleaves day headers ("Today, …", "Tomorrow, …" once the window crosses midnight) with the
+# events, and lists all-day events with a bare date as start. Keep the first timed event line only.
 next_event=$(khal list now "${HOURS_AHEAD}h" --format "{start}|{end}|{title}" 2>/dev/null \
-    | grep -v -e "^error" -e "^Today" -e "^$" | head -1)
+    | grep -E '^[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}\|' | head -1)
 
 # The calendar icon (image#cal-icon) shows while this marker is non-empty; poke it on change.
 marker="${XDG_RUNTIME_DIR:-/tmp}/waybar-next-event"

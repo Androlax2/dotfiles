@@ -24,6 +24,7 @@ hl.window_rule({
 require("apps/pip")
 require("apps/browser")
 require("apps/terminals")
+require("apps/claude")
 require("apps/webcam-overlay")
 require("apps/bitwarden")
 require("apps/jetbrains")
