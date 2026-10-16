@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
+set -euo pipefail
+
 # Chrome writes its crash reports under the config dir even headless; give it one the sandbox allows.
 export CHROME_CONFIG_HOME="$HOME/.cache/chrome-sandbox"
 mkdir -p "$CHROME_CONFIG_HOME"
-exec /home/theo/.local/bin/greywall --allow-path "$CHROME_CONFIG_HOME" -- /home/theo/.opencode/bin/opencode "$@"
-#/home/theo/.opencode/bin/opencode "$@"
+
+# Each Greywall launch has private network/PID namespaces and a private /tmp.
+# Sharing service.json across them makes unreachable servers replace each other.
+# Set only state inside the sandbox; keep the database, config and cache shared.
+# Explicit profile/proxy identity are needed because the command now starts with env.
+exec "$HOME/.local/bin/greywall" --profile opencode --proxy-user opencode \
+    --allow-path "$CHROME_CONFIG_HOME" -- \
+    env XDG_STATE_HOME=/tmp/opencode-greywall-state \
+    "$HOME/.opencode/bin/opencode" "$@"

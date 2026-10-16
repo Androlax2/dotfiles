@@ -17,6 +17,11 @@
     "hyprland/submap",
     "custom/hdr",
     "custom/hyprsunset",
+    "image#claude-icon",
+    "image#claude-5h-icon",
+    "custom/claude-5h",
+    "image#claude-7d-icon",
+    "custom/claude-7d",
     "image#updates-icon",
     "custom/updates",
     "image#jobpilot-icon",
@@ -161,6 +166,54 @@
     "interval": 60,
     "format": "{}",
     "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
+  },
+
+  // ---- right: Claude usage. The asterisk marks the group, then clock = current 5-hour window and
+  // calendar = 7-day window, each value coloured by its own threshold (orange at 70 %, red at 90 %).
+  // One script serves both, caching the response so the endpoint /usage reads is polled once per 5 min.
+  // Click opens the usage page on claude.ai.
+  "image#claude-icon": {
+    "path": "/home/theo/.config/waybar/icons/claude.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "xdg-open https://claude.ai/settings/usage"
+  },
+
+  "image#claude-5h-icon": {
+    "path": "/home/theo/.config/waybar/icons/clock.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "xdg-open https://claude.ai/settings/usage"
+  },
+
+  "custom/claude-5h": {
+    "exec": "~/.config/waybar/scripts/claude-usage.sh five_hour",
+    "return-type": "json",
+    "interval": 300,
+    "signal": 15,
+    "format": "{}",
+    "escape": false,
+    "on-click": "xdg-open https://claude.ai/settings/usage"
+  },
+
+  "image#claude-7d-icon": {
+    "path": "/home/theo/.config/waybar/icons/calendar.svg",
+    "size": 14,
+    "interval": 3600,
+    "tooltip": false,
+    "on-click": "xdg-open https://claude.ai/settings/usage"
+  },
+
+  "custom/claude-7d": {
+    "exec": "~/.config/waybar/scripts/claude-usage.sh seven_day",
+    "return-type": "json",
+    "interval": 300,
+    "signal": 15,
+    "format": "{}",
+    "escape": false,
+    "on-click": "xdg-open https://claude.ai/settings/usage"
   },
 
   // ---- right: jobpilot. Sent automatically today, then (N) awaiting manual intervention; the class tracks the hourly

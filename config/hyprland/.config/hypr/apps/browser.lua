@@ -9,6 +9,7 @@ hl.window_rule({ match = { tag = "chromium-based-browser" }, tile = true })
 -- Only a subtle opacity change, but not for video sites
 hl.window_rule({ match = { tag = "chromium-based-browser" }, opacity = "1 0.98" })
 hl.window_rule({ match = { tag = "firefox-based-browser" }, opacity = "1 0.98" })
+hl.window_rule({ match = { class = "^zen$" }, opacity = "1 1" })
 
 -- Some video sites should never have opacity applied to them
 hl.window_rule({ match = { initial_title = "((?i)(?:[a-z0-9-]+\\.)*youtube\\.com_/|app\\.zoom\\.us_/wc/home)" }, opacity = "1 1" })

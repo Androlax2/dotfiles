@@ -164,6 +164,9 @@ window#waybar {
 
 /* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
 #image.updates-icon,
+#image.claude-icon,
+#image.claude-5h-icon,
+#image.claude-7d-icon,
 #image.jobpilot-icon,
 #image.cpu-icon,
 #image.gpu-icon,
@@ -198,6 +201,31 @@ window#waybar {
 
 #custom-updates.stale {
     color: @orange;
+}
+
+/* Claude usage: clock = 5-hour window, calendar = 7-day window, each value coloured by its own threshold. */
+#custom-claude-5h,
+#custom-claude-7d {
+    color: @purple;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+#custom-claude-5h.warning,
+#custom-claude-7d.warning {
+    color: @orange;
+}
+
+#custom-claude-5h.critical,
+#custom-claude-7d.critical {
+    color: @red;
+}
+
+#custom-claude-5h.stale,
+#custom-claude-5h.unknown,
+#custom-claude-7d.stale,
+#custom-claude-7d.unknown {
+    color: @comment;
 }
 
 /* jobpilot: several classes can apply at once; later rules win, so the most urgent state is last. */

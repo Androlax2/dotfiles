@@ -13,3 +13,6 @@ config/OpenRGB/.config/OpenRGB/logs/
 
 # IntelliJ project files
 .idea/
+
+# Python bytecode caches: rewritten whenever a script runs (osd.py, card.py, vendored modules)
+__pycache__/
