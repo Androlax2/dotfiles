@@ -118,9 +118,14 @@ here, follow this file and call out the conflict so I can decide.
 
 ## Git / commit hygiene
 
-- Never commit, push, or otherwise write to git on my behalf. Even when
-  the work obviously concludes with a commit, stop and let me run it.
-  This rule has zero exceptions.
+- Never commit, push, or otherwise write to git on my behalf, unless the
+  project's `CLAUDE.md` has a `## Git authorization` section or my current
+  message explicitly allows it. Without either, stop when the work concludes
+  with a commit and let me run it.
+- An authorization covers exactly: creating feature branches, staging,
+  committing, pushing feature branches, and opening pull requests. It never
+  covers committing or pushing to the default branch, force-pushing,
+  merging, rebasing or resetting pushed commits, deleting branches, or tags.
 
 ## When proposing changes
 
@@ -155,13 +160,14 @@ here, follow this file and call out the conflict so I can decide.
 - Never silence a static-analysis error by adding it to a baseline without
   surfacing the alternative of fixing it.
 - Never disable a test to make a suite pass.
-- Never run any git command that writes: no `commit`, `push`, `pull`,
+- Unless git writes are authorized (see Git / commit hygiene), never run
+  any git command that writes: no `commit`, `push`, `pull`,
   `merge`, `rebase`, `reset --hard`, `checkout` of a different branch,
   `stash drop`, `tag`, `cherry-pick`, or anything that changes the working
   tree, the index, the local history, or the remote. Read-only git
   commands (`status`, `diff`, `log`, `show`, `blame`, `ls-files`) are fine.
 - Never stage files (`git add`) without an explicit instruction in the
-  current message.
+  current message or a git authorization in the project's `CLAUDE.md`.
 
 ## Things I've consistently pushed back on
 
@@ -173,3 +179,34 @@ Carry these forward across sessions — don't re-propose unless I bring them up:
   an explicit call site would be clearer.
 - Excessive comments and noise. Code that needs a comment to be readable
   probably needs to be rewritten.
+
+## Sandbox environment (greywall)
+
+Every session runs inside greywall, started by `~/.local/bin/greywall-agents/claude`. A
+SessionStart hook prints what this project has (Docker, GitHub, image paste); trust it over
+assumptions, and tell me when it reports something missing that the task needs.
+
+- **Never probe for escapes** (mounting `/`, reading `/etc/shadow`, sockets you were not given).
+  If you think the sandbox has a gap, say so; I run the checks myself.
+- **Network** goes through greyproxy. A blocked host is a decision for me: name the host and ask
+  me to approve it in the greyproxy dashboard. Never work around a block.
+- **Docker**: each project in `~/IdeaProjects` can have its own rootless daemon
+  (`make -C ~/dotfiles agent-docker-add PROJECT=<name>`). Never use my main Docker. Inside
+  containers, HTTP(S) goes through `http://<name>-docker:proxy@10.0.2.2:43051`, HTTPS needs
+  greyproxy's public CA (`~/.local/share/greyproxy/ca-cert.pem`), and only `--user 0` can write
+  into the project.
+- **GitHub**: a token limited to the project's repository comes from
+  `make -C ~/dotfiles agent-github-token PROJECT=<name>`. Push feature branches only, and only
+  when git writes are authorized (see Git / commit hygiene). `.git/config` is read-only: name the remote
+  and branch explicitly.
+- **TLS**: greyproxy's CA is deliberately not trusted system-wide. Never suggest
+  `greyproxy cert install`; git, curl and PHP already get a bundle from the launcher.
+- **Things I run outside the sandbox** (Composer and pnpm scripts, Makefiles, git hooks,
+  compose files, IDE run configurations): point out every change to them, because they run with
+  my full rights.
+- **Files you cannot reach** (my dotfiles, `/etc`, `~/.local/bin`): write the new version to
+  `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
+  to paste long files into the terminal.
+- **Commands I must run**: one fish block, output piped to `wl-copy` so I can paste it back
+  (`begin; …; end 2>&1 | wl-copy; and echo copied`). Keep `sudo` and interactive commands out of
+  the pipe, and never pipe secrets into the clipboard.
