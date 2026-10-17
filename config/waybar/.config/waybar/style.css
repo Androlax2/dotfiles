@@ -222,16 +222,7 @@ window#waybar {
     color: @orange;
 }
 
-/* Claude usage (Claude island, Claude workspace only): clock glyph = 5-hour window, calendar glyph =
-   7-day window, each value coloured by its own threshold. */
-#custom-claude-5h,
-#custom-claude-7d {
-    color: @purple;
-    font-weight: 600;
-    margin-right: 10px;
-}
-
-/* Last module of its island: no trailing gap. */
+/* The sessions chip is alone in its island: no trailing gap. */
 #custom-claude-sessions {
     margin-right: 0;
 }
@@ -239,23 +230,6 @@ window#waybar {
 #custom-claude-sessions.idle {
     background: transparent;
     color: @textDim;
-}
-
-#custom-claude-5h.warning,
-#custom-claude-7d.warning {
-    color: @orange;
-}
-
-#custom-claude-5h.critical,
-#custom-claude-7d.critical {
-    color: @red;
-}
-
-#custom-claude-5h.stale,
-#custom-claude-5h.unknown,
-#custom-claude-7d.stale,
-#custom-claude-7d.unknown {
-    color: @comment;
 }
 
 /* jobpilot: several classes can apply at once; later rules win, so the most urgent state is last. */

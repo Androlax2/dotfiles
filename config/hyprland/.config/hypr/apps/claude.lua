@@ -14,7 +14,17 @@ hl.window_rule({ match = { tag = "claude-waiting", focus = false }, border_color
 -- Working keeps the theme's focused gradient; only the unfocused border says "a session lives here".
 hl.window_rule({ match = { tag = "claude-working", focus = false }, border_color = "rgba(" .. colors.blue .. "99)" })
 
-hl.workspace_rule({ workspace = tostring(WORKSPACE), persistent = true })
+-- The cockpit: no gaps, border, rounding or shadow, and the bar hides itself here (waybar's
+-- workspace-listener), so the manager fills the screen like an app of its own.
+hl.workspace_rule({
+    workspace = tostring(WORKSPACE),
+    persistent = true,
+    gaps_in = 0,
+    gaps_out = 0,
+    no_border = true,
+    no_rounding = true,
+    no_shadow = true,
+})
 -- Fully opaque: a wall of session output over the wallpaper was hard to read at the global 0.95/0.9.
 hl.window_rule({ match = { class = "^claude-sessions$" }, workspace = tostring(WORKSPACE), opacity = "1 1" })
 

@@ -9,8 +9,9 @@ local inactiveBorderColor = "rgba(" .. colors.bgHighlight .. "99)"
 hl.config({
     general = {
         gaps_in = 5,
-        -- Top gap equals Waybar's 6 px top margin, so the space under the bar matches the space above it.
-        gaps_out = { top = 6, right = 15, bottom = 15, left = 15 },
+        -- The bar reserves no space (waybar "exclusive": false): the top gap holds its 6 px margin,
+        -- its 32 px height and 6 px below, so windows never move when it hides on the Claude workspace.
+        gaps_out = { top = 44, right = 15, bottom = 15, left = 15 },
 
         border_size = 1,
 

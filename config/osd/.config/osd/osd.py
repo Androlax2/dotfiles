@@ -73,6 +73,7 @@ WAYBAR_SESSIONS_SIGNAL = "-RTMIN+16"
 SESSION_PRUNE_INTERVAL_S = 5
 STATE_URGENCY = {"working": 0, "waiting": 1, "needs-you": 2}
 TARGET_FIELDS = ("kitty_pid", "kitty_window", "kitty_listen", "tmux_pane")
+CLAUDE_WORKSPACE = 6  # the cockpit (hypr/apps/claude.lua): its sidebar shows every state, banners are noise there
 # What Claude Code prints at the bottom of its pane: while busy, while a permission dialog is open,
 # and the input prompt line it shows when idle (also shown while busy, so busy wins over it).
 # Busy: the spinner line, "✻ Spinning… (8m 31s · ↓ 29.7k tokens)", or the interrupt hint as a whole
@@ -272,6 +273,14 @@ def hyprctl_eval(expression: str) -> bool:
     return run_command(["hyprctl", "eval", expression])
 
 
+def claude_workspace_active() -> bool:
+    try:
+        result = subprocess.run(["hyprctl", "-j", "activeworkspace"], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
+        return result.returncode == 0 and json.loads(result.stdout).get("id") == CLAUDE_WORKSPACE
+    except (OSError, subprocess.TimeoutExpired, ValueError, AttributeError):
+        return False
+
+
 def show_in_manager(session: str) -> bool:
     return run_command(["claude-sessions", "show", session])
 
@@ -379,11 +388,11 @@ class SessionRegistry:
         if previous_state != entry["state"]:
             entry["since"] = time.time()
 
-        if "message" in report:
+        if "message" not in report:
+            self.banners.drop(session)
+        elif not claude_workspace_active():
             self.banners.raise_banner({"session": session, "title": f"Claude · {entry['project']}",
                                        "message": report["message"], "sticky": report["sticky"]})
-        else:
-            self.banners.drop(session)
 
         # The window a session moved away from (tmux session re-attached elsewhere) loses its
         # tag unless another session still lives there; the new one is tagged.

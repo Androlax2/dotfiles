@@ -6,19 +6,23 @@
   "position": "top",
   "height": 32,
   "margin-top": 6,
+  // No reserved space: hypr/theme.lua keeps the top gap instead, so hiding the bar on the Claude
+  // workspace does not re-lay out the windows (that relayout was an upward slide on every switch).
+  "exclusive": false,
   "margin-left": 15,
   "margin-right": 15,
   "spacing": 0,
 
   "modules-left": ["hyprland/workspaces", "custom/mpris"],
   "modules-center": ["clock", "clock#date", "image#cal-icon", "custom/calendar"],
-  // Two islands on the right: Claude (usage on its workspace, the sessions chip everywhere), then the
-  // rest. The .modules-right container itself is transparent; each group draws its own island.
+  // Two islands on the right: the Claude sessions chip, then the rest. The .modules-right container
+  // itself is transparent; each group draws its own island. On the Claude workspace the whole bar
+  // hides (custom/workspace-listener): usage and details live in the manager's sidebar there.
   "modules-right": ["group/claude", "group/right"],
 
   "group/claude": {
     "orientation": "inherit",
-    "modules": ["custom/claude-5h", "custom/claude-7d", "custom/claude-sessions"]
+    "modules": ["custom/claude-sessions"]
   },
 
   "group/right": {
@@ -191,31 +195,6 @@
     "on-click": "osd-show focus-next"
   },
 
-  // ---- Claude island: usage, only while workspace 6 is active (scripts/on-claude-workspace.sh;
-  // custom/workspace-listener sends RTMIN+15 on every workspace switch). Clock glyph = current 5-hour
-  // window, calendar glyph = 7-day window, each value coloured by its own threshold (orange at 70 %,
-  // red at 90 %). The glyphs are in the text so they hide with the values. One script serves both,
-  // caching the response so the endpoint /usage reads is polled once per 5 min. Click opens claude.ai.
-  "custom/claude-5h": {
-    "exec": "~/.config/waybar/scripts/claude-usage.sh five_hour",
-    "return-type": "json",
-    "interval": 300,
-    "signal": 15,
-    "format": "{}",
-    "escape": false,
-    "on-click": "xdg-open https://claude.ai/settings/usage"
-  },
-
-  "custom/claude-7d": {
-    "exec": "~/.config/waybar/scripts/claude-usage.sh seven_day",
-    "return-type": "json",
-    "interval": 300,
-    "signal": 15,
-    "format": "{}",
-    "escape": false,
-    "on-click": "xdg-open https://claude.ai/settings/usage"
-  },
-
   // ---- right: jobpilot. Sent automatically today, then (N) awaiting manual intervention; the class tracks the hourly
   // jobpilot-apply run (running / error / critical = credentials to refresh). Click opens the triage TUI
   // and refreshes the module on exit; right-click shows the latest run's log (make last).
@@ -345,7 +324,7 @@
     "tooltip": false
   },
 
-  // Never renders text; it forwards Hyprland workspace switches to the Claude usage modules as SIGRTMIN+15.
+  // Never renders text; it hides the bar on the Claude workspace and shows it elsewhere (SIGUSR1).
   "custom/workspace-listener": {
     "exec": "~/.config/waybar/scripts/workspace-listener.sh",
     "tooltip": false
