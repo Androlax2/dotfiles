@@ -213,11 +213,14 @@ agent-docker-status: ## [read-only] List the agent Docker daemons and whether th
 
 agent_github = tools/agent-github.sh
 
-.PHONY: agent-github-token agent-github-relogin agent-github-protect agent-github-check
+.PHONY: agent-github-token agent-github-board-token agent-github-relogin agent-github-protect agent-github-check
 
 agent-github-token: ## Create and store a GitHub token that reaches only this project's repo: make agent-github-token PROJECT=runway
 	@test -n "$(PROJECT)" || { echo "usage: make agent-github-token PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
 	@$(agent_github) token "$(PROJECT)"
+
+agent-github-board-token: ## Create and store the classic token, project scope only, that lets agents read and move Project board cards
+	@$(agent_github) project-board-token
 
 agent-github-relogin: ## Revoke your old GitHub CLI login and log in again with keyring storage
 	@$(agent_github) relogin

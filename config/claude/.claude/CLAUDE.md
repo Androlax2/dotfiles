@@ -124,8 +124,14 @@ here, follow this file and call out the conflict so I can decide.
   with a commit and let me run it.
 - An authorization covers exactly: creating feature branches, staging,
   committing, pushing feature branches, and opening pull requests. It never
-  covers committing or pushing to the default branch, force-pushing,
-  merging, rebasing or resetting pushed commits, deleting branches, or tags.
+  covers committing or pushing to the default branch, force-pushing, local
+  merges, rebasing or resetting pushed commits, deleting branches, or tags.
+- Merging pull requests is covered only when the project's
+  `## Git authorization` section says so in words ("Claude may merge pull
+  requests"), as it stands on the default branch: an edit in the working tree
+  does not count. Then merge only with `gh pr merge` (`gh stack merge` for a
+  stack), only once every required check has passed, never with `--admin` or
+  `--delete-branch`, and never to get past a failing check or a review.
 
 ## When proposing changes
 
@@ -190,11 +196,21 @@ assumptions, and tell me when it reports something missing that the task needs.
   If you think the sandbox has a gap, say so; I run the checks myself.
 - **Network** goes through greyproxy. A blocked host is a decision for me: name the host and ask
   me to approve it in the greyproxy dashboard. Never work around a block.
+- **Command deny list**: greywall's `command.deny` only checks the command greywall launches,
+  as text. Commands run inside a session are not blocked, so never treat an entry there as
+  enforcement or as a reason something is impossible: real limits are GitHub rulesets, token
+  permissions and the rules in this file.
 - **Docker**: each project in `~/IdeaProjects` can have its own rootless daemon
-  (`make -C ~/dotfiles agent-docker-add PROJECT=<name>`). Never use my main Docker. Inside
-  containers, HTTP(S) goes through `http://<name>-docker:proxy@10.0.2.2:43051`, HTTPS needs
-  greyproxy's public CA (`~/.local/share/greyproxy/ca-cert.pem`), and only `--user 0` can write
-  into the project.
+  (`make -C ~/dotfiles agent-docker-add PROJECT=<name>`). Never use my main Docker. The
+  launcher's client config injects the container proxy (`http://<name>-docker:proxy@10.0.2.2:43051`)
+  into every build step and container; don't set it by hand. HTTPS inside them still needs
+  greyproxy's public CA (`~/.local/share/greyproxy/ca-cert.pem`): pass it as an optional build
+  argument, never bake it into images CI or production use. When a vendor Dockerfile has no
+  step that could take it, keep a dev-only copy that adds the argument, record the upstream
+  version it came from, and make the project's check fail when the upstream file changes, so
+  the copy cannot drift silently. Set both `NO_PROXY` and `no_proxy`
+  to include the compose service names, or calls between services go through greyproxy. Only
+  `--user 0` can write into the project.
 - **GitHub**: a token limited to the project's repository comes from
   `make -C ~/dotfiles agent-github-token PROJECT=<name>`. Push feature branches only, and only
   when git writes are authorized (see Git / commit hygiene). `.git/config` is read-only: name the remote
