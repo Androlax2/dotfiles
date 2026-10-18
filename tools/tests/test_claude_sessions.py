@@ -189,6 +189,13 @@ class ManagerTests(Sandbox):
         self.assertEqual(self.tmux_calls("send-keys"), [])
         self.assertFalse(any("secret" in line for line in self.log_lines()))
 
+    def test_the_approval_pane_opens_under_the_session_without_the_cursor_and_closes(self):
+        self.run_manager("approval-pane", "0123456789ab")
+        split = self.tmux_calls("split-window")[-1]
+        self.assertIn("-v -d", split)
+        self.assertTrue(split.endswith("attach-session -t =claude-run-0123456789ab"))
+        self.assertEqual(self.run_manager("approval-pane", "../x").returncode, 1)
+
     def test_zoom_toggles_the_viewer_pane(self):
         self.run_manager("zoom")
         self.assertIn("tmux resize-pane -Z -t %11", self.calls("tmux"))

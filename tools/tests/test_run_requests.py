@@ -146,6 +146,33 @@ class ApproveTests(Sandbox):
         self.assertIn(f"Claude · {self.root.name}", shown)
         self.assertNotIn("Claude · dotfiles", shown)
 
+    def test_it_tells_the_daemon_when_it_needs_theo(self):
+        fifo = self.runtime / "osd.fifo"
+        os.mkfifo(fifo)
+        reader = subprocess.Popen(["cat", str(fifo)], stdout=subprocess.PIPE, text=True)
+        holder = subprocess.Popen(["sleep", "30"], stdout=open(fifo, "w"))
+        self.addCleanup(reader.kill)
+        self.addCleanup(holder.kill)
+        request_id = self.file()
+        self.approve(request_id, "y\n\n")
+        time.sleep(0.2)
+        holder.kill()
+        phases = [line.split()[-1] for line in reader.communicate(timeout=5)[0].splitlines() if line.startswith("run-phase")]
+        self.assertEqual(phases, ["asking", "running", "asking", "done"])
+
+    def test_output_stopped_mid_line_reads_as_a_prompt(self):
+        sys_path = str(BIN)
+        import importlib.machinery, importlib.util
+        loader = importlib.machinery.SourceFileLoader("approve", str(BIN / "claude-run-approve"))
+        module = importlib.util.module_from_spec(importlib.util.spec_from_loader("approve", loader))
+        loader.exec_module(module)
+        log = self.root / "out.log"
+        log.write_text("[sudo] password for theo: ")
+        self.assertTrue(module.waits_for_input(str(log), 2.0))
+        self.assertFalse(module.waits_for_input(str(log), 0.5))
+        log.write_text("built 12 targets\n")
+        self.assertFalse(module.waits_for_input(str(log), 5.0))
+
     def test_stale_and_answered_requests_are_refused(self):
         stale = self.file(age=3600)
         self.assertIn("older than 15 minutes", self.approve(stale, "y\n\n"))

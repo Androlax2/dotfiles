@@ -15,7 +15,9 @@ by the Claude Code hook ~/.claude/hooks/session-state.sh:
     sessions-clear          forget every session (claude-sessions reset)
     focus-next              show the most urgent Claude session in the manager
     run-request <id>        Claude asks to run a command outside the sandbox (ask-to-run): a banner,
-                            and claude-run-approve in a popup over the cockpit or a floating window
+                            and claude-run-approve in a tmux session shown in the cockpit, and in a
+                            floating window while it needs Theo
+    run-phase <id> <phase>  claude-run-approve's asking / running / done
     notice-clear <id>       drop the banner a notice raised
     notice <json>           a sticky banner of its own ({"id", "title", "message"}); a click
                             dismisses it (the session manager's budget alerts)
@@ -234,6 +236,11 @@ class Osd:
         if command == "notice-clear":
             if NOTICE_ID.fullmatch(rest.strip()):
                 self.banners.drop(f"notice:{rest.strip()}")
+            return
+        if command == "run-phase":
+            parts = rest.split()
+            if len(parts) == 2:
+                self.registry.runs.phase_changed(parts[0], parts[1])
             return
         if command == "run-request":
             try:

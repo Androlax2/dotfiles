@@ -514,6 +514,13 @@ class LayoutTests(Sandbox):
         self.assertEqual(calls[0], ("background", "parallel", "/r/runway", "fix-login"))
         self.assertRegex(calls[1][3], r"^parallel-\d{4}$")
 
+    def test_a_repositorys_sessions_are_grouped_under_its_first_card(self):
+        sessions = [{"session": "a", "project": "opusline", "started": 1}, {"session": "b", "project": "runway", "started": 2},
+                    {"session": "c", "project": "opusline", "started": 3}, {"session": "d", "project": "dotfiles", "started": 4, "pinned": True}]
+        grouped = self.sidebar.grouped_by_project(sessions)
+        self.assertEqual([(session["session"], session["follows"]) for session in grouped],
+                         [("d", False), ("a", False), ("c", True), ("b", False)])
+
     def test_the_list_is_ordered_by_priority_across_typed_items_and_issues(self):
         app, _ = self.todo_app()
         app.todos.add("runway", "/r/runway", "normal typed")

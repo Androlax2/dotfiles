@@ -483,36 +483,60 @@ RUN_APPROVE = os.path.expanduser("~/.local/bin/claude-run-approve")
 MANAGER_SESSION = "claude-manager"
 
 
-def launch_approval(request_id: str):
-    """The approval terminal for a request (claude-run-approve): a popup over the cockpit when it
-    shows, else a floating window (apps/claude.lua floats class claude-run). None if it failed."""
+# Games, as in hypr/scripts/is-gaming.sh (GAME_CLASS_REGEX): keep both lists the same.
+GAME_CLASS = re.compile(r"^(steam_app_[0-9]+|Star Citizen|Dofus\.x64|retroarch)$")
+GAMING_CHECK_S = 2
+gaming_cache = {"checked": 0.0, "now": False}
+
+
+def gaming() -> bool:
+    """Game mode on (ALT+G, the gamemode submap) or a game window focused: banners and approval
+    windows wait. A fullscreen video is not a game. Asked at most every GAMING_CHECK_S."""
+    if time.time() - gaming_cache["checked"] < GAMING_CHECK_S:
+        return gaming_cache["now"]
     refresh_hyprland_instance()
-    client = (tmux_output(["list-clients", "-t", MANAGER_SESSION, "-F", "#{client_name}"]) or "").split("\n")[0].strip()
-    if client and claude_workspace_active():
-        command = ["tmux", "display-popup", "-c", client, "-E", "-w", "80%", "-h", "70%",
-                   "-T", " Claude asks to run a command ", RUN_APPROVE, request_id]
-    else:
-        command = ["kitty", "--class", "claude-run", "-T", "Claude asks to run a command", RUN_APPROVE, request_id]
+    now = False
     try:
-        return subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-    except OSError as error:
-        log(f"cannot open the approval terminal for {request_id}: {error}")
-        return None
+        submap = subprocess.run(["hyprctl", "submap"], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S).stdout.strip()
+        window = subprocess.run(["hyprctl", "-j", "activewindow"], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S).stdout
+        window_class = (json.loads(window or "{}") or {}).get("class", "") if window.strip().startswith("{") else ""
+        now = submap == "gamemode" or bool(GAME_CLASS.match(window_class or ""))
+    except (OSError, subprocess.TimeoutExpired, ValueError, AttributeError):
+        now = False
+    if now != gaming_cache["now"]:
+        log("gaming: banners and approval windows wait" if now else "no game: banners and approval windows shown again")
+    gaming_cache.update(checked=time.time(), now=now)
+    return now
+
+
+def quiet() -> bool:
+    """Times when nothing should pop up: a calendar meeting, or a game."""
+    return in_meeting() or gaming()
+
+
+RUN_SESSION = "claude-run-{}"
+RUN_PHASES = ("asking", "running", "done")
 
 
 class RunRequests:
-    """Commands Claude asks Theo to run outside the sandbox (ask-to-run). The daemon runs nothing:
-    it raises a banner and opens claude-run-approve, one request at a time, the others waiting."""
+    """Commands Claude asks Theo to run outside the sandbox (ask-to-run). The daemon runs nothing
+    itself: each request gets claude-run-approve in a tmux session of its own (claude-run-<id>),
+    one request at a time. That session shows in a pane under the cockpit's session pane, without
+    taking the cursor, and in a floating window on the current workspace only while it needs Theo
+    (claude-run-approve reports asking / running / done), never while he games."""
 
-    def __init__(self, banners):
+    def __init__(self, banners, schedule_repeating):
         self.banners = banners
         self.queue: list[str] = []
-        self.current = None  # (request id, the approval terminal's process)
+        self.current = ""
+        self.phase = ""
+        self.window = None  # the floating window's process
+        schedule_repeating(1, self.tick)
 
     def request(self, request_id: str):
         if not RUN_ID.fullmatch(request_id):
             raise ValueError("not a request id")
-        if request_id in self.queue or (self.current and self.current[0] == request_id):
+        if request_id in self.queue or request_id == self.current:
             return
         try:
             with open(os.path.join(RUNS_DIR, f"{request_id}.request")) as file:
@@ -522,23 +546,75 @@ class RunRequests:
             validate_text("project", project)
         except (OSError, ValueError, AttributeError):
             project = "?"
-        self.banners.raise_notice({"id": f"run-{request_id}", "title": f"Claude · {project}",
-                                   "message": "asks you to run a command"})
+        if not quiet():
+            self.banners.raise_notice({"id": f"run-{request_id}", "title": f"Claude · {project}",
+                                       "message": "asks you to run a command"})
         log(f"run request {request_id} from {project}")
         self.queue.append(request_id)
         self.next()
 
     def next(self):
-        """Open the next waiting request once the current approval terminal is closed."""
-        if self.current and self.current[1] is not None and self.current[1].poll() is None:
+        if self.current:
             return
-        self.current = None
         while self.queue:
             request_id = self.queue.pop(0)
             if os.path.exists(os.path.join(RUNS_DIR, f"{request_id}.result")):
                 continue
-            self.current = (request_id, launch_approval(request_id))
+            if not run_command(["tmux", "new-session", "-d", "-s", RUN_SESSION.format(request_id), "-x", "180", "-y", "45",
+                                RUN_APPROVE, request_id]):
+                log(f"cannot start the approval for {request_id}")
+                continue
+            self.current, self.phase = request_id, "asking"
+            run_command(["claude-sessions", "approval-pane", request_id])
+            self.show()
             return
+
+    def phase_changed(self, request_id: str, phase: str):
+        if request_id != self.current or phase not in RUN_PHASES:
+            return
+        self.phase = phase
+        if phase == "done":
+            self.finish()
+        else:
+            self.show()
+
+    def show(self):
+        """The floating window while the approval needs Theo, he is off the cockpit, and not gaming."""
+        wanted = self.phase == "asking" and not claude_workspace_active() and not quiet()
+        open_now = self.window is not None and self.window.poll() is None
+        if wanted and not open_now:
+            try:
+                self.window = subprocess.Popen(
+                    ["kitty", "--class", "claude-run", "-T", "Claude asks to run a command",
+                     "tmux", "attach-session", "-t", "=" + RUN_SESSION.format(self.current)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            except OSError as error:
+                log(f"cannot open the approval window: {error}")
+                self.window = None
+        elif not wanted and open_now:
+            self.window.terminate()
+            self.window = None
+
+    def finish(self):
+        if self.window is not None and self.window.poll() is None:
+            self.window.terminate()
+        self.window = None
+        self.banners.drop(f"notice:run-{self.current}")
+        run_command(["claude-sessions", "approval-pane", "close"])
+        self.current, self.phase = "", ""
+        self.next()
+
+    def tick(self) -> bool:
+        """Every second: the floating window follows the workspace and the games, and an approval
+        whose tmux session ended (closed by hand, crashed) is cleared."""
+        if self.current:
+            if tmux_output(["has-session", "-t", "=" + RUN_SESSION.format(self.current)]) is None:
+                self.finish()
+            else:
+                self.show()
+        elif self.queue:
+            self.next()
+        return True
 
 
 class SessionRegistry:
@@ -551,7 +627,7 @@ class SessionRegistry:
         self.banners = banners
         self.sessions: dict[str, dict] = {}
         self.held: dict[str, dict] = {}  # session -> its latest banner, kept back during a meeting
-        self.runs = RunRequests(banners)
+        self.runs = RunRequests(banners, schedule_repeating)
         self.recent_written = (0.0, frozenset())  # when recent-sessions.json was written, for which ids
         self.load_snapshot()
         schedule_repeating(SESSION_PRUNE_INTERVAL_S, self.prune_dead)
@@ -612,9 +688,9 @@ class SessionRegistry:
         elif not claude_workspace_active():
             banner = {"session": session, "title": f"Claude · {entry['project']}",
                       "message": report["message"], "sticky": report["sticky"]}
-            if in_meeting():
+            if quiet():
                 self.held[session] = banner
-                log(f"banner held (meeting) for {session[:8]} ({entry['project']}): {report['message']}")
+                log(f"banner held (meeting or game) for {session[:8]} ({entry['project']}): {report['message']}")
             else:
                 self.banners.raise_banner(banner)
                 log(f"banner {'sticky ' if report['sticky'] else ''}for {session[:8]} ({entry['project']}): {report['message']}")
@@ -753,7 +829,7 @@ class SessionRegistry:
 
     def release_held(self):
         """After the meeting, the banners it held back, for the sessions still there."""
-        if not self.held or in_meeting():
+        if not self.held or quiet():
             return
         held, self.held = self.held, {}
         for session, banner in held.items():
@@ -769,7 +845,6 @@ class SessionRegistry:
         self.reconcile_with_panes()
         self.release_held()
         self.drop_stale_banners()
-        self.runs.next()
         return True  # keep the repeating schedule
 
     def drop_stale_banners(self):

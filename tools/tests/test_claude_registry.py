@@ -207,44 +207,70 @@ class RegistryTests(Sandbox):
         self.registry.refresh_hyprland_instance()
         self.assertEqual(os.environ["HYPRLAND_INSTANCE_SIGNATURE"], "running_instance")
 
-    def test_run_requests_open_one_approval_at_a_time(self):
+    def run_setup(self, on_cockpit=False, quiet=False):
         self.registry.RUNS_DIR = str(self.root)
-        opened = []
+        commands, windows = [], []
 
-        class Terminal:
-            def __init__(self):
-                self.finished = None
+        class Window:
+            def __init__(self, command):
+                self.command, self.terminated = command, False
 
             def poll(self):
-                return self.finished
+                return 0 if self.terminated else None
 
-        def launch(request_id):
-            opened.append(request_id)
-            return Terminal()
+            def terminate(self):
+                self.terminated = True
 
-        self.registry.launch_approval = launch
-        with self.assertRaises(ValueError):
-            self.sessions.runs.request("../../etc")
-        self.sessions.runs.request("aaaaaaaaaaaa")
-        self.sessions.runs.request("bbbbbbbbbbbb")
-        self.assertEqual(opened, ["aaaaaaaaaaaa"])
-        self.assertIn("run-bbbbbbbbbbbb", self.banners.raised)
-        self.sessions.runs.current[1].finished = 0
-        self.sessions.prune_dead()
-        self.assertEqual(opened, ["aaaaaaaaaaaa", "bbbbbbbbbbbb"])
+        def run(command, ok_exit_codes=(0,)):
+            commands.append(command)
+            return True
 
-    def test_the_approval_opens_over_the_cockpit_or_in_a_window(self):
-        launched = []
+        self.registry.run_command = run
+        self.registry.claude_workspace_active = lambda: on_cockpit
+        self.registry.quiet = lambda: quiet
+        self.registry.tmux_output = lambda arguments: ""
         original = self.registry.subprocess.Popen
         self.addCleanup(setattr, self.registry.subprocess, "Popen", original)
-        self.registry.subprocess.Popen = lambda command, **options: launched.append(command)
-        self.registry.tmux_output = lambda arguments: "/dev/pts/3\n" if arguments[0] == "list-clients" else ""
-        self.registry.claude_workspace_active = lambda: True
-        self.registry.launch_approval("aaaaaaaaaaaa")
-        self.registry.claude_workspace_active = lambda: False
-        self.registry.launch_approval("aaaaaaaaaaaa")
-        self.assertEqual([command[:4] for command in launched], [["tmux", "display-popup", "-c", "/dev/pts/3"],
-                                                                 ["kitty", "--class", "claude-run", "-T"]])
+        self.registry.subprocess.Popen = lambda command, **options: windows.append(Window(command)) or windows[-1]
+        return self.registry.RunRequests(self.banners, lambda seconds, callback: None), commands, windows
+
+    def test_a_request_starts_in_its_own_tmux_session_and_one_at_a_time(self):
+        runs, commands, _ = self.run_setup()
+        with self.assertRaises(ValueError):
+            runs.request("../../etc")
+        runs.request("aaaaaaaaaaaa")
+        runs.request("bbbbbbbbbbbb")
+        started = [command for command in commands if command[:2] == ["tmux", "new-session"]]
+        self.assertEqual([command[4] for command in started], ["claude-run-aaaaaaaaaaaa"])
+        self.assertIn(["claude-sessions", "approval-pane", "aaaaaaaaaaaa"], commands)
+        runs.phase_changed("aaaaaaaaaaaa", "done")
+        self.assertIn(["claude-sessions", "approval-pane", "close"], commands)
+        self.assertEqual(runs.current, "bbbbbbbbbbbb")
+
+    def test_the_window_shows_only_while_it_needs_theo_off_the_cockpit(self):
+        runs, _, windows = self.run_setup()
+        runs.request("aaaaaaaaaaaa")
+        self.assertEqual(windows[0].command[-1], "=claude-run-aaaaaaaaaaaa")
+        runs.phase_changed("aaaaaaaaaaaa", "running")
+        self.assertTrue(windows[0].terminated)
+        runs.phase_changed("aaaaaaaaaaaa", "asking")
+        self.assertEqual(len(windows), 2)
+
+    def test_no_window_on_the_cockpit_or_while_gaming(self):
+        for on_cockpit, quiet in ((True, False), (False, True)):
+            runs, _, windows = self.run_setup(on_cockpit=on_cockpit, quiet=quiet)
+            runs.request("aaaaaaaaaaaa")
+            self.assertEqual(windows, [])
+
+    def test_gaming_means_game_mode_or_a_game_window(self):
+        original = self.registry.subprocess.run
+        self.addCleanup(setattr, self.registry.subprocess, "run", original)
+        for submap, window_class, expected in (("gamemode", "kitty", True), ("default", "steam_app_1245620", True),
+                                               ("default", "zen", False)):
+            outputs = {"submap": submap, "-j": json.dumps({"class": window_class, "fullscreen": 2})}
+            self.registry.subprocess.run = lambda command, **options: type("R", (), {"stdout": outputs[command[1]], "returncode": 0})()
+            self.registry.gaming_cache.update(checked=0.0)
+            self.assertEqual(self.registry.gaming(), expected, (submap, window_class))
 
     def test_notices_are_validated_like_session_text(self):
         notice = self.registry.parse_notice(json.dumps({"id": "claude-usage-80", "title": "Claude · This week at 82%", "message": "Resets Sat"}))
