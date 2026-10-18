@@ -22,14 +22,25 @@ set -gx PATH "$HOME/.local/bin/greywall-agents" $PATH
 
 function claude
     set -lx CLAUDE_AUTO_RETRY_ACTIVE 1
-    # An interactive `claude` from any terminal opens in the session manager on its workspace
-    # (~/.local/bin/claude-sessions). The manager's own viewer pane (CLAUDE_SESSIONS_INSIDE),
-    # print mode and the informational flags run claude right here.
+    # An interactive `claude` from any terminal asks where to run: Enter (or m) opens it in the
+    # session manager on its workspace (~/.local/bin/claude-sessions), t runs it in this terminal,
+    # any other key (or Ctrl-C) cancels. The manager's own viewer pane (CLAUDE_SESSIONS_INSIDE),
+    # print mode and the informational flags run claude right here without asking.
     if test -z "$CLAUDE_SESSIONS_INSIDE"; and isatty stdin; and isatty stdout
         and not contains -- -p $argv; and not contains -- --print $argv
         and not contains -- --help $argv; and not contains -- --version $argv
-        claude-sessions new (pwd) $argv; and claude-sessions show
-        return
+        set -l prompt (set_color --bold blue)'claude'(set_color normal)'  '(set_color --bold)'⏎'(set_color normal)' session manager  '(set_color --bold)'t'(set_color normal)' this terminal  '
+        read -l -n 1 -P $prompt choice; or return 130
+        switch $choice
+            case '' m M
+                claude-sessions new (pwd) $argv; and claude-sessions show
+                return
+            case t T
+                # run right here, below
+            case '*'
+                echo "claude: cancelled"
+                return 1
+        end
     end
     node (npm root -g)/claude-auto-retry/src/launcher.js $argv
 end

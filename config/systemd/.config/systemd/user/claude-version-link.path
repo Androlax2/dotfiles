@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for new Claude Code versions (finishes updates greywall keeps from completing)
+
+[Path]
+PathChanged=%h/.local/share/claude/versions
+Unit=claude-version-link.service
+
+[Install]
+WantedBy=default.target

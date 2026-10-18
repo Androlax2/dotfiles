@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Finish Claude Code's self-updates. Claude downloads a new version into
+# ~/.local/share/claude/versions/ and then repoints ~/.local/bin/claude at it; inside greywall that
+# second step fails (~/.local/bin is read-only there), so every session would keep starting the old
+# version and show "Update installed · Restart to update" forever. This repoints the link from
+# outside the sandbox: to the newest version that starts, never backwards.
+# Run by claude-version-link.path (each change in the versions folder) and its service at login.
+# CLAUDE_VERSIONS_DIR / CLAUDE_LINK override the paths (tests).
+set -euo pipefail
+versions_dir=${CLAUDE_VERSIONS_DIR:-$HOME/.local/share/claude/versions}
+link=${CLAUDE_LINK:-$HOME/.local/bin/claude}
+
+current=$(basename "$(readlink "$link" 2>/dev/null || true)")
+newest=""
+while read -r version; do
+    # A download still being written, or a broken one, does not start: skip it, the next change
+    # in the folder runs this again.
+    if [[ -x $versions_dir/$version ]] && timeout 20 "$versions_dir/$version" --version >/dev/null 2>&1; then
+        newest=$version
+        break
+    fi
+done < <(find "$versions_dir" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -rV)
+
+if [[ -z $newest ]]; then
+    echo "claude-version-link: no runnable version in $versions_dir" >&2
+    exit 0
+fi
+if [[ $newest == "$current" ]]; then
+    exit 0
+fi
+# Only forward: an older link target is replaced, a newer one (pinned by hand) is left alone.
+if [[ -n $current && $(printf '%s\n%s\n' "$current" "$newest" | sort -V | tail -1) == "$current" ]]; then
+    exit 0
+fi
+ln -sfn "$versions_dir/$newest" "$link"
+echo "claude-version-link: ${current:-nothing} -> $newest"
+claude-sessions log update INFO "claude now starts $newest (was ${current:-nothing}); r on a card restarts it on the new version" 2>/dev/null || true

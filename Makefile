@@ -34,8 +34,8 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install \
-	    check check-packages check-skills check-services check-system check-untracked check-security check-palette \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install \
+	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
 	    backup backup-list backup-status backup-check backup-maintain backup-init
@@ -120,7 +120,13 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 ##@ Keep the repo in sync
 
-check: check-packages check-skills check-services check-system check-untracked check-security check-palette ## [read-only] Show everything that differs from the repo
+test: ## [read-only] Run the unit tests in tools/tests (wrappers, the Claude session manager, its daemon and hook)
+	python3 -m unittest discover -s tools/tests -v
+
+handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)
+	@tools/handoff-install.sh
+
+check: check-packages check-skills check-services check-system check-untracked check-security check-palette test ## [read-only] Show everything that differs from the repo, then run the tests
 
 check-packages: ## Packages listed but not installed, or the reverse
 	@echo "== packages =="
@@ -213,7 +219,8 @@ agent-docker-status: ## [read-only] List the agent Docker daemons and whether th
 
 agent_github = tools/agent-github.sh
 
-.PHONY: agent-github-token agent-github-board-token agent-github-relogin agent-github-protect agent-github-check
+.PHONY: agent-github-token agent-github-board-token agent-github-relogin agent-github-protect agent-github-check \
+	    agent-dashboard-tailnet agent-dashboard-tailnet-off
 
 agent-github-token: ## Create and store a GitHub token that reaches only this project's repo: make agent-github-token PROJECT=runway
 	@test -n "$(PROJECT)" || { echo "usage: make agent-github-token PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
@@ -231,6 +238,16 @@ agent-github-protect: ## Require pull requests and block force pushes on the pro
 
 agent-github-check: ## [read-only] Check that each agent token reaches only its repo and that gh keeps no token in hosts.yml
 	@$(agent_github) check
+
+# greyproxy's dashboard listens on localhost only; `tailscale serve` publishes it to this tailnet
+# (and nowhere else) so pending network requests can be approved from the phone.
+GREYPROXY_DASHBOARD_PORT ?= 43080
+agent-dashboard-tailnet: ## Publish greyproxy's dashboard on the tailnet: make agent-dashboard-tailnet [GREYPROXY_DASHBOARD_PORT=43080] (then open /dashboard)
+	tailscale serve --bg --https=443 http://127.0.0.1:$(GREYPROXY_DASHBOARD_PORT)
+	tailscale serve status
+
+agent-dashboard-tailnet-off: ## Stop publishing greyproxy's dashboard on the tailnet
+	tailscale serve --https=443 off
 
 ##@ Maintain
 
