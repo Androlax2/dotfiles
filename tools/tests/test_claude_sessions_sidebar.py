@@ -464,6 +464,18 @@ class LayoutTests(Sandbox):
         self.sidebar.run_palette_entry(app, (1, "f", "focus"), None)
         self.assertEqual((app.focus, app.focus_waiting), (1, True))
 
+    def test_greyproxy_requests_retried_lately_count_as_held(self):
+        path = self.root / "greyproxy.db"
+        database = self.sidebar.sqlite3.connect(path)
+        database.execute("create table pending_requests (container_name text, destination_host text, destination_port integer, "
+                         "first_seen datetime, last_seen datetime, attempt_count integer)")
+        database.execute("insert into pending_requests values ('c', 'api.stripe.com', 443, datetime('now'), datetime('now', '-2 minutes'), 3)")
+        database.execute("insert into pending_requests values ('c', 'old.example', 80, datetime('now', '-3 days'), datetime('now', '-3 days'), 1)")
+        database.commit()
+        database.close()
+        self.assertEqual(self.sidebar.greyproxy_held(str(path)), ["api.stripe.com:443"])
+        self.assertEqual(self.sidebar.greyproxy_held(str(self.root / "missing.db")), [])
+
     def test_status_falls_back_to_the_flat_windows_without_a_limits_list(self):
         (self.runtime / "claude-usage.json").write_text(json.dumps({
             "five_hour": {"utilization": 37.4, "resets_at": "2026-10-20T09:00:00Z"}, "seven_day": {"utilization": 72},
