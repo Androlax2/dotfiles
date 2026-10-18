@@ -29,7 +29,7 @@ fn notice_id(key: &str) -> String {
 
 fn notify(alert: &Alert) -> bool {
     let notice = json!({"id": notice_id(&alert.key), "title": banner_text(&format!("{NOTICE_TITLE} · {}", alert.title)), "message": banner_text(&alert.detail)});
-    cockpit::approval::send(&format!("notice {notice}"))
+    cockpit::approval::send_host(&format!("notice {notice}"))
 }
 
 /// Brings the alerts in line with the findings. New problems (or ones that turned critical) get a
@@ -142,7 +142,7 @@ pub fn run() -> Result<(), String> {
     let found = findings(&store, &facts, now).map_err(|error| format!("cannot check: {error}"))?;
     let mut send = |key: &str, alert: Option<&Alert>| match alert {
         Some(alert) => notify(alert),
-        None => cockpit::approval::send(&format!("notice-clear {}", notice_id(key))),
+        None => cockpit::approval::send_host(&format!("notice-clear {}", notice_id(key))),
     };
     let changed = apply(&store, &found, now, cockpit::util::gaming(), &mut send).map_err(|error| format!("cannot keep the alerts: {error}"))?;
     write_status(&store, now).map_err(|error| format!("cannot write {}: {error}", status_path().display()))?;

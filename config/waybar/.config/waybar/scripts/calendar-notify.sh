@@ -26,6 +26,8 @@ while true; do
             event_title=$(echo "$event" | cut -d' ' -f2-)
             
             # Send notification
+            # swaync reads the body as markup: an invite's title is someone else's text.
+            event_title=$(printf '%s' "$event_title" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
             notify-send "󰃭 Upcoming Event" "$event_time - $event_title" -u normal -t 30000
             
             # Mark as notified

@@ -7,7 +7,9 @@ Description=vitals: disk health (SMART) and kernel errors for the unprivileged c
 [Service]
 Type=oneshot
 StateDirectory=vitals
-StateDirectoryMode=0755
+StateDirectoryMode=0750
+# Readable by Theo's collector only: the kernel log bypasses dmesg_restrict for other accounts.
+Group=theo
 UMask=0022
 ProtectSystem=strict
 ReadWritePaths=/var/lib/vitals

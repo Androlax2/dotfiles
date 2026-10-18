@@ -105,13 +105,8 @@ global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages, age
 	    mkdir -p ~/.claude/plugins/data/"$${plugin/@/-}"; \
 	done
 
-system: ## [sudo] Copy system/ into /, replacing changed files
-	@for path in $(system_files); do \
-	    cmp -s "system/$$path" "/$$path" && continue; \
-	    sudo install -D -o root -g root -m "$$(stat -c %a "system/$$path")" "system/$$path" "/$$path"; \
-	    echo "installed /$$path"; \
-	done
-	sudo systemctl daemon-reload
+system: ## [sudo] Copy system/ into /: each changed file shows its diff and asks first
+	@tools/system-install.sh
 
 locale: ## [sudo] Generate the locales enabled in locale.gen
 	sudo locale-gen

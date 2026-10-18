@@ -65,7 +65,7 @@ text="<span color='${time_colour}' weight='600'>${start_time}</span> ${safe_titl
 tooltip="<b>Upcoming Events</b>\\n\\n"
 while IFS= read -r line; do
     if [[ "$line" =~ ^(Today|Tomorrow|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) ]]; then
-        tooltip+="<span color='#7aa2f7'><b>$line</b></span>\\n"
+        tooltip+="<span color='#7aa2f7'><b>$(printf '%s' "$line" | escape_pango | escape_json)</b></span>\\n"
     elif [[ -n "$line" ]]; then
         tooltip+="    $(printf '%s' "$line" | escape_pango | escape_json)\\n"
     fi

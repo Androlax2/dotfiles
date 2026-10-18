@@ -1,9 +1,0 @@
-[Unit]
-Description=Point ~/.local/bin/claude at the newest downloaded Claude Code version (~/.local/bin/claude-version-link)
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/claude-version-link
-
-[Install]
-WantedBy=default.target

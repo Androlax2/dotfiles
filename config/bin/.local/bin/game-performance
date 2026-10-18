@@ -3,9 +3,11 @@
 # the end of a game (~/.config/gamemode.ini, [custom]); GameMode itself switches the CPU and GPU to
 # their performance modes.
 #
-#   game-performance on    pause the heavy timers, drop background work to idle CPU and disk priority
-#   game-performance off   undo it: priorities back, the paused timers restarted (one that came due
-#                          meanwhile runs now), Hyprland's game mode off
+#   game-performance on    freeze the Claude sessions, pause the heavy timers, drop the remaining
+#                          background work to idle CPU and disk priority
+#   game-performance off   undo it: sessions thawed (they carry on where they stopped), priorities
+#                          back, the paused timers restarted (one that came due meanwhile runs now),
+#                          Hyprland's game mode off
 #
 # Only timers that were running are restarted, from the list kept in $XDG_RUNTIME_DIR.
 set -uo pipefail
@@ -13,11 +15,20 @@ set -uo pipefail
 # Heavy or long jobs that can wait for the end of a game.
 PAUSED_TIMERS=(restic-backup.timer restic-maintenance.timer jobpilot-apply.timer update-check.timer
                security-check.timer claude-health-check.timer)
-# Work that may already be running when the game starts: Claude sessions (their builds and tests run
-# in the tmux server of claude-sessions.service) and the jobs of the timers above.
-LOWERED_UNITS=(claude-sessions.service restic-backup.service restic-maintenance.service jobpilot-apply.service
+# The Claude sessions: tmux starts each pane in a systemd scope of its own (tmux-spawn-*.scope), and a
+# session's scope holds everything it runs (greywall, claude, its builds and tests). Those scopes are
+# frozen (cgroup freezer), not killed: the sessions resume mid-step after the game. The column and
+# approval panes have no claude in their scope and stay usable.
+FROZEN_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.frozen"
+# Jobs of the timers above that may already be running when the game starts.
+LOWERED_UNITS=(restic-backup.service restic-maintenance.service jobpilot-apply.service
                update-check.service security-check.service claude-health-check.service)
 PAUSED_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.paused"
+
+# The systemd units (scopes) of the running Claude processes, one per line.
+claude_scopes() {
+    ps -C claude -o cgroup= 2>/dev/null | sed -n 's|.*/\([^/]*\.scope\)$|\1|p' | sort -u
+}
 
 log() {
     claude-sessions log game INFO "$1" 2>/dev/null || true
@@ -34,11 +45,22 @@ on() {
     for unit in "${LOWERED_UNITS[@]}"; do
         systemctl --user set-property --runtime "$unit" CPUWeight=idle IOWeight=1 2>/dev/null || true
     done
-    log "game started: $(wc -l < "$PAUSED_LIST") timer(s) paused, background work at idle priority"
+    : > "$FROZEN_LIST"
+    local scope
+    while read -r scope; do
+        [[ -n $scope ]] && systemctl --user freeze "$scope" 2>/dev/null && echo "$scope" >> "$FROZEN_LIST"
+    done < <(claude_scopes)
+    log "game started: $(wc -l < "$FROZEN_LIST") Claude session(s) paused, $(wc -l < "$PAUSED_LIST") timer(s) paused, background work at idle priority"
 }
 
 off() {
-    local unit timer
+    local unit timer scope
+    if [[ -f $FROZEN_LIST ]]; then
+        while read -r scope; do
+            [[ -n $scope ]] && systemctl --user thaw "$scope" 2>/dev/null
+        done < "$FROZEN_LIST"
+        rm -f "$FROZEN_LIST"
+    fi
     for unit in "${LOWERED_UNITS[@]}"; do
         # An empty assignment puts the unit's own setting back.
         systemctl --user set-property --runtime "$unit" CPUWeight= IOWeight= 2>/dev/null || true
@@ -50,7 +72,7 @@ off() {
         rm -f "$PAUSED_LIST"
     fi
     hyprctl eval "EXIT_GAME_MODE()" >/dev/null 2>&1 || true
-    log "game ended: background work back to normal"
+    log "game ended: Claude sessions resumed, background work back to normal"
 }
 
 case "${1:-}" in

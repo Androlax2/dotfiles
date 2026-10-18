@@ -165,6 +165,15 @@ Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go th
 
 Nothing outside the sandbox runs git on a session's folder, since a session can write that repository's configuration: the hook works out what a turn changed inside the sandbox, the daemon reads project names from the `.git` files, and `g` opens lazygit inside greywall.
 
+What sessions can and cannot do to the machine (audits of 2026-10-18 and 2026-10-19):
+
+- They report on `osd.fifo` (their state, their requests); banners, focus, clearing the column and approval phases only come through `osd-host.fifo`, which no sandbox can open.
+- Theo's answers (run results, guide progress) go to `~/.cache/claude-answers`, which sessions read but cannot write: no session can forge another's approved output.
+- Commands are shown as they run: run through `sh` exactly as quoted, in the folder resolved before Theo answers, with hidden characters, blank-line padding and non-ASCII letters flagged; output goes back with secrets redacted.
+- Claude Code updates only from outside the sandbox (`claude-update.timer`); sessions cannot write the versions folder.
+- `make system` and `make handoff-install` show every file (new ones whole, control characters visible) and refuse setuid bits and symlinked destinations.
+- Todo items lose control characters, show "by Claude" when a session filed them, and go to sessions by folder, never by project name; the queue waits while Theo games.
+
 Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs that run outside it (`config/bin`, `apps/target`, the greywall launcher), and every session can write `~/.claude.json`, the memory folders and the shared todo updates. So a compromised project could reach a dotfiles session (an MCP server added for it, a planted memory or todo item) and, through it, run code with my rights. Locking those paths would mean routing every cockpit change through `.handoff/`.
 
 ### Around it
@@ -197,7 +206,7 @@ A game window opening turns **game mode** on by itself (`config/hyprland/.config
 
 - Hyprland drops animations, blur and rounding; banners and approval windows wait.
 - Feral GameMode (`config/gamemode`) puts the CPU governor and the GPU (`card1`) in their performance modes while the game's process runs.
-- `game-performance` (GameMode's start and end hooks) pauses the backup, jobpilot and the update, security and health checks until the game ends, and drops Claude sessions and any running job to idle CPU and disk priority.
+- `game-performance` (GameMode's start and end hooks) pauses the Claude sessions (cgroup freezer on each session's tmux scope: they resume mid-step after the game; the column and approval panes stay usable), the backup, jobpilot and the update, security and health checks, and drops any job already running to idle CPU and disk priority. The Todo queue waits too. `game-performance off` thaws by hand; the cockpit doctor flags sessions left frozen.
 - MangoHud (`config/MangoHud`): FPS, frame times, CPU and GPU load and temperatures, with `Right Shift + F12`. Only Steam and its games load it (`config/steam` sets `MANGOHUD=1` in Steam's launcher).
 
 ## Machine monitor (vitals)
