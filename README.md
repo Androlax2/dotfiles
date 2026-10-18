@@ -157,7 +157,7 @@ Moving around: Ctrl+Tab between the column and the session, Ctrl+1/2/3 to a pane
 
 | Command (inside a session) | What happens outside |
 | --- | --- |
-| `ask-to-run --why '…' '<command>'` | An approval terminal shows the command and Claude's explanation, in a pane under the session in the cockpit and in a floating window elsewhere. Nothing runs without "Run it"; the output goes back only if I agree. Hidden characters are shown escaped |
+| `ask-to-run --why '…' '<command>'` | An approval terminal shows the command and Claude's explanation, in a pane under the session in the cockpit and in a floating window elsewhere. Nothing runs without "Run it"; the output then goes back to Claude, with tokens, keys, passwords and credentials replaced by `[redacted]` first. Hidden characters are shown escaped |
 | `ask-to-guide` | Steps I do by hand (a browser, a console) in a floating window, one at a time, with links to open, values to copy and questions to answer; the answers, or the step I got stuck on, go back to Claude |
 | `claude-todo start/done/add` | Updates the Todo panel |
 
