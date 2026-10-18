@@ -271,6 +271,14 @@ esac""")
         self.assertEqual((branch, origin), ("feat/effort-menu", "git@github.com:o/proj-a.git"))
         self.assertTrue(any(f"-c {clone} " in call and "claude $argv" in call for call in self.tmux_calls("respawn-pane")))
 
+    def test_a_clone_of_a_clone_is_filed_under_the_first_repository(self):
+        self.git_repository()
+        clones = self.root / "clones"
+        self.run_manager("parallel", str(self.project), "first", CLAUDE_SESSIONS_CLONES=str(clones))
+        result = self.run_manager("parallel", str(clones / "proj-a" / "first"), "second", CLAUDE_SESSIONS_CLONES=str(clones))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((clones / "proj-a" / "second" / ".git").is_dir())
+
     def test_parallel_refuses_a_bad_branch_name_in_the_viewer(self):
         self.git_repository()
         self.run_manager("parallel", str(self.project), "bad..name", CLAUDE_SESSIONS_CLONES=str(self.root / "clones"))

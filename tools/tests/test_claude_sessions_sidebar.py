@@ -502,6 +502,18 @@ class LayoutTests(Sandbox):
         self.assertEqual(self.sidebar.TodoList().items[0]["project"], "runway")  # reloaded from disk
         self.assertEqual(panel.lines[1].right[0][0], "bug")
 
+    def test_plus_starts_another_session_on_the_cards_repository(self):
+        app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1}])
+        self.sidebar.run_outside_curses = lambda screen, action: action()
+        self.sidebar.input_line = lambda prompt: "fix-login"
+        panel = app.panels[1]
+        panel.selected = 0
+        self.assertEqual(panel.handle(ord("+"), app, None), "cloning runway for fix-login …")
+        self.sidebar.input_line = lambda prompt: ""
+        panel.handle(ord("+"), app, None)
+        self.assertEqual(calls[0], ("background", "parallel", "/r/runway", "fix-login"))
+        self.assertRegex(calls[1][3], r"^parallel-\d{4}$")
+
     def test_the_list_is_ordered_by_priority_across_typed_items_and_issues(self):
         app, _ = self.todo_app()
         app.todos.add("runway", "/r/runway", "normal typed")
