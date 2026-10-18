@@ -19,6 +19,7 @@ cups
 cups-pdf
 dbeaver
 ddcutil
+dkms
 docker
 docker-buildx
 docker-compose
@@ -67,6 +68,7 @@ libreoffice-fresh
 libva-intel-driver
 linux
 linux-firmware
+linux-headers
 loupe
 lychee
 man-db

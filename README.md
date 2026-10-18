@@ -206,7 +206,7 @@ Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs t
 
 - `vitals-collect.timer` (user, every minute) runs `vitals collect`: one SQLite file in `~/.local/state/vitals`, every reading for 35 days and hourly summaries for good. A new problem raises a banner (held while gaming) and a chip in the bar until it clears.
 - `vitals-root.timer` (system, every 10 minutes, in `system/`) runs only `smartctl` and `journalctl` as root and leaves their output in `/var/lib/vitals`: no program from the dotfiles runs as root.
-- Pump and case fan speeds need the motherboard's fan chip driver. The kernel's `it87` does not know this board's chip; once a driver exposes it, its fans appear on their own.
+- Pump and fan speeds come from the motherboard's fan chip (ITE IT8696E) through the community `it87` driver (AUR `it87-dkms-git`, loaded at boot by `system/etc/modules-load.d/it87.conf`; the kernel's own `it87` does not know this chip). Header 5 carries the pump; the case fans hang off the cooler, out of its sight.
 - `vitals import` loaded the temperature log kept since February (`log-temps.sh`, now retired with `check-temp-trends`).
 
 ## Quickstart

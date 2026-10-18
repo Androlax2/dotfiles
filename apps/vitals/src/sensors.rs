@@ -74,6 +74,10 @@ pub fn read_hwmon(root: &Path) -> Vec<Reading> {
             let channel = input.trim_end_matches("_input");
             let Some(raw) = read_number(&folder.join(&input)) else { continue };
             let label = read_text(&folder.join(format!("{channel}_label"))).unwrap_or_else(|| channel.to_string());
+            // An unwired input of a fan chip reads exactly 0 °C; nothing in a running PC does.
+            if channel.starts_with("temp") && raw == 0.0 {
+                continue;
+            }
             if channel.starts_with("temp") {
                 let limit = |suffix: &str| read_number(&folder.join(format!("{channel}_{suffix}"))).and_then(|millis| sane_limit(millis / 1000.0));
                 let critical = limit("crit");
@@ -137,6 +141,9 @@ pub fn label(key: &str) -> String {
         ("gigabyte_wmi", temp) => format!("Board {}", temp.trim_start_matches("temp")),
         ("r8169_0_a00:00", _) => "Network chip".to_string(),
         ("prom21_xhci", _) => "USB controller".to_string(),
+        // The motherboard's fan chip (it87 driver): its headers by number, as printed on the board.
+        (chip_name, fan) if chip_name.starts_with("it8") && kind == "fan" => format!("Fan header {}", fan.trim_start_matches("fan")),
+        (chip_name, temp) if chip_name.starts_with("it8") => format!("Fan chip sensor {}", temp.trim_start_matches("temp")),
         _ => format!("{chip} {channel}"),
     };
     match kind {
@@ -192,6 +199,15 @@ mod tests {
     }
 
     #[test]
+    fn an_unwired_temperature_input_is_left_out() {
+        let root = scratch();
+        chip(&root, 8, "it8696", &[("temp6_input", "0"), ("temp1_input", "30000"), ("fan5_input", "2721")], None);
+        let keys: Vec<String> = read_hwmon(&root).into_iter().map(|reading| reading.key).collect();
+        assert_eq!(keys, ["fan:it8696/fan5", "temp:it8696/temp1"]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn placeholder_limits_are_ignored() {
         let root = scratch();
         chip(&root, 0, "nvme", &[("temp2_input", "34900"), ("temp2_label", "Sensor 1"), ("temp2_max", "65261850")], None);
@@ -212,5 +228,6 @@ mod tests {
         assert_eq!(label("temp:spd5118 2-0053/temp1"), "RAM 0053");
         assert_eq!(label("load:cpu"), "CPU load");
         assert_eq!(label("temp:nvme/Sensor 1"), "NVMe sensor 1");
+        assert_eq!(label("fan:it8696/fan5"), "Fan header 5");
     }
 }
