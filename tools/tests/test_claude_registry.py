@@ -33,6 +33,9 @@ class FakeBanners:
     def showing(self, session):
         return session in self.raised and session not in self.dropped
 
+    def raise_notice(self, notice):
+        self.raised.append(notice["id"])
+
     def drop(self, session):
         self.dropped.append(session)
 
@@ -203,6 +206,45 @@ class RegistryTests(Sandbox):
         self.addCleanup(os.environ.pop, "HYPRLAND_INSTANCE_SIGNATURE", None)
         self.registry.refresh_hyprland_instance()
         self.assertEqual(os.environ["HYPRLAND_INSTANCE_SIGNATURE"], "running_instance")
+
+    def test_run_requests_open_one_approval_at_a_time(self):
+        self.registry.RUNS_DIR = str(self.root)
+        opened = []
+
+        class Terminal:
+            def __init__(self):
+                self.finished = None
+
+            def poll(self):
+                return self.finished
+
+        def launch(request_id):
+            opened.append(request_id)
+            return Terminal()
+
+        self.registry.launch_approval = launch
+        with self.assertRaises(ValueError):
+            self.sessions.runs.request("../../etc")
+        self.sessions.runs.request("aaaaaaaaaaaa")
+        self.sessions.runs.request("bbbbbbbbbbbb")
+        self.assertEqual(opened, ["aaaaaaaaaaaa"])
+        self.assertIn("run-bbbbbbbbbbbb", self.banners.raised)
+        self.sessions.runs.current[1].finished = 0
+        self.sessions.prune_dead()
+        self.assertEqual(opened, ["aaaaaaaaaaaa", "bbbbbbbbbbbb"])
+
+    def test_the_approval_opens_over_the_cockpit_or_in_a_window(self):
+        launched = []
+        original = self.registry.subprocess.Popen
+        self.addCleanup(setattr, self.registry.subprocess, "Popen", original)
+        self.registry.subprocess.Popen = lambda command, **options: launched.append(command)
+        self.registry.tmux_output = lambda arguments: "/dev/pts/3\n" if arguments[0] == "list-clients" else ""
+        self.registry.claude_workspace_active = lambda: True
+        self.registry.launch_approval("aaaaaaaaaaaa")
+        self.registry.claude_workspace_active = lambda: False
+        self.registry.launch_approval("aaaaaaaaaaaa")
+        self.assertEqual([command[:4] for command in launched], [["tmux", "display-popup", "-c", "/dev/pts/3"],
+                                                                 ["kitty", "--class", "claude-run", "-T"]])
 
     def test_notices_are_validated_like_session_text(self):
         notice = self.registry.parse_notice(json.dumps({"id": "claude-usage-80", "title": "Claude · This week at 82%", "message": "Resets Sat"}))

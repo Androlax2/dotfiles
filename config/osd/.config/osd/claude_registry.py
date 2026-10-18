@@ -477,6 +477,68 @@ def show_in_manager(session: str) -> bool:
     return run_command(["claude-sessions", "show", session])
 
 
+RUNS_DIR = os.environ.get("CLAUDE_RUNS_DIR", os.path.expanduser("~/.cache/claude/runs"))
+RUN_ID = re.compile(r"[0-9a-f]{12}")
+RUN_APPROVE = os.path.expanduser("~/.local/bin/claude-run-approve")
+MANAGER_SESSION = "claude-manager"
+
+
+def launch_approval(request_id: str):
+    """The approval terminal for a request (claude-run-approve): a popup over the cockpit when it
+    shows, else a floating window (apps/claude.lua floats class claude-run). None if it failed."""
+    refresh_hyprland_instance()
+    client = (tmux_output(["list-clients", "-t", MANAGER_SESSION, "-F", "#{client_name}"]) or "").split("\n")[0].strip()
+    if client and claude_workspace_active():
+        command = ["tmux", "display-popup", "-c", client, "-E", "-w", "80%", "-h", "70%",
+                   "-T", " Claude asks to run a command ", RUN_APPROVE, request_id]
+    else:
+        command = ["kitty", "--class", "claude-run", "-T", "Claude asks to run a command", RUN_APPROVE, request_id]
+    try:
+        return subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError as error:
+        log(f"cannot open the approval terminal for {request_id}: {error}")
+        return None
+
+
+class RunRequests:
+    """Commands Claude asks Theo to run outside the sandbox (ask-to-run). The daemon runs nothing:
+    it raises a banner and opens claude-run-approve, one request at a time, the others waiting."""
+
+    def __init__(self, banners):
+        self.banners = banners
+        self.queue: list[str] = []
+        self.current = None  # (request id, the approval terminal's process)
+
+    def request(self, request_id: str):
+        if not RUN_ID.fullmatch(request_id):
+            raise ValueError("not a request id")
+        if request_id in self.queue or (self.current and self.current[0] == request_id):
+            return
+        try:
+            with open(os.path.join(RUNS_DIR, f"{request_id}.request")) as file:
+                project = str(json.load(file).get("project", "?"))
+            validate_text("project", project)
+        except (OSError, ValueError, AttributeError):
+            project = "?"
+        self.banners.raise_notice({"id": f"run-{request_id}", "title": f"Claude · {project}",
+                                   "message": "asks you to run a command"})
+        log(f"run request {request_id} from {project}")
+        self.queue.append(request_id)
+        self.next()
+
+    def next(self):
+        """Open the next waiting request once the current approval terminal is closed."""
+        if self.current and self.current[1] is not None and self.current[1].poll() is None:
+            return
+        self.current = None
+        while self.queue:
+            request_id = self.queue.pop(0)
+            if os.path.exists(os.path.join(RUNS_DIR, f"{request_id}.result")):
+                continue
+            self.current = (request_id, launch_approval(request_id))
+            return
+
+
 class SessionRegistry:
     """Every live Claude session, keyed by session id, mirrored to the snapshot file and to Hyprland.
 
@@ -487,6 +549,7 @@ class SessionRegistry:
         self.banners = banners
         self.sessions: dict[str, dict] = {}
         self.held: dict[str, dict] = {}  # session -> its latest banner, kept back during a meeting
+        self.runs = RunRequests(banners)
         self.recent_written = (0.0, frozenset())  # when recent-sessions.json was written, for which ids
         self.load_snapshot()
         schedule_repeating(SESSION_PRUNE_INTERVAL_S, self.prune_dead)
@@ -704,6 +767,7 @@ class SessionRegistry:
         self.reconcile_with_panes()
         self.release_held()
         self.drop_stale_banners()
+        self.runs.next()
         return True  # keep the repeating schedule
 
     def drop_stale_banners(self):

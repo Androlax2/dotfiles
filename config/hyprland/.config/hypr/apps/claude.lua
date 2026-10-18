@@ -47,3 +47,7 @@ end
 -- The "still there?" screen before the lock on this workspace (scripts/claude-idle.sh) sits over
 -- a blurred desktop; it is translucent itself, so what is behind it stays readable.
 hl.layer_rule({ match = { namespace = "^claude-idle$" }, blur = true, ignore_alpha = 0.3 })
+
+-- The approval window for a command Claude asks to run outside the sandbox (claude-run-approve),
+-- when the cockpit is not on screen: floating, centred, above the work.
+hl.window_rule({ match = { class = "^claude-run$" }, float = true, center = true, size = "1100 640" })
