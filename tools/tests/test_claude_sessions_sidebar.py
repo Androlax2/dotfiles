@@ -839,9 +839,11 @@ class ErrorHandOffTests(Sandbox):
         self.log_path.write_text("2026-10-18T10:00:00+02:00 ERROR manager: logged before the column started\n")
         self.sidebar.LOG_PATH = str(self.log_path)
         self.sidebar.ERROR_REPORTS_PATH = str(self.root / "error-reports.json")
+        self.sidebar.ERROR_REPORT_DIR = str(self.root / "error-reports")
         self.sidebar.gaming = lambda: self.is_gaming
         self.is_gaming = False
         self.handed = []
+        self.real_manager = self.sidebar.manager
         self.sidebar.manager = lambda *arguments: self.handed.append(("say",) + arguments[1:]) or ""
         self.sidebar.manager_in_background = lambda *arguments: self.handed.append(arguments)
         self.reporter = self.sidebar.ErrorReporter()
@@ -873,6 +875,38 @@ class ErrorHandOffTests(Sandbox):
         self.append_log("2026-10-18T13:00:01+02:00 ERROR manager: it broke")
         self.tick([{"session": "s1", "project": "dotfiles", "state": "waiting"}])
         self.assertEqual(self.handed[0][:2], ("say", "s1"))
+
+    def test_a_long_report_reaches_a_waiting_session_through_the_real_say(self):
+        # The report has many lines and `say` takes one of at most 4000 characters: it used to be
+        # refused every time ("a message is one line of at most 4000 characters").
+        self.sidebar.manager = self.real_manager
+        self.shim("tmux", 'case $1 in capture-pane) printf "done\\n❯ \\n" ;; esac')
+        (self.runtime / "claude-sessions.json").write_text(json.dumps({"sessions": [
+            {"session": SESSION_A, "project": "dotfiles", "state": "waiting", "tmux_pane": "%4"}]}))
+        self.append_log(*[f"2026-10-18T13:00:{second:02d}+02:00 INFO manager: show {'x' * 120}" for second in range(40)],
+                        "2026-10-18T13:00:41+02:00 ERROR manager: it broke")
+        self.tick([{"session": SESSION_A, "project": "dotfiles", "state": "waiting"}])
+        typed = [call for call in self.calls("tmux") if call.startswith("tmux send-keys -t %4 -l -- ")]
+        self.assertEqual(len(typed), 1)
+        self.assertEqual(self.handed, [])
+        report = pathlib.Path(typed[0].rsplit(" ", 1)[1]).read_text()
+        self.assertIn("ERROR manager: it broke", report)
+        self.assertIn("INFO manager: show", report)
+
+    def test_a_refused_message_falls_back_to_a_new_session(self):
+        def refuse_say(*arguments):
+            self.handed.append(("say",) + arguments[1:])
+            return "has a dialog open"
+        self.sidebar.manager = refuse_say
+        self.append_log("2026-10-18T13:00:01+02:00 ERROR manager: it broke")
+        self.tick([{"session": "s1", "project": "dotfiles", "state": "waiting"}])
+        self.assertEqual([call[0] for call in self.handed], ["say", "background"])
+        self.assertIn("WARN sidebar: error hand-off to dotfiles session s1 failed (has a dialog open)", self.log_path.read_text())
+
+    def test_an_info_line_quoting_an_error_is_not_handed_off(self):
+        self.append_log("2026-10-18T13:00:01+02:00 INFO sidebar: error handed to a new dotfiles session: ERROR manager: it broke")
+        self.tick()
+        self.assertEqual(self.handed, [])
 
     def test_the_same_error_goes_once_a_day_and_three_errors_at_most(self):
         self.append_log(*[f"2026-10-18T13:00:0{index}+02:00 ERROR manager: failure {letter}" for index, letter in enumerate("aabcde")])
