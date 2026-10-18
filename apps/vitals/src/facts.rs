@@ -73,7 +73,8 @@ pub fn smart_reports(root: &Path) -> Vec<Smart> {
     disks
 }
 
-static KERNEL_CATEGORIES: LazyLock<[(&str, Regex); 4]> = LazyLock::new(|| [
+static KERNEL_CATEGORIES: LazyLock<[(&str, Regex); 5]> = LazyLock::new(|| [
+    ("memory", Regex::new(r"(?i)out of memory|oom-kill|killed process").unwrap()),
     ("gpu", Regex::new(r"(?i)amdgpu.*(reset|hang|timeout|timed out)|ring \S+ timeout").unwrap()),
     ("disk", Regex::new(r"(?i)I/O error|nvme\S*:.*(timeout|reset|failed)|blk_update_request").unwrap()),
     ("hardware", Regex::new(r"(?i)machine check|\bmce\b|hardware error").unwrap()),
@@ -85,11 +86,16 @@ static KERNEL_CATEGORIES: LazyLock<[(&str, Regex); 4]> = LazyLock::new(|| [
 pub fn kernel_errors(log: &str) -> BTreeMap<String, Vec<String>> {
     let mut found: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for line in log.lines() {
-        if let Some((category, _)) = KERNEL_CATEGORIES.iter().find(|(_, pattern)| pattern.is_match(line)) {
+        if let Some(category) = kernel_category(line) {
             found.entry(category.to_string()).or_default().push(line.trim().to_string());
         }
     }
     found
+}
+
+/// memory, gpu, disk, hardware or thermal; None for what this monitor does not watch.
+pub fn kernel_category(line: &str) -> Option<&'static str> {
+    KERNEL_CATEGORIES.iter().find(|(_, pattern)| pattern.is_match(line)).map(|(category, _)| *category)
 }
 
 /// MemAvailable as a share of MemTotal.

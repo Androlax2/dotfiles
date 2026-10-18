@@ -5,6 +5,9 @@
 //!   hourly    low / mean / high per sensor and hour, kept for good: the long charts
 //!   limits    the driver's own limits per sensor, from the last reading
 //!   alerts    what is wrong now, and whether Theo was told
+//!   alert_history   the alerts that ended, with when they started and ended
+//!   games     game sessions: name, start, end, and the peaks reached (JSON, written at the end)
+//!   events    crashes, hard stops, memory kills, GPU hangs: what the Journal tab lists
 
 use rusqlite::{Connection, OptionalExtension, params};
 use std::collections::BTreeMap;
@@ -18,6 +21,32 @@ pub fn directory() -> PathBuf {
 
 pub struct Store {
     pub connection: Connection,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EndedAlert {
+    pub level: String,
+    pub title: String,
+    pub since: i64,
+    pub until: i64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Game {
+    pub start: i64,
+    /// None while it is still running.
+    pub end: Option<i64>,
+    pub name: String,
+    /// The peaks of the session (games::Stats as JSON), written when it ends.
+    pub stats: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Event {
+    pub at: i64,
+    /// crash, unclean, memory, gpu, disk, hardware, thermal
+    pub kind: String,
+    pub text: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -59,7 +88,11 @@ impl Store {
              CREATE TABLE IF NOT EXISTS limits (sensor TEXT PRIMARY KEY, high REAL, critical REAL);
              CREATE TABLE IF NOT EXISTS alerts (key TEXT PRIMARY KEY, level TEXT NOT NULL, title TEXT NOT NULL, detail TEXT NOT NULL,
                                                 since INTEGER NOT NULL, notified INTEGER NOT NULL);
-             CREATE TABLE IF NOT EXISTS state (name TEXT PRIMARY KEY, value TEXT NOT NULL);")?;
+             CREATE TABLE IF NOT EXISTS state (name TEXT PRIMARY KEY, value TEXT NOT NULL);
+             CREATE TABLE IF NOT EXISTS alert_history (key TEXT NOT NULL, level TEXT NOT NULL, title TEXT NOT NULL,
+                                                       since INTEGER NOT NULL, until INTEGER NOT NULL);
+             CREATE TABLE IF NOT EXISTS games (start INTEGER PRIMARY KEY, end INTEGER, name TEXT NOT NULL, stats TEXT);
+             CREATE TABLE IF NOT EXISTS events (at INTEGER NOT NULL, kind TEXT NOT NULL, text TEXT NOT NULL, PRIMARY KEY (at, kind, text));")?;
         Ok(Store { connection })
     }
 
@@ -152,6 +185,62 @@ impl Store {
         Ok(())
     }
 
+    pub fn save_ended_alert(&self, alert: &Alert, until: i64) -> rusqlite::Result<()> {
+        self.connection.execute("INSERT INTO alert_history (key, level, title, since, until) VALUES (?1, ?2, ?3, ?4, ?5)",
+                                params![alert.key, alert.level, alert.title, alert.since, until])?;
+        Ok(())
+    }
+
+    /// The alerts that ended after `since`, latest first.
+    pub fn ended_alerts(&self, since: i64) -> rusqlite::Result<Vec<EndedAlert>> {
+        let mut statement = self.connection.prepare("SELECT level, title, since, until FROM alert_history WHERE until >= ?1 ORDER BY until DESC")?;
+        let rows = statement.query_map(params![since], |row| Ok(EndedAlert { level: row.get(0)?, title: row.get(1)?, since: row.get(2)?, until: row.get(3)? }))?;
+        rows.collect()
+    }
+
+    pub fn start_game(&self, start: i64, name: &str) -> rusqlite::Result<()> {
+        self.connection.execute("INSERT OR IGNORE INTO games (start, name) VALUES (?1, ?2)", params![start, name])?;
+        Ok(())
+    }
+
+    pub fn rename_game(&self, start: i64, name: &str) -> rusqlite::Result<()> {
+        self.connection.execute("UPDATE games SET name = ?2 WHERE start = ?1", params![start, name])?;
+        Ok(())
+    }
+
+    pub fn end_game(&self, start: i64, end: i64, stats: &str) -> rusqlite::Result<()> {
+        self.connection.execute("UPDATE games SET end = ?2, stats = ?3 WHERE start = ?1", params![start, end, stats])?;
+        Ok(())
+    }
+
+    pub fn forget_game(&self, start: i64) -> rusqlite::Result<()> {
+        self.connection.execute("DELETE FROM games WHERE start = ?1", params![start])?;
+        Ok(())
+    }
+
+    pub fn running_game(&self) -> rusqlite::Result<Option<Game>> {
+        Ok(self.games(0)?.into_iter().find(|game| game.end.is_none()))
+    }
+
+    /// The sessions that started after `since`, latest first.
+    pub fn games(&self, since: i64) -> rusqlite::Result<Vec<Game>> {
+        let mut statement = self.connection.prepare_cached("SELECT start, end, name, stats FROM games WHERE start >= ?1 ORDER BY start DESC")?;
+        let rows = statement.query_map(params![since], |row| Ok(Game { start: row.get(0)?, end: row.get(1)?, name: row.get(2)?, stats: row.get(3)? }))?;
+        rows.collect()
+    }
+
+    /// True when the event is new: the root data is read again every minute and repeats itself.
+    pub fn add_event(&self, event: &Event) -> rusqlite::Result<bool> {
+        Ok(self.connection.execute("INSERT OR IGNORE INTO events (at, kind, text) VALUES (?1, ?2, ?3)", params![event.at, event.kind, event.text])? > 0)
+    }
+
+    /// The events after `since`, latest first.
+    pub fn events(&self, since: i64) -> rusqlite::Result<Vec<Event>> {
+        let mut statement = self.connection.prepare("SELECT at, kind, text FROM events WHERE at >= ?1 ORDER BY at DESC")?;
+        let rows = statement.query_map(params![since], |row| Ok(Event { at: row.get(0)?, kind: row.get(1)?, text: row.get(2)? }))?;
+        rows.collect()
+    }
+
     pub fn state(&self, name: &str) -> rusqlite::Result<Option<String>> {
         self.connection.query_row("SELECT value FROM state WHERE name = ?1", params![name], |row| row.get(0)).optional()
     }
@@ -187,6 +276,26 @@ mod tests {
         store.forget_before(1000).unwrap();
         assert_eq!(store.series("temp:cpu", 0).unwrap(), [(90_000, 52.0)]);
         assert_eq!(store.hours("temp:cpu", 0).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn an_event_seen_twice_is_kept_once() {
+        let store = memory();
+        let event = Event { at: 10, kind: "crash".into(), text: "game".into() };
+        assert!(store.add_event(&event).unwrap());
+        assert!(!store.add_event(&event).unwrap());
+        assert_eq!(store.events(0).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_game_runs_until_it_ends() {
+        let store = memory();
+        store.start_game(100, "Jeu").unwrap();
+        store.rename_game(100, "ARC Raiders").unwrap();
+        assert_eq!(store.running_game().unwrap().map(|game| game.name), Some("ARC Raiders".into()));
+        store.end_game(100, 4000, "{}").unwrap();
+        assert_eq!(store.running_game().unwrap(), None);
+        assert_eq!(store.games(0).unwrap()[0].end, Some(4000));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-//! The TUI: four tabs over the history the collector keeps, plus live sensor readings.
+//! The TUI: seven tabs over the history the collector keeps, plus live sensor readings.
 //!
 //!   1 Overview   what is wrong now, every temperature (now, 24 h range, limit, 24 h curve), fans, load
 //!   2 Cooling    CPU and GPU over 90 days (daily coolest and hottest), the idle trend the checks use
@@ -6,16 +6,20 @@
 //!   4 System     failed services, kernel errors, memory, the backup
 //!   5 Care       upkeep on a schedule (dusting, radiator, water cooling, paste, restore, BIOS):
 //!                ↑ ↓ pick a task, d records it done today, b moves its date a week earlier
+//!   6 Games      each game session with its peaks (games.rs)
+//!   7 Journal    crashes, hard stops, memory kills, GPU hangs and the alerts that ended (journal.rs)
 //!
-//! The Overview opens with the machine in plain words (summary.rs). Tab / ← → or 1-5 switch, r
+//! The Overview opens with the machine in plain words (summary.rs). Tab / ← → or 1-7 switch, r
 //! refreshes, q or Esc quits. Refreshes every 5 s on its own.
 
 use crate::care::{self, Due};
 use crate::checks::{self, DAY, TRENDED};
 use crate::summary::{self, Machine};
 use crate::facts::{self, Facts};
+use crate::games::Stats;
+use crate::journal;
 use crate::sensors::{self, Kind, Reading, label};
-use crate::store::{Alert, Store};
+use crate::store::{self, Alert, EndedAlert, Game, Store};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -28,7 +32,10 @@ use std::time::{Duration, Instant};
 
 const REFRESH: Duration = Duration::from_secs(5);
 const FACTS_REFRESH: Duration = Duration::from_secs(30);
-const TABS: [&str; 5] = ["Aperçu", "Refroidissement", "Disques", "Système", "Entretien"];
+const TABS: [&str; 7] = ["Aperçu", "Refroidissement", "Disques", "Système", "Entretien", "Jeux", "Journal"];
+const CARE_TAB: usize = 4;
+const JOURNAL_DAYS: i64 = 30;
+const GAME_DAYS: i64 = 90;
 const WEEK: i64 = 7 * DAY;
 const SPARK: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const CHART_DAYS: i64 = 90;
@@ -72,6 +79,25 @@ struct View {
     care_done: Vec<Option<i64>>,
     care_selected: usize,
     last_backup: Option<i64>,
+    events: Vec<store::Event>,
+    ended_alerts: Vec<EndedAlert>,
+    games: Vec<Game>,
+    /// mount → days until full at the pace of the last two weeks
+    fill_forecast: BTreeMap<String, f64>,
+}
+
+fn when(at: i64) -> String {
+    use chrono::TimeZone;
+    chrono::Local.timestamp_opt(at, 0).single().map(|time| time.format("%d/%m %H:%M").to_string()).unwrap_or_default()
+}
+
+fn duration(seconds: i64) -> String {
+    let minutes = seconds / 60;
+    if minutes < 60 { format!("{minutes} min") } else { format!("{} h {:02}", minutes / 60, minutes % 60) }
+}
+
+fn degrees(value: Option<f64>) -> String {
+    value.map(|value| format!("{value:.0} °C")).unwrap_or_else(|| "–".into())
 }
 
 fn median(mut values: Vec<f64>) -> Option<f64> {
@@ -86,7 +112,8 @@ impl View {
     fn new() -> View {
         View { tab: 0, readings: Vec::new(), loads: BTreeMap::new(), alerts: Vec::new(), day: BTreeMap::new(), limits: BTreeMap::new(),
                long: BTreeMap::new(), idle: BTreeMap::new(), facts: Facts::default(), facts_at: None, error: None, collected_at: None,
-               care_done: vec![None; care::TASKS.len()], care_selected: 0, last_backup: None }
+               care_done: vec![None; care::TASKS.len()], care_selected: 0, last_backup: None, events: Vec::new(), ended_alerts: Vec::new(),
+               games: Vec::new(), fill_forecast: BTreeMap::new() }
     }
 
     fn refresh(&mut self) {
@@ -109,9 +136,17 @@ impl View {
         self.care_done = care::TASKS.iter().map(|task| care::last_done(&store, task)).collect();
         self.last_backup = self.facts.last_backup.or_else(|| store.state("last_backup").ok().flatten().and_then(|stamp| stamp.parse().ok()));
         self.limits = store.limits()?;
+        self.events = store.events(now - JOURNAL_DAYS * DAY)?;
+        self.ended_alerts = store.ended_alerts(now - JOURNAL_DAYS * DAY)?;
+        self.games = store.games(now - GAME_DAYS * DAY)?;
+        self.fill_forecast = self.facts.disk_usage.iter().filter_map(|(mount, _)| {
+            let history: Vec<(i64, f64)> = store.hours(&crate::collect::disk_key(mount), now - 14 * DAY).ok()?
+                .into_iter().map(|(hour, _, mean, _)| (hour, mean)).collect();
+            Some((mount.clone(), checks::days_until_full(&history)?))
+        }).collect();
         let latest = store.latest()?;
         self.collected_at = latest.values().map(|(at, _)| *at).max();
-        self.loads = latest.iter().filter(|(sensor, _)| sensor.starts_with("load:")).map(|(sensor, (_, value))| (sensor.clone(), *value)).collect();
+        self.loads = latest.iter().filter(|(sensor, _)| ["load:", "power:", "clock:", "vram:"].iter().any(|kind| sensor.starts_with(kind))).map(|(sensor, (_, value))| (sensor.clone(), *value)).collect();
         self.day = self.readings.iter().map(|reading| {
             let hours = store.hours(&reading.key, now - DAY).unwrap_or_default();
             (reading.key.clone(), hours.into_iter().map(|(_, low, mean, high)| (low, mean, high)).collect())
@@ -159,20 +194,24 @@ fn machine(view: &View) -> Machine {
     let now = cockpit::util::now_secs();
     let reading = |key: &str| view.readings.iter().find(|reading| reading.key == key).map(|reading| reading.value);
     let kernel_problems = view.facts.kernel_errors.keys().map(|category| match category.as_str() {
-        "gpu" => "réinitialisations du GPU", "disk" => "erreurs d'entrée/sortie disque", "hardware" => "erreurs matérielles", _ => "bridage thermique",
+        "gpu" => "réinitialisations du GPU", "disk" => "erreurs d'entrée/sortie disque", "hardware" => "erreurs matérielles",
+        "memory" => "programmes tués faute de mémoire", _ => "bridage thermique",
     }.to_string()).collect();
     Machine {
         alerts: view.alerts.clone(),
         cpu_idle: view.idle.get("cpu").copied().unwrap_or((None, None)),
         cpu_now: reading("temp:k10temp/Tctl"),
         pump_rpm: reading(summary::PUMP),
-        disk: view.facts.disks.first().map(|disk| (disk.device.clone(), disk.percentage_used,
-                                                   disk.critical_warning == 0 && disk.available_spare >= disk.spare_threshold)),
+        // The disk in the worst shape speaks for all: a failing one first, then the most worn.
+        disk: view.facts.disks.iter()
+            .map(|disk| (disk.device.clone(), disk.percentage_used, disk.critical_warning == 0 && disk.available_spare >= disk.spare_threshold))
+            .min_by_key(|(_, worn, healthy)| (*healthy, std::cmp::Reverse(*worn))),
         fullest: view.facts.disk_usage.iter().cloned().max_by(|a, b| a.1.total_cmp(&b.1)),
         failed_units: view.facts.failed_units.clone(),
         kernel_problems,
         backup_age_days: view.last_backup.map(|at| (now - at).div_euclid(DAY)),
         care: care::TASKS.iter().zip(&view.care_done).map(|(task, done)| (task.title, care::due(task, *done, now))).collect(),
+        recent_events: view.events.iter().filter(|event| event.at >= now - 7 * DAY).map(|event| event.kind.clone()).collect(),
     }
 }
 
@@ -222,7 +261,12 @@ fn overview(frame: &mut Frame, area: Rect, view: &View) {
         rows.push(Row::new(vec![Cell::from(label(&reading.key)), Cell::from(format!("{:.0} tr/min", reading.value)), Cell::from(""), Cell::from(""), Cell::from("")]));
     }
     for (sensor, value) in &view.loads {
-        rows.push(Row::new(vec![Cell::from(label(sensor)), Cell::from(format!("{value:.0} %")), Cell::from(""), Cell::from(""), Cell::from("")]));
+        let shown = match sensor.split(':').next() {
+            Some("power") => format!("{value:.0} W"),
+            Some("clock") => format!("{value:.0} MHz"),
+            _ => format!("{value:.0} %"),
+        };
+        rows.push(Row::new(vec![Cell::from(label(sensor)), Cell::from(shown), Cell::from(""), Cell::from(""), Cell::from("")]));
     }
     let table = Table::new(rows, [Constraint::Length(18), Constraint::Length(10), Constraint::Length(12), Constraint::Length(7), Constraint::Min(24)])
         .header(Row::new(["Capteur", "Actuel", "24 h", "Limite", "Dernières 24 h"]).style(dim()))
@@ -273,8 +317,12 @@ fn disks(frame: &mut Frame, area: Rect, view: &View) {
     lines.push(Line::styled("Espace", Style::default().add_modifier(Modifier::BOLD)));
     for (mount, used) in &view.facts.disk_usage {
         let filled = (*used / 5.0).round() as usize;
+        let forecast = match view.fill_forecast.get(mount) {
+            Some(days) if *days <= 365.0 => Span::styled(format!("   plein dans ~{days:.0} jours à ce rythme"), level_style(if *days <= 30.0 { "warn" } else { "ok" })),
+            _ => Span::raw(""),
+        };
         lines.push(Line::from(vec![Span::raw(format!("  {mount:<16} ")), Span::styled("█".repeat(filled), level_style(if *used >= 90.0 { "warn" } else { "ok" })),
-                                   Span::styled("░".repeat(20 - filled.min(20)), dim()), Span::raw(format!(" {used:.0} %"))]));
+                                   Span::styled("░".repeat(20 - filled.min(20)), dim()), Span::raw(format!(" {used:.0} %")), forecast]));
     }
     frame.render_widget(Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(" Disques ")), area);
 }
@@ -289,7 +337,7 @@ fn system(frame: &mut Frame, area: Rect, view: &View) {
     lines.push(Line::from(""));
     lines.push(Line::styled("Erreurs du noyau (24 h)", Style::default().add_modifier(Modifier::BOLD)));
     if facts.kernel_errors.is_empty() {
-        lines.push(Line::styled("  aucune de celles surveillées (réinitialisations du GPU, entrées/sorties disque, erreurs matérielles, bridage)", level_style("ok")));
+        lines.push(Line::styled("  aucune de celles surveillées (réinitialisations du GPU, entrées/sorties disque, erreurs matérielles, mémoire épuisée, bridage)", level_style("ok")));
     }
     for (category, entries) in &facts.kernel_errors {
         lines.push(Line::styled(format!("  {category} : {} ligne(s)", entries.len()), level_style("warn")));
@@ -339,6 +387,68 @@ fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
     frame.render_widget(Paragraph::new(detail).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL)), detail_area);
 }
 
+fn games_tab(frame: &mut Frame, area: Rect, view: &View) {
+    let now = cockpit::util::now_secs();
+    let rows: Vec<Row> = view.games.iter().map(|game| {
+        let Some(end) = game.end else {
+            return Row::new(vec![Cell::from(when(game.start)), Cell::from(game.name.clone()), Cell::from(duration(now - game.start)),
+                                 Cell::from("en cours").style(level_style("ok"))]);
+        };
+        let peaks = game.stats.as_deref().map(Stats::from_json).unwrap_or_default();
+        let at_limit = Cell::from(if peaks.minutes_at_limit == 0 { "–".to_string() } else { format!("{} min", peaks.minutes_at_limit) })
+            .style(level_style(if peaks.minutes_at_limit == 0 { "ok" } else { "warn" }));
+        Row::new(vec![Cell::from(when(game.start)), Cell::from(game.name.clone()), Cell::from(duration(end - game.start)),
+                      Cell::from(degrees(peaks.cpu)), Cell::from(degrees(peaks.gpu)), Cell::from(degrees(peaks.hotspot)), Cell::from(degrees(peaks.vram)),
+                      Cell::from(peaks.power.map(|watts| format!("{watts:.0} W")).unwrap_or_else(|| "–".into())), at_limit])
+    }).collect();
+    let empty = rows.is_empty();
+    let table = Table::new(rows, [Constraint::Length(12), Constraint::Min(18), Constraint::Length(9), Constraint::Length(8), Constraint::Length(8),
+                                  Constraint::Length(12), Constraint::Length(8), Constraint::Length(10), Constraint::Length(12)])
+        .header(Row::new(["Début", "Jeu", "Durée", "CPU", "GPU", "Point chaud", "VRAM", "GPU max", "À la limite"]).style(dim()))
+        .block(Block::default().borders(Borders::ALL).title(format!(" Sessions de jeu · {GAME_DAYS} jours · maximums atteints ")));
+    if empty {
+        let text = "Aucune session pour l'instant : une partie s'enregistre dès que GameMode démarre ou qu'une fenêtre de jeu a le focus.";
+        frame.render_widget(Paragraph::new(Line::styled(text, dim())).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Sessions de jeu ")), area);
+        return;
+    }
+    frame.render_widget(table, area);
+}
+
+/// The game running at `at`, if any.
+fn game_at(games: &[Game], at: i64) -> Option<&str> {
+    let now = cockpit::util::now_secs();
+    games.iter().find(|game| game.start <= at && at <= game.end.unwrap_or(now)).map(|game| game.name.as_str())
+}
+
+/// Events and ended alerts together, latest first: (time, level, what, detail).
+fn journal_entries(view: &View) -> Vec<(i64, &'static str, String, String)> {
+    let mut entries: Vec<(i64, &'static str, String, String)> = view.events.iter().map(|event| {
+        let level = if event.kind == "crash" || event.kind == "thermal" { "warn" } else { "crit" };
+        let during = game_at(&view.games, event.at).map(|game| format!(" · pendant {game}")).unwrap_or_default();
+        (event.at, level, journal::kind_name(&event.kind).to_string(), format!("{}{during}", event.text))
+    }).collect();
+    entries.extend(view.ended_alerts.iter().map(|alert| {
+        (alert.since, if alert.level == "crit" { "crit" } else { "warn" }, format!("Alerte · {}", alert.title),
+         format!("du {} au {} ({})", when(alert.since), when(alert.until), duration(alert.until - alert.since)))
+    }));
+    entries.sort_by_key(|entry| std::cmp::Reverse(entry.0));
+    entries
+}
+
+fn journal_tab(frame: &mut Frame, area: Rect, view: &View) {
+    let entries = journal_entries(view);
+    let mut lines: Vec<Line> = Vec::new();
+    if entries.is_empty() {
+        lines.push(Line::styled(format!("Rien à signaler ces {JOURNAL_DAYS} derniers jours."), level_style("ok")));
+    }
+    for (at, level, what, detail) in entries {
+        lines.push(Line::from(vec![Span::styled(format!("{}  ", when(at)), dim()), Span::styled(what, level_style(level).add_modifier(Modifier::BOLD))]));
+        lines.push(Line::styled(format!("             {detail}"), dim()));
+    }
+    let title = format!(" Journal · {JOURNAL_DAYS} jours · plantages, arrêts brutaux, mémoire, GPU, alertes terminées ");
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(title)), area);
+}
+
 /// d: done today; b: the recorded date a week earlier (for a task done a while ago).
 fn record_care(view: &mut View, earlier: bool) {
     let task = &care::TASKS[view.care_selected];
@@ -360,9 +470,11 @@ fn draw(frame: &mut Frame, view: &View) {
         1 => cooling(frame, body, view),
         2 => disks(frame, body, view),
         3 => system(frame, body, view),
-        _ => care_tab(frame, body, view),
+        CARE_TAB => care_tab(frame, body, view),
+        5 => games_tab(frame, body, view),
+        _ => journal_tab(frame, body, view),
     }
-    let keys = if view.tab == 4 { "↑↓ choisir · d fait aujourd'hui · b une semaine plus tôt · 1-5 / Tab changer d'onglet · q quitter" } else { "1-5 / Tab changer d'onglet · r rafraîchir · q quitter" };
+    let keys = if view.tab == CARE_TAB { "↑↓ choisir · d fait aujourd'hui · b une semaine plus tôt · 1-7 / Tab changer d'onglet · q quitter" } else { "1-7 / Tab changer d'onglet · r rafraîchir · q quitter" };
     frame.render_widget(Paragraph::new(Line::styled(keys, dim())), footer);
 }
 
@@ -380,11 +492,11 @@ fn event_loop(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 }
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                    KeyCode::Char(digit @ '1'..='5') => view.tab = digit as usize - '1' as usize,
-                    KeyCode::Up | KeyCode::Char('k') if view.tab == 4 => view.care_selected = view.care_selected.saturating_sub(1),
-                    KeyCode::Down | KeyCode::Char('j') if view.tab == 4 => view.care_selected = (view.care_selected + 1).min(care::TASKS.len() - 1),
-                    KeyCode::Char('d') if view.tab == 4 => record_care(&mut view, false),
-                    KeyCode::Char('b') if view.tab == 4 => record_care(&mut view, true),
+                    KeyCode::Char(digit @ '1'..='7') => view.tab = digit as usize - '1' as usize,
+                    KeyCode::Up | KeyCode::Char('k') if view.tab == CARE_TAB => view.care_selected = view.care_selected.saturating_sub(1),
+                    KeyCode::Down | KeyCode::Char('j') if view.tab == CARE_TAB => view.care_selected = (view.care_selected + 1).min(care::TASKS.len() - 1),
+                    KeyCode::Char('d') if view.tab == CARE_TAB => record_care(&mut view, false),
+                    KeyCode::Char('b') if view.tab == CARE_TAB => record_care(&mut view, true),
                     KeyCode::Tab | KeyCode::Right => view.tab = (view.tab + 1) % TABS.len(),
                     KeyCode::BackTab | KeyCode::Left => view.tab = (view.tab + TABS.len() - 1) % TABS.len(),
                     KeyCode::Char('r') => {
@@ -418,6 +530,51 @@ mod tests {
     fn a_sparkline_spans_its_own_range() {
         assert_eq!(sparkline(&[40.0, 50.0, 60.0]), "▁▅█");
         assert_eq!(sparkline(&[]), "");
+    }
+
+    fn event(at: i64, kind: &str) -> store::Event {
+        store::Event { at, kind: kind.into(), text: "ArcRaiders.exe (SIGSEGV)".into() }
+    }
+
+    #[test]
+    fn a_crash_during_a_game_names_the_game() {
+        let mut view = View::new();
+        view.games = vec![Game { start: 1000, end: Some(5000), name: "ARC Raiders".into(), stats: None }];
+        view.events = vec![event(2000, "crash")];
+        assert!(journal_entries(&view)[0].3.ends_with(" · pendant ARC Raiders"), "{:?}", journal_entries(&view));
+    }
+
+    #[test]
+    fn the_journal_lists_the_latest_first() {
+        let mut view = View::new();
+        view.events = vec![event(2000, "crash")];
+        view.ended_alerts = vec![EndedAlert { level: "warn".into(), title: "CPU trop chaud : 91 °C".into(), since: 3000, until: 3600 }];
+        let order: Vec<i64> = journal_entries(&view).into_iter().map(|entry| entry.0).collect();
+        assert_eq!(order, [3000, 2000]);
+    }
+
+    #[test]
+    fn the_most_worn_disk_speaks_for_all() {
+        let mut view = View::new();
+        let disk = |device: &str, worn: u64| crate::facts::Smart { device: device.into(), percentage_used: worn, available_spare: 100, spare_threshold: 10, ..Default::default() };
+        view.facts.disks = vec![disk("nvme0n1", 2), disk("nvme1n1", 40)];
+        assert_eq!(machine(&view).disk.map(|disk| disk.0), Some("nvme1n1".into()));
+    }
+
+    #[test]
+    fn every_tab_draws_with_a_game_and_an_event() {
+        let backend = ratatui::backend::TestBackend::new(120, 30);
+        let mut terminal = ratatui::Terminal::new(backend).unwrap();
+        let mut view = View::new();
+        let peaks = Stats { cpu: Some(78.0), hotspot: Some(95.0), minutes_at_limit: 2, ..Default::default() };
+        view.games = vec![Game { start: 1000, end: Some(8000), name: "ARC Raiders".into(), stats: Some(peaks.to_json()) }];
+        view.events = vec![event(2000, "unclean")];
+        for tab in 0..TABS.len() {
+            view.tab = tab;
+            terminal.draw(|frame| draw(frame, &view)).unwrap();
+        }
+        let screen: String = terminal.backend().buffer().content().iter().map(|cell| cell.symbol()).collect();
+        assert!(screen.contains("Arrêt brutal"));
     }
 
     #[test]

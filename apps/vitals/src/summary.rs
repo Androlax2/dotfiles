@@ -1,5 +1,5 @@
 //! The machine in plain words: one headline, then a sentence per area (cooling, disk, system,
-//! backup, upkeep), each saying what it means and what to do when something drifts.
+//! backup, upkeep, stability), each saying what it means and what to do when something drifts.
 
 use crate::care::{self, Due};
 use crate::store::Alert;
@@ -26,6 +26,8 @@ pub struct Machine {
     pub backup_age_days: Option<i64>,
     /// Each upkeep task's title and due state.
     pub care: Vec<(&'static str, Due)>,
+    /// The kinds of the journal's events of the last seven days (crash, unclean, gpu…).
+    pub recent_events: Vec<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -129,6 +131,40 @@ fn upkeep(machine: &Machine) -> Sentence {
     sentence("Entretien", "ok", text)
 }
 
+/// The event kinds that point at the machine rather than at one program.
+const SERIOUS: [&str; 5] = ["unclean", "gpu", "disk", "hardware", "memory"];
+
+fn counted(kind: &str, count: usize) -> String {
+    let (one, many) = match kind {
+        "crash" => ("plantage", "plantages"),
+        "unclean" => ("arrêt brutal", "arrêts brutaux"),
+        "memory" => ("programme tué faute de mémoire", "programmes tués faute de mémoire"),
+        "gpu" => ("blocage du GPU", "blocages du GPU"),
+        "disk" => ("erreur disque", "erreurs disque"),
+        "hardware" => ("erreur matérielle", "erreurs matérielles"),
+        "thermal" => ("bridage thermique", "bridages thermiques"),
+        _ => ("événement", "événements"),
+    };
+    format!("{count} {}", if count == 1 { one } else { many })
+}
+
+fn stability(machine: &Machine) -> Sentence {
+    if machine.recent_events.is_empty() {
+        return sentence("Stabilité", "ok", "Aucun plantage, arrêt brutal ni blocage du GPU ces 7 derniers jours.");
+    }
+    let mut counts: Vec<(&str, usize)> = Vec::new();
+    for kind in &machine.recent_events {
+        match counts.iter_mut().find(|(known, _)| known == kind) {
+            Some(entry) => entry.1 += 1,
+            None => counts.push((kind, 1)),
+        }
+    }
+    counts.sort_by_key(|(kind, _)| (!SERIOUS.contains(kind), *kind));
+    let level = if counts.iter().any(|(kind, _)| SERIOUS.contains(kind)) { "warn" } else { "ok" };
+    sentence("Stabilité", level, format!("Ces 7 derniers jours : {} ; détails dans l'onglet Journal.",
+                                         counts.iter().map(|(kind, count)| counted(kind, *count)).collect::<Vec<_>>().join(", ")))
+}
+
 /// "Dépoussiérer les filtres" in the middle of a sentence: only its first letter changes.
 fn lowercase_first(text: &str) -> String {
     let mut characters = text.chars();
@@ -136,7 +172,7 @@ fn lowercase_first(text: &str) -> String {
 }
 
 pub fn sentences(machine: &Machine) -> Vec<Sentence> {
-    vec![cooling(machine), disk(machine), system(machine), backup(machine), upkeep(machine)]
+    vec![cooling(machine), disk(machine), system(machine), backup(machine), upkeep(machine), stability(machine)]
 }
 
 #[cfg(test)]
@@ -184,6 +220,24 @@ mod tests {
     fn upkeep_without_dates_asks_for_them() {
         let machine = Machine { care: vec![("Dépoussiérer les filtres et les ventilateurs", Due::Unknown)], ..healthy() };
         assert!(sentences(&machine)[4].text.contains("1 tâche sans date"));
+    }
+
+    #[test]
+    fn a_quiet_week_says_so() {
+        assert_eq!(sentences(&healthy())[5].level, "ok");
+    }
+
+    #[test]
+    fn a_hard_stop_comes_first_and_warns() {
+        let machine = Machine { recent_events: vec!["crash".into(), "unclean".into(), "crash".into()], ..healthy() };
+        let line = &sentences(&machine)[5];
+        assert_eq!(line.level, "warn");
+        assert_eq!(line.text, "Ces 7 derniers jours : 1 arrêt brutal, 2 plantages ; détails dans l'onglet Journal.");
+    }
+
+    #[test]
+    fn a_program_crash_alone_does_not_warn() {
+        assert_eq!(sentences(&Machine { recent_events: vec!["crash".into()], ..healthy() })[5].level, "ok");
     }
 
     #[test]

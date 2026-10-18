@@ -152,6 +152,58 @@ pub fn load_trend(minutes: &Minutes, now: i64, sensor: &str, load: &str, name: &
                 name.to_uppercase())))
 }
 
+/// Pump readings at idle below this many minutes per window say nothing.
+const MIN_IDLE_PUMP_MINUTES: usize = 120;
+/// A pump that lost this share of its idle speed in three weeks is tiring.
+const PUMP_SLOWDOWN: f64 = 0.15;
+/// A disk filling up warns this many days before it is full.
+const FILL_WARNING_DAYS: f64 = 30.0;
+const MIN_FILL_HISTORY_S: i64 = 3 * DAY;
+
+/// The pump's idle speed this week against three weeks earlier: a pump wears out slowly, and
+/// slows down before it stops.
+pub fn pump_trend(minutes: &Minutes, now: i64, pump: &str, load: &str) -> Option<Finding> {
+    let idle_between = |from: i64, to: i64| -> Vec<f64> {
+        minutes.range(now - to..now - from)
+            .filter(|(_, readings)| readings.get(load).is_some_and(|busy| *busy < IDLE_LOAD))
+            .filter_map(|(_, readings)| readings.get(pump).copied()).filter(|rpm| *rpm > 0.0).collect()
+    };
+    let (mut this_week, mut earlier) = (idle_between(0, 7 * DAY), idle_between(21 * DAY, 28 * DAY));
+    if this_week.len() < MIN_IDLE_PUMP_MINUTES || earlier.len() < MIN_IDLE_PUMP_MINUTES {
+        return None;
+    }
+    let (now_rpm, earlier_rpm) = (median(&mut this_week)?, median(&mut earlier)?);
+    let slowdown = 1.0 - now_rpm / earlier_rpm;
+    (slowdown >= PUMP_SLOWDOWN).then(|| warn("pump-slower", format!("La pompe ralentit : −{:.0} %", slowdown * 100.0),
+        format!("Au repos, la pompe est passée de {earlier_rpm:.0} à {now_rpm:.0} tr/min en trois semaines : vérifie le watercooling \
+                 (bruit, bulles, raccords) avant qu'elle ne s'arrête.")))
+}
+
+/// Days until a disk is full at the pace of its history (time, percent used), oldest first; None
+/// when it is not filling up or the history is too short to tell.
+pub fn days_until_full(history: &[(i64, f64)]) -> Option<f64> {
+    let (first, last) = (history.first()?, history.last()?);
+    if last.0 - first.0 < MIN_FILL_HISTORY_S {
+        return None;
+    }
+    let count = history.len() as f64;
+    let mean_time = history.iter().map(|point| point.0 as f64).sum::<f64>() / count;
+    let mean_used = history.iter().map(|point| point.1).sum::<f64>() / count;
+    let covariance: f64 = history.iter().map(|point| (point.0 as f64 - mean_time) * (point.1 - mean_used)).sum();
+    let variance: f64 = history.iter().map(|point| (point.0 as f64 - mean_time).powi(2)).sum();
+    let per_second = covariance / variance;
+    (per_second > 0.0).then(|| (100.0 - last.1).max(0.0) / per_second / DAY as f64)
+}
+
+/// A disk that will be full within a month at its pace; the 90 % finding takes over past that.
+pub fn filling(mount: &str, history: &[(i64, f64)]) -> Option<Finding> {
+    let used = history.last()?.1;
+    let days = days_until_full(history).filter(|days| *days <= FILL_WARNING_DAYS && used < DISK_FULL_PERCENT)?;
+    let key = match slug(mount).as_str() { "" => "root".to_string(), named => named.to_string() };
+    Some(warn(format!("filling-{key}"), format!("{mount} sera plein dans ~{days:.0} jours"),
+              format!("{mount} est plein à {used:.0} % et se remplit au rythme des deux dernières semaines : fais de la place.")))
+}
+
 /// A fan or pump that stopped while its chip is warm, though it spun this week. Fans that stop by
 /// design when cool (the GPU's zero-RPM mode) stay quiet below FAN_MATTERS_FROM.
 pub fn stopped_fans(minutes: &Minutes, now: i64) -> Vec<Finding> {
@@ -218,6 +270,7 @@ pub fn system(facts: &Facts, now: i64) -> Vec<Finding> {
             "gpu" => ("crit", "Réinitialisations ou blocages du GPU"),
             "disk" => ("crit", "Erreurs d'entrée/sortie disque"),
             "hardware" => ("crit", "Erreurs matérielles (machine check)"),
+            "memory" => ("warn", "Programme tué faute de mémoire"),
             _ => ("warn", "Bridage thermique"),
         };
         let detail = format!("{} message(s) du noyau en 24 h, le dernier : {}", lines.len(), lines.last().map(String::as_str).unwrap_or(""));
@@ -391,6 +444,45 @@ mod tests {
     fn a_failed_backup_warns() {
         let facts = Facts { backup_result: Some("exit-code".into()), last_backup: Some(NOW), uptime_s: Some(7200), ..Facts::default() };
         assert_eq!(system(&facts, NOW)[0].key, "backup-failed");
+    }
+
+    #[test]
+    fn a_pump_that_lost_a_fifth_of_its_idle_speed_warns() {
+        let mut minutes = Minutes::new();
+        for minute in 0..200 {
+            minutes.insert(NOW - 25 * DAY + minute * 60, BTreeMap::from([("fan:it8696/fan5".to_string(), 2800.0), ("load:cpu".to_string(), 5.0)]));
+            minutes.insert(NOW - 2 * DAY + minute * 60, BTreeMap::from([("fan:it8696/fan5".to_string(), 2200.0), ("load:cpu".to_string(), 5.0)]));
+        }
+        assert_eq!(pump_trend(&minutes, NOW, "fan:it8696/fan5", "load:cpu").map(|finding| finding.key), Some("pump-slower".into()));
+    }
+
+    #[test]
+    fn a_steady_pump_is_fine() {
+        let mut minutes = Minutes::new();
+        for minute in 0..200 {
+            minutes.insert(NOW - 25 * DAY + minute * 60, BTreeMap::from([("fan:it8696/fan5".to_string(), 2800.0), ("load:cpu".to_string(), 5.0)]));
+            minutes.insert(NOW - 2 * DAY + minute * 60, BTreeMap::from([("fan:it8696/fan5".to_string(), 2750.0), ("load:cpu".to_string(), 5.0)]));
+        }
+        assert_eq!(pump_trend(&minutes, NOW, "fan:it8696/fan5", "load:cpu"), None);
+    }
+
+    #[test]
+    fn a_disk_gaining_two_points_a_day_from_70_is_full_in_about_15_days() {
+        let history: Vec<(i64, f64)> = (0..=5).map(|day| (NOW - (5 - day) * DAY, 60.0 + 2.0 * day as f64)).collect();
+        let days = days_until_full(&history).unwrap();
+        assert!((days - 15.0).abs() < 0.01, "{days}");
+        assert_eq!(filling("/", &history).map(|finding| finding.key), Some("filling-root".into()));
+    }
+
+    #[test]
+    fn a_disk_that_does_not_grow_has_no_forecast() {
+        let history: Vec<(i64, f64)> = (0..=5).map(|day| (NOW - (5 - day) * DAY, 60.0)).collect();
+        assert_eq!(days_until_full(&history), None);
+    }
+
+    #[test]
+    fn a_day_of_history_is_too_short_to_forecast() {
+        assert_eq!(days_until_full(&[(NOW - 3600, 50.0), (NOW, 60.0)]), None);
     }
 
     #[test]

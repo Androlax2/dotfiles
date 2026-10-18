@@ -2,7 +2,7 @@
 # system tools and leaves their output, readable by all, in /var/lib/vitals: no program from the
 # dotfiles runs as root, and the file in /etc only changes through `make system` (sudo).
 [Unit]
-Description=vitals: disk health (SMART) and kernel errors for the unprivileged collector
+Description=vitals: disk health (SMART), kernel errors, crashes and memory kills for the unprivileged collector
 
 [Service]
 Type=oneshot
@@ -23,4 +23,8 @@ ExecStart=/bin/sh -c 'mkdir -p /var/lib/vitals/smart; \
         mv "/var/lib/vitals/smart/$name.json.new" "/var/lib/vitals/smart/$name.json"; \
     done; \
     journalctl -k -p err --since=-24h -o short-iso --no-pager > /var/lib/vitals/kernel-errors.log.new; \
-    mv /var/lib/vitals/kernel-errors.log.new /var/lib/vitals/kernel-errors.log'
+    mv /var/lib/vitals/kernel-errors.log.new /var/lib/vitals/kernel-errors.log; \
+    coredumpctl list --since=-24h --json=short --no-pager > /var/lib/vitals/crashes.json.new 2>/dev/null; \
+    mv /var/lib/vitals/crashes.json.new /var/lib/vitals/crashes.json; \
+    journalctl -u systemd-oomd --since=-24h -o short-iso --no-pager --grep=Killed > /var/lib/vitals/oomd.log.new 2>/dev/null; \
+    mv /var/lib/vitals/oomd.log.new /var/lib/vitals/oomd.log'

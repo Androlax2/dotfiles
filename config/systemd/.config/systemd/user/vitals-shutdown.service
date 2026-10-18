@@ -1,0 +1,14 @@
+# vitals (apps/vitals) tells a clean shutdown from a hard stop (a freeze, a power cut, the power
+# button held): this unit records the boot when the session starts and again when it stops
+# cleanly. A boot recorded at the start but never at the stop shows in the Journal tab.
+[Unit]
+Description=vitals: record clean shutdowns, so a hard stop shows in the journal
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/vitals shutdown watch
+ExecStop=%h/.local/bin/vitals shutdown clean
+
+[Install]
+WantedBy=default.target

@@ -125,6 +125,30 @@ pub fn gpu_load(root: &Path) -> Option<f64> {
     entries.flatten().filter_map(|entry| read_number(&entry.path().join("device/gpu_busy_percent"))).reduce(f64::max)
 }
 
+/// The graphics card with the most video memory (the discrete one): its power draw (W), its
+/// core clock (MHz) and the share of its memory in use (%), as (key, value).
+pub fn gpu_details(root: &Path) -> Vec<(String, f64)> {
+    let Ok(entries) = fs::read_dir(root.join("sys/class/drm")) else { return Vec::new() };
+    let card = entries.flatten().map(|entry| entry.path().join("device"))
+        .filter_map(|device| Some((read_number(&device.join("mem_info_vram_total"))?, device)))
+        .max_by(|a, b| a.0.total_cmp(&b.0));
+    let Some((vram_total, device)) = card else { return Vec::new() };
+    let mut details = Vec::new();
+    let hwmon = fs::read_dir(device.join("hwmon")).ok().and_then(|mut entries| entries.next()?.ok()).map(|entry| entry.path());
+    if let Some(hwmon) = hwmon {
+        if let Some(microwatts) = read_number(&hwmon.join("power1_average")).or_else(|| read_number(&hwmon.join("power1_input"))) {
+            details.push(("power:gpu".to_string(), microwatts / 1e6));
+        }
+        if let Some(hertz) = read_number(&hwmon.join("freq1_input")) {
+            details.push(("clock:gpu".to_string(), hertz / 1e6));
+        }
+    }
+    if let Some(used) = read_number(&device.join("mem_info_vram_used")).filter(|_| vram_total > 0.0) {
+        details.push(("vram:gpu".to_string(), used * 100.0 / vram_total));
+    }
+    details
+}
+
 /// Where a sensor sorts on screen: the CPU and GPU first, the rest after.
 pub fn rank(key: &str) -> (usize, String) {
     let name = label(key);
@@ -159,6 +183,10 @@ pub fn label(key: &str) -> String {
     };
     match kind {
         "load" => format!("Charge {}", rest.to_uppercase()),
+        "power" => "GPU puissance".to_string(),
+        "clock" => "GPU fréquence".to_string(),
+        "vram" => "VRAM utilisée".to_string(),
+        "disk" => format!("Disque {rest}"),
         _ => named,
     }
 }
@@ -249,6 +277,23 @@ mod tests {
         let root = scratch();
         chip(&root, 0, "nvme", &[("temp2_input", "34900"), ("temp2_label", "Sensor 1"), ("temp2_max", "65261850")], None);
         assert_eq!(read_hwmon(&root)[0].high, None);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_discrete_gpu_reports_its_power_clock_and_memory_use() {
+        let root = scratch();
+        for (card, total) in [("card0", "536870912"), ("card1", "17163091968")] {
+            let device = root.join(format!("sys/class/drm/{card}/device"));
+            fs::create_dir_all(device.join("hwmon/hwmon7")).unwrap();
+            fs::write(device.join("mem_info_vram_total"), total).unwrap();
+            fs::write(device.join("mem_info_vram_used"), "4290772992").unwrap();
+            fs::write(device.join("hwmon/hwmon7/power1_average"), "245000000").unwrap();
+            fs::write(device.join("hwmon/hwmon7/freq1_input"), "2650000000").unwrap();
+        }
+        let details = gpu_details(&root);
+        assert_eq!(details[..2], [("power:gpu".to_string(), 245.0), ("clock:gpu".to_string(), 2650.0)]);
+        assert!((details[2].1 - 25.0).abs() < 0.01, "{}", details[2].1);
         fs::remove_dir_all(root).unwrap();
     }
 

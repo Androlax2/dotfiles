@@ -2,9 +2,10 @@
 //! vitals collect         one collection (vitals-collect.timer, every minute)
 //! vitals import [log]    the temperature log of log-temps.sh into the history, once
 //! vitals status          the bar's dot, as waybar JSON
+//! vitals shutdown watch|clean   vitals-shutdown.service, to tell a clean shutdown from a hard stop
 
 use serde_json::{Value, json};
-use vitals::{collect, import, store::Store, tui};
+use vitals::{collect, import, journal, sensors, store::Store, tui};
 
 /// Past this the collector is not running: the dot says so instead of a reassuring silence.
 const STALE_AFTER_S: i64 = 5 * 60;
@@ -39,6 +40,8 @@ fn main() {
             println!("{}", status());
             Ok(())
         }
+        ["shutdown", moment] => Store::open().map_err(|error| error.to_string())
+            .and_then(|store| journal::mark(&store, &sensors::sys_root(), moment)),
         ["import", rest @ ..] if rest.len() <= 1 => {
             let path = rest.first().map(std::path::PathBuf::from).unwrap_or_else(|| cockpit::paths::home().join(".local/share/templogs/temps.log"));
             std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display())).and_then(|log| {
@@ -53,7 +56,7 @@ fn main() {
                 Ok(())
             })
         }
-        _ => Err("usage: vitals [collect | status | import [log]]".into()),
+        _ => Err("usage: vitals [collect | status | shutdown watch|clean | import [log]]".into()),
     };
     if let Err(error) = result {
         eprintln!("vitals: {error}");

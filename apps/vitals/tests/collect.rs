@@ -91,3 +91,55 @@ fn without_a_collection_the_chip_says_so() {
     let machine = Machine::new();
     assert_eq!(machine.status()["class"], "stale");
 }
+
+fn store(machine: &Machine) -> vitals::store::Store {
+    vitals::store::Store::at(machine.root.join("state/vitals.sqlite")).unwrap()
+}
+
+#[test]
+fn a_collection_during_game_mode_opens_a_game_session() {
+    let machine = Machine::new();
+    fs::write(machine.root.join("run/game-performance.paused"), "").unwrap();
+    machine.vitals(&["collect"]);
+    let running = store(&machine).running_game().unwrap().expect("no session");
+    assert_eq!(running.name, vitals::games::UNNAMED);
+}
+
+#[test]
+fn a_crash_left_by_the_root_unit_reaches_the_journal() {
+    let machine = Machine::new();
+    fs::write(machine.root.join("root-data/crashes.json"),
+              r#"[{"time": 1792352525000000, "pid": 42, "uid": 1000, "sig": 6, "exe": "/usr/bin/waybar"}]"#).unwrap();
+    machine.vitals(&["collect"]);
+    machine.vitals(&["collect"]);
+    let events = store(&machine).events(0).unwrap();
+    assert_eq!(events.iter().map(|event| event.text.as_str()).collect::<Vec<_>>(), ["waybar (SIGABRT)"]);
+}
+
+#[test]
+fn a_boot_that_was_watched_and_never_shut_down_cleanly_is_a_hard_stop() {
+    let machine = Machine::new();
+    let boot_id = machine.root.join("sys/proc/sys/kernel/random/boot_id");
+    fs::create_dir_all(boot_id.parent().unwrap()).unwrap();
+    fs::write(&boot_id, "first\n").unwrap();
+    assert!(machine.vitals(&["shutdown", "watch"]).status.success());
+    machine.vitals(&["collect"]);
+    fs::write(&boot_id, "second\n").unwrap();
+    machine.vitals(&["collect"]);
+    let kinds: Vec<String> = store(&machine).events(0).unwrap().into_iter().map(|event| event.kind).collect();
+    assert_eq!(kinds, ["unclean"]);
+}
+
+#[test]
+fn a_clean_shutdown_leaves_the_journal_empty() {
+    let machine = Machine::new();
+    let boot_id = machine.root.join("sys/proc/sys/kernel/random/boot_id");
+    fs::create_dir_all(boot_id.parent().unwrap()).unwrap();
+    fs::write(&boot_id, "first\n").unwrap();
+    machine.vitals(&["shutdown", "watch"]);
+    machine.vitals(&["collect"]);
+    machine.vitals(&["shutdown", "clean"]);
+    fs::write(&boot_id, "second\n").unwrap();
+    machine.vitals(&["collect"]);
+    assert!(store(&machine).events(0).unwrap().is_empty());
+}

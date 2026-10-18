@@ -4,6 +4,9 @@
 use crate::care;
 use crate::checks::{self, DAY, Finding, TRENDED};
 use crate::facts;
+use crate::games;
+use crate::journal;
+use crate::summary;
 use crate::sensors::{self, Kind};
 use crate::store::{Alert, KEEP_SAMPLES_S, Store};
 use serde_json::json;
@@ -55,6 +58,7 @@ pub fn apply(store: &Store, findings: &[Finding], now: i64, is_gaming: bool, sen
     for (key, alert) in &previous {
         if !findings.iter().any(|finding| &finding.key == key) {
             store.drop_alert(key)?;
+            store.save_ended_alert(alert, now)?;
             if alert.notified {
                 send(key, None);
             }
@@ -93,6 +97,9 @@ fn record_sensors(store: &Store, now: i64) -> rusqlite::Result<()> {
     if let Some(load) = sensors::gpu_load(&root) {
         store.record(now, "load:gpu", load)?;
     }
+    for (key, value) in sensors::gpu_details(&root) {
+        store.record(now, &key, value)?;
+    }
     store.forget_before(now - KEEP_SAMPLES_S)
 }
 
@@ -123,8 +130,19 @@ pub fn findings(store: &Store, facts: &facts::Facts, now: i64) -> rusqlite::Resu
         minutes.entry(at).or_default().extend(readings);
     }
     let mut found = checks::all(&minutes, &store.limits()?, facts, now);
+    let pump_minutes = store.minutes(now - 29 * DAY, &[summary::PUMP, "load:cpu"])?;
+    found.extend(checks::pump_trend(&pump_minutes, now, summary::PUMP, "load:cpu"));
+    for (mount, _) in &facts.disk_usage {
+        let history: Vec<(i64, f64)> = store.hours(&disk_key(mount), now - 14 * DAY)?.into_iter().map(|(hour, _, mean, _)| (hour, mean)).collect();
+        found.extend(checks::filling(mount, &history));
+    }
     found.extend(care_findings(store, now));
     Ok(found)
+}
+
+/// The history key of a mount's usage.
+pub fn disk_key(mount: &str) -> String {
+    format!("disk:{mount}")
 }
 
 /// Upkeep past its interval, like any other problem. Never-recorded tasks raise nothing.
@@ -139,6 +157,11 @@ pub fn run() -> Result<(), String> {
     let now = cockpit::util::now_secs();
     record_sensors(&store, now).map_err(|error| format!("cannot record: {error}"))?;
     let facts = facts_with_history(&store).map_err(|error| format!("cannot read the history: {error}"))?;
+    for (mount, used) in &facts.disk_usage {
+        store.record(now, &disk_key(mount), *used).map_err(|error| format!("cannot record: {error}"))?;
+    }
+    journal::record(&store, &sensors::sys_root(), now).map_err(|error| format!("cannot keep the journal: {error}"))?;
+    games::follow(&store, now).map_err(|error| format!("cannot follow the game: {error}"))?;
     let found = findings(&store, &facts, now).map_err(|error| format!("cannot check: {error}"))?;
     let mut send = |key: &str, alert: Option<&Alert>| match alert {
         Some(alert) => notify(alert),
@@ -190,6 +213,7 @@ mod tests {
         apply(&store, &[finding("hot-cpu", "warn")], 100, false, &mut send).unwrap();
         let changed = apply(&store, &[], 160, false, &mut send).unwrap();
         assert!(changed);
+        assert_eq!(store.ended_alerts(0).unwrap()[0].until, 160);
         assert_eq!(sent.last().unwrap(), &("hot-cpu".to_string(), false));
         assert!(store.alerts().unwrap().is_empty());
     }

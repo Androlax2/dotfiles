@@ -212,9 +212,9 @@ A game window opening turns **game mode** on by itself (`config/hyprland/.config
 
 ## Machine monitor (vitals)
 
-`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI, in French: **Aperçu** (the machine in plain words, then every temperature with its 24 h range and limit, the pump, fans, load), **Refroidissement** (CPU and GPU over 90 days, and the idle trend), **Disques** (SMART health, space), **Système** (failed services, kernel errors, memory, the backup) and **Entretien** (upkeep on a schedule).
+`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI, in French: **Aperçu** (the machine in plain words, then every temperature with its 24 h range and limit, the pump, fans, load), **Refroidissement** (CPU and GPU over 90 days, and the idle trend), **Disques** (SMART health, space), **Système** (failed services, kernel errors, memory, the backup), **Entretien** (upkeep on a schedule), **Jeux** (each game session with its peaks: CPU, GPU, hotspot, VRAM, GPU power, minutes at a limit) and **Journal** (crashes, hard stops, programs killed for memory, GPU hangs, and the alerts that ended, over 30 days, each tagged with the game running at the time). Aperçu also lists the GPU's power, clock and video memory use.
 
-Aperçu opens with a headline ("Ton PC va bien : rien à faire.") and one sentence each for cooling, disk, system, backup and upkeep, saying what to do when something drifts: a CPU idling 5 °C warmer than two weeks ago means dusting the filters and the radiator, then checking the pump.
+Aperçu opens with a headline ("Ton PC va bien : rien à faire.") and one sentence each for cooling, disk, system, backup, upkeep and stability (the last 7 days of the Journal), saying what to do when something drifts: a CPU idling 5 °C warmer than two weeks ago means dusting the filters and the radiator, then checking the pump.
 
 | Upkeep (Entretien tab) | Every |
 | --- | --- |
@@ -233,11 +233,14 @@ Aperçu opens with a headline ("Ton PC va bien : rien à faire.") and one senten
 | Idle trend | The idle temperature (10th percentile of idle minutes) of the last two weeks is 5 °C above the two before: dust, the pump, the paste |
 | Load trend | The temperature under the same load (≥ 70 %) is 5 °C above three weeks earlier |
 | Fans | A fan or pump that spun this week reads 0 RPM while its chip is above 60 °C |
-| Disks | A SMART critical warning, spare blocks under their threshold, 80 % wear, new media errors, a file system over 90 % |
-| System | Failed services, kernel GPU resets, disk I/O errors, machine checks or throttling, low memory or memory pressure, no successful backup in two days |
+| Pump | The pump's idle speed this week is 15 % under three weeks earlier: it slows down before it stops |
+| Disks | A SMART critical warning, spare blocks under their threshold, 80 % wear, new media errors, a file system over 90 %, or one that will be full within 30 days at the pace of the last two weeks |
+| System | Failed services, kernel GPU resets, disk I/O errors, machine checks, programs killed for memory or throttling, low memory or memory pressure, no successful backup in two days |
 
 - `vitals-collect.timer` (user, every minute) runs `vitals collect`: one SQLite file in `~/.local/state/vitals`, every reading for 35 days and hourly summaries for good. A new problem raises a banner (held while gaming) and a chip in the bar until it clears.
-- `vitals-root.timer` (system, every 10 minutes, in `system/`) runs only `smartctl` and `journalctl` as root and leaves their output in `/var/lib/vitals`: no program from the dotfiles runs as root.
+- `vitals-root.timer` (system, every 10 minutes, in `system/`) runs only `smartctl`, `journalctl` and `coredumpctl` as root and leaves their output in `/var/lib/vitals`: no program from the dotfiles runs as root.
+- `vitals-shutdown.service` (user) records the boot when the session starts and again when it stops cleanly; a boot recorded only at the start was a hard stop (a freeze, a power cut, the power button held).
+- A game session runs while GameMode has the machine (game-performance's list in `$XDG_RUNTIME_DIR`) or a game window has the focus; its name is the game window's title.
 - Pump and fan speeds come from the motherboard's fan chip (ITE IT8696E) through the community `it87` driver (AUR `it87-dkms-git`, loaded at boot by `system/etc/modules-load.d/it87.conf`; the kernel's own `it87` does not know this chip). Header 5 carries the pump; the case fans hang off the cooler, out of its sight.
 - `vitals import` loaded the temperature log kept since February (`log-temps.sh`, now retired with `check-temp-trends`).
 
