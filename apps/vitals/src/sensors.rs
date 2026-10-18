@@ -37,9 +37,10 @@ fn read_text(path: &Path) -> Option<String> {
     fs::read_to_string(path).ok().map(|text| text.trim().to_string()).filter(|text| !text.is_empty())
 }
 
-/// Driver limits outside this range are placeholders (nvme's +65261.8 °C).
+/// Driver limits outside this range are placeholders (nvme's +65261.8 °C), and so is 127 °C, the
+/// largest value of a signed byte register: the fan chip's "no limit set".
 fn sane_limit(celsius: f64) -> Option<f64> {
-    (celsius > 20.0 && celsius < 150.0).then_some(celsius)
+    (celsius > 20.0 && celsius < 150.0 && celsius != 127.0).then_some(celsius)
 }
 
 /// The hwmon folders, each with the chip name it will be known by.
@@ -64,8 +65,12 @@ fn chips(root: &Path) -> Vec<(String, PathBuf)> {
 }
 
 pub fn read_hwmon(root: &Path) -> Vec<Reading> {
+    let chips = chips(root);
+    // Gigabyte's firmware interface reports the board's temperatures that the fan chip (it87) also
+    // reads: one source is enough, and the firmware's is the one with no unwired inputs.
+    let firmware_has_board_temperatures = chips.iter().any(|(chip, _)| chip == "gigabyte_wmi");
     let mut readings = Vec::new();
-    for (chip, folder) in chips(root) {
+    for (chip, folder) in chips {
         let Ok(entries) = fs::read_dir(&folder) else { continue };
         let mut inputs: Vec<String> = entries.flatten().map(|entry| entry.file_name().to_string_lossy().into_owned())
             .filter(|name| name.ends_with("_input") && (name.starts_with("temp") || name.starts_with("fan"))).collect();
@@ -75,7 +80,7 @@ pub fn read_hwmon(root: &Path) -> Vec<Reading> {
             let Some(raw) = read_number(&folder.join(&input)) else { continue };
             let label = read_text(&folder.join(format!("{channel}_label"))).unwrap_or_else(|| channel.to_string());
             // An unwired input of a fan chip reads exactly 0 °C; nothing in a running PC does.
-            if channel.starts_with("temp") && raw == 0.0 {
+            if channel.starts_with("temp") && (raw == 0.0 || (firmware_has_board_temperatures && chip.starts_with("it8"))) {
                 continue;
             }
             if channel.starts_with("temp") {
@@ -204,6 +209,24 @@ mod tests {
         chip(&root, 8, "it8696", &[("temp6_input", "0"), ("temp1_input", "30000"), ("fan5_input", "2721")], None);
         let keys: Vec<String> = read_hwmon(&root).into_iter().map(|reading| reading.key).collect();
         assert_eq!(keys, ["fan:it8696/fan5", "temp:it8696/temp1"]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_fan_chip_temperatures_give_way_to_the_firmwares() {
+        let root = scratch();
+        chip(&root, 3, "gigabyte_wmi", &[("temp1_input", "29000")], None);
+        chip(&root, 8, "it8696", &[("temp1_input", "29000"), ("fan5_input", "2860")], None);
+        let keys: Vec<String> = read_hwmon(&root).into_iter().map(|reading| reading.key).collect();
+        assert_eq!(keys, ["temp:gigabyte_wmi/temp1", "fan:it8696/fan5"]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_fan_chips_unset_limit_is_no_limit() {
+        let root = scratch();
+        chip(&root, 8, "it8696", &[("temp1_input", "30000"), ("temp1_max", "127000")], None);
+        assert_eq!(read_hwmon(&root)[0].high, None);
         fs::remove_dir_all(root).unwrap();
     }
 
