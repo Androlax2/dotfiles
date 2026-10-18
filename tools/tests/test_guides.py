@@ -162,19 +162,46 @@ class ClaudeGuideTests(Sandbox):
         self.assertEqual(guide.position, 0)  # back to the one skipped
         self.assertTrue(guide.mark_done())
 
-    def test_enter_asks_first_then_runs_then_marks_done(self):
+    def test_the_box_is_the_answer_on_a_question_and_a_note_elsewhere(self):
         guide = self.open_guide()
-        self.assertEqual(guide.needs_action(), "")
+        guide.submit("  login   done  ")
         guide.move(1)
-        self.assertEqual(guide.needs_action(), "ask")
-        guide.answers[1] = "a@b"
-        self.assertEqual(guide.needs_action(), "")
-        guide.move(1)
-        self.assertEqual(guide.needs_action(), "run")
+        guide.submit("a@b")
+        self.assertEqual((guide.notes, guide.answers), ({0: "login done"}, {1: "a@b"}))
+        guide.move(-1)
+        self.assertEqual(guide.typed(), "login done")
+        guide.submit("")
+        self.assertEqual(guide.notes, {})
+
+    def test_typing_pasting_and_enter_go_through_the_real_screen(self):
+        import pty, select
+        guide_id = self.file(steps=[{"text": "Log in"}, {"text": "Answer", "ask": "Which email?"}])
+        pid, fd = pty.fork()
+        if pid == 0:
+            os.environ.update(CLAUDE_GUIDES_DIR=str(self.root), TERM="xterm-256color")
+            os.execv(str(BIN / "claude-guide"), ["claude-guide", guide_id])
+
+        def pump(seconds):
+            end = time.time() + seconds
+            while time.time() < end:
+                if select.select([fd], [], [], 0.05)[0]:
+                    try:
+                        os.read(fd, 65536)
+                    except OSError:
+                        return
+        for keys in (b"logged in", b"\r", b"\x1b[200~a@b\nc\x1b[201~", b"\r"):
+            pump(0.6)
+            os.write(fd, keys)
+        pump(2.5)
+        os.waitpid(pid, 0)
+        result = json.loads((self.root / f"{guide_id}.result").read_text())
+        self.assertEqual(result["status"], "done")
+        self.assertEqual(result["notes"], [{"step": 1, "note": "logged in"}])
+        self.assertEqual(result["answers"], [{"step": 2, "question": "Which email?", "answer": "a@b c"}])
 
     def test_hidden_characters_are_shown_escaped_and_flagged(self):
         guide = self.open_guide(steps=[{"text": "Run‮ this", "copy": "a\x1b[2Kb"}])
-        lines, _ = self.guide_module.render(guide, 50)
+        lines = self.guide_module.render_step(guide, 50)
         text = "\n".join(line for line, _ in lines)
         self.assertNotIn("‮", text)
         self.assertNotIn("\x1b", text)

@@ -57,6 +57,10 @@ BUSY_PATTERNS = (
 )
 # The permission dialog: its question alone on a line, then its first option within a few lines.
 PERMISSION_DIALOG = re.compile(r"^[\s│]*Do you want to proceed\?[\s│]*$(?:\n.*){0,3}?\n[\s│❯]*1\.\s*Yes", re.MULTILINE)
+# Any of Claude's numbered choice menus (a question it asks, a plan to approve) with the cursor on an
+# option: "❯ 2. Option". Like the idle prompt it starts with ❯, so it is checked before it; without
+# it a question looked like the idle prompt and cleared the hook's needs-you within a second.
+CHOICE_MENU = re.compile(r"^[\s│]*❯[\s\u00a0]*\d+\.\s+\S", re.MULTILINE)
 PROMPT_LINE = re.compile(r"^\s*❯[  ]", re.MULTILINE)  # Claude pads its prompt with a no-break space
 PANE_TAIL_LINES = 20
 
@@ -389,8 +393,9 @@ def permission_request(tail: str) -> str:
 
 
 def pane_state(tail: str):
-    """needs-you on a permission dialog, working on the spinner, waiting at the idle prompt, else None."""
-    if PERMISSION_DIALOG.search(tail):
+    """needs-you on a permission dialog or a choice menu, working on the spinner, waiting at the idle
+    prompt, else None."""
+    if PERMISSION_DIALOG.search(tail) or CHOICE_MENU.search(tail):
         return "needs-you"
     if any(pattern.search(tail) for pattern in BUSY_PATTERNS):
         return "working"

@@ -228,16 +228,30 @@ class ManagerTests(Sandbox):
 
     def test_the_loading_screen_closes_once_the_session_reports_in(self):
         since = int(time.time()) - 1
-        (self.runtime / "claude-sessions-loading").write_text(f"Resuming proj-a …\n{self.project}\n{SESSION_A}\n{since}\n")
+        (self.runtime / "claude-sessions-loading").write_text(f"Resuming proj-a …\n{self.project}\n{SESSION_A}\n{since}\nstart\n")
         self.snapshot.write_text(json.dumps({"sessions": [{"session": SESSION_A, "cwd": str(self.project), "started": since + 1}]}))
         started = time.time()
         self.assertEqual(self.run_manager("loading-screen").returncode, 0)
         self.assertLess(time.time() - started, 5)
         self.assertFalse((self.runtime / "claude-sessions-loading").exists())
 
+    def test_exiting_the_viewed_session_shows_a_closing_screen_until_it_is_gone(self):
+        (self.runtime / "claude-sessions.current").write_text(SESSION_A + "\n")
+        self.run_manager("exit", SESSION_A)
+        self.assertTrue(self.wait_for_calls("tmux display-popup", 1), "no closing screen over the viewer")
+        self.assertEqual((self.runtime / "claude-sessions-loading").read_text().splitlines()[::4], ["Closing proj-a …", "gone"])
+
+    def test_the_closing_screen_ends_once_the_session_left_the_snapshot(self):
+        (self.runtime / "claude-sessions-loading").write_text(f"Closing proj-a …\n{self.project}\n{SESSION_A}\n{int(time.time())}\ngone\n")
+        self.snapshot.write_text(json.dumps({"sessions": []}))
+        started = time.time()
+        self.run_manager("loading-screen")
+        self.assertLess(time.time() - started, 5)
+        self.assertFalse((self.runtime / "claude-sessions-loading").exists())
+
     def test_the_loading_screen_gives_up_and_logs_it(self):
         since = int(time.time())
-        (self.runtime / "claude-sessions-loading").write_text(f"Starting Claude in proj-a …\n{self.project}\n\n{since}\n")
+        (self.runtime / "claude-sessions-loading").write_text(f"Starting Claude in proj-a …\n{self.project}\n\n{since}\nstart\n")
         self.run_manager("loading-screen", CLAUDE_SESSIONS_LOADING_TIMEOUT_S="0")
         self.assertIn("loading screen timed out", (self.state / "claude-sessions/log").read_text())
 

@@ -53,6 +53,13 @@ class PaneStateTests(unittest.TestCase):
     def test_permission_dialog_means_needs_you(self):
         self.assertEqual(self.registry.pane_state(" Do you want to proceed?\n ❯ 1. Yes\n   2. No\n"), "needs-you")
 
+    def test_a_question_menu_means_needs_you_not_the_idle_prompt(self):
+        question = " ☐ Layout\n\n Which guide layout do you want?\n\n ❯ 1. A: one step, one box\n   2. B: checklist + box\n   3. Type something.\n\n Enter to select · ↑/↓ to navigate · Esc to cancel\n"
+        self.assertEqual(self.registry.pane_state(question), "needs-you")
+
+    def test_a_numbered_line_typed_at_the_prompt_alone_is_not_a_menu(self):
+        self.assertEqual(self.registry.pane_state("✻ Brewed for 3s\n❯ 1.\n"), "waiting")
+
     def test_idle_prompt_with_no_break_space_means_waiting(self):
         self.assertEqual(self.registry.pane_state("✻ Brewed for 23s · done\n❯ \n  [theo@archlinux dotfiles]\n"), "waiting")
 
