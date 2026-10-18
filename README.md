@@ -73,7 +73,7 @@ One palette, Tokyo Night (night), applied the same way everywhere:
 | `Alt + 8` | Workspace 8 |
 | `Alt + 9` | Workspace 9 |
 | `Alt + F` | Fullscreen |
-| `Alt + G` | Game mode (eye candy off) |
+| `Alt + G` | Game mode by hand (it turns on by itself when a game opens) |
 | `Alt + J` | Toggle window split |
 | `Alt + Q` | Terminal |
 | `Alt + Scroll down` | Next workspace |
@@ -190,6 +190,15 @@ Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs t
 | [`config/hyprland/.config/hypr/apps/claude.lua`](config/hyprland/.config/hypr/apps/claude.lua), [`scratchpads.lua`](config/hyprland/.config/hypr/scratchpads.lua) | Workspace 6, window rules, the web windows |
 | [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `claude-sessions`, the health check, the version link |
 | [`apps/cockpit/tests`](apps/cockpit/tests), [`apps/desktop/src/tests.rs`](apps/desktop/src/tests.rs) | `make test`: the scripts, hooks and programs through fake commands on PATH, and the daemon's registry |
+
+## Games
+
+A game window opening turns **game mode** on by itself (`config/hyprland/.config/hypr/game-mode.lua`), and the game's exit turns it off:
+
+- Hyprland drops animations, blur and rounding; banners and approval windows wait.
+- Feral GameMode (`config/gamemode`) puts the CPU governor and the GPU (`card1`) in their performance modes while the game's process runs.
+- `game-performance` (GameMode's start and end hooks) pauses the backup, jobpilot and the update, security and health checks until the game ends, and drops Claude sessions and any running job to idle CPU and disk priority.
+- MangoHud (`config/MangoHud`): FPS, frame times, CPU and GPU load and temperatures, with `Right Shift + F12`. Only Steam and its games load it (`config/steam` sets `MANGOHUD=1` in Steam's launcher).
 
 ## Machine monitor (vitals)
 

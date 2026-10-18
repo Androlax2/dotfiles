@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# While a game runs, the rest of the machine steps aside. Feral GameMode runs this at the start and
+# the end of a game (~/.config/gamemode.ini, [custom]); GameMode itself switches the CPU and GPU to
+# their performance modes.
+#
+#   game-performance on    pause the heavy timers, drop background work to idle CPU and disk priority
+#   game-performance off   undo it: priorities back, the paused timers restarted (one that came due
+#                          meanwhile runs now), Hyprland's game mode off
+#
+# Only timers that were running are restarted, from the list kept in $XDG_RUNTIME_DIR.
+set -uo pipefail
+
+# Heavy or long jobs that can wait for the end of a game.
+PAUSED_TIMERS=(restic-backup.timer restic-maintenance.timer jobpilot-apply.timer update-check.timer
+               security-check.timer claude-health-check.timer)
+# Work that may already be running when the game starts: Claude sessions (their builds and tests run
+# in the tmux server of claude-sessions.service) and the jobs of the timers above.
+LOWERED_UNITS=(claude-sessions.service restic-backup.service restic-maintenance.service jobpilot-apply.service
+               update-check.service security-check.service claude-health-check.service)
+PAUSED_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.paused"
+
+log() {
+    claude-sessions log game INFO "$1" 2>/dev/null || true
+}
+
+on() {
+    : > "$PAUSED_LIST"
+    local timer unit
+    for timer in "${PAUSED_TIMERS[@]}"; do
+        if systemctl --user is-active --quiet "$timer"; then
+            systemctl --user stop "$timer" && echo "$timer" >> "$PAUSED_LIST"
+        fi
+    done
+    for unit in "${LOWERED_UNITS[@]}"; do
+        systemctl --user set-property --runtime "$unit" CPUWeight=idle IOWeight=1 2>/dev/null || true
+    done
+    log "game started: $(wc -l < "$PAUSED_LIST") timer(s) paused, background work at idle priority"
+}
+
+off() {
+    local unit timer
+    for unit in "${LOWERED_UNITS[@]}"; do
+        # An empty assignment puts the unit's own setting back.
+        systemctl --user set-property --runtime "$unit" CPUWeight= IOWeight= 2>/dev/null || true
+    done
+    if [[ -f $PAUSED_LIST ]]; then
+        while read -r timer; do
+            [[ -n $timer ]] && systemctl --user start "$timer"
+        done < "$PAUSED_LIST"
+        rm -f "$PAUSED_LIST"
+    fi
+    hyprctl eval "EXIT_GAME_MODE()" >/dev/null 2>&1 || true
+    log "game ended: background work back to normal"
+}
+
+case "${1:-}" in
+    on) on ;;
+    off) off ;;
+    *) echo "usage: game-performance on|off" >&2; exit 2 ;;
+esac

@@ -32,6 +32,7 @@ fish
 fisher
 font-manager
 fzf
+gamemode
 gamescope
 git
 git-delta
@@ -64,6 +65,8 @@ lact
 lazydocker
 lazygit
 less
+lib32-gamemode
+lib32-mangohud
 libreoffice-fresh
 libva-intel-driver
 linux
@@ -72,6 +75,7 @@ linux-headers
 loupe
 lychee
 man-db
+mangohud
 mariadb-clients
 mitmproxy
 mpv
