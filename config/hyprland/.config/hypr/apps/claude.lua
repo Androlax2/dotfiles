@@ -1,4 +1,4 @@
--- Claude Code sessions. ~/.config/osd/osd.py keeps the registry (hooks run inside greywall with
+-- Claude Code sessions. The OSD daemon (osd, apps/desktop) keeps the registry (hooks run inside greywall with
 -- no Hyprland socket) and calls CLAUDE_WINDOW_STATE below with `hyprctl eval`: the terminal a
 -- session runs in carries exactly one claude-<state> tag, and the rules colour its border by state.
 -- The claude-sessions manager (ALT + C) is the one window that lists and shows every session.

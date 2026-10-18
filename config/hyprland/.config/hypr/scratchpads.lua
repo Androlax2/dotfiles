@@ -57,7 +57,7 @@ local function web_scratchpad(name, title, url, width, height, cockpit)
         placeholder = function(window) return window.class == "dotfiles." .. name .. "-placeholder" end,
         spawn = function(page)
             local rules = { workspace = "special:" .. name .. " silent", float = true, center = true, size = width .. " " .. height }
-            hl.exec_cmd(string.format("~/.config/hypr/scripts/web-placeholder.py %s %q", name, title), rules)
+            hl.exec_cmd(string.format("~/.local/bin/web-placeholder %s %q", name, title), rules)
             hl.exec_cmd(string.format("~/.config/hypr/scripts/web-launch.sh %s %q", name, page or url), rules)
         end,
     }

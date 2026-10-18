@@ -21,7 +21,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment " .. session_environment
         .. " && systemctl --user restart osd.service elephant.service walker.service"
         .. " && systemctl --user start claude-sessions.service")
-    hl.exec_cmd("~/.config/mpris-card/card.py") -- resident so the card shows instantly
+    hl.exec_cmd("~/.local/bin/mpris-card") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")
     -- From the session, not a root unit: OpenRGB's udev rules give i2c/hidraw access to the

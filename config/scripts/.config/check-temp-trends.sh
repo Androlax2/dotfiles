@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-out="$("$HOME/.config/check-temp-trends.py" || true)"
-code=$?
+# check-temp-trends (apps/desktop) exits 2 on a warning; `|| code=$?` keeps that code under set -e.
+code=0
+out="$("$HOME/.local/bin/check-temp-trends")" || code=$?
 
 mkdir -p "$HOME/.local/share/templogs"
 echo "$(date -Is) rc=$code $out" >> "$HOME/.local/share/templogs/trend-check.log"

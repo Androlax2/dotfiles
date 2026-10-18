@@ -2,7 +2,7 @@
 # hypridle listeners for the Claude workspace (6, hypr/apps/claude.lua). Reading a session's
 # output is idle time to hypridle, so there the lock comes later than elsewhere (the standard
 # listeners stand down on that workspace) and asks first:
-#   claude-idle.sh prompt   on-timeout: the "still there?" screen (claude-idle-prompt.py) for
+#   claude-idle.sh prompt   on-timeout: the "still there?" screen (claude-idle-prompt) for
 #                           GRACE_S, then the lock unless it was answered
 #   claude-idle.sh cancel   on-resume: input happened, close the screen and forget the lock
 # Any key, click or mouse move answers the screen itself; hypridle sees the same input as resumed
@@ -12,7 +12,7 @@ GRACE_S=${CLAUDE_IDLE_GRACE_S:-30}
 SCREEN_OFF_AFTER_S=${CLAUDE_IDLE_SCREEN_OFF_AFTER_S:-30}
 PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/claude-idle.pid"
 ON_CLAUDE_WORKSPACE="$HOME/.config/waybar/scripts/on-claude-workspace.sh"
-PROMPT="$HOME/.config/hypr/scripts/claude-idle-prompt.py"
+PROMPT="$HOME/.local/bin/claude-idle-prompt"
 
 prompt() {
     "$ON_CLAUDE_WORKSPACE" || exit 0

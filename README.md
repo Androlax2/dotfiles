@@ -136,7 +136,7 @@ Workspace 6 is a cockpit for every Claude Code session on the machine. `claude-s
 
 ![A guide window beside the cockpit, one step at a time](assets/claude-guide.png)
 
-The screenshots come from `tools/capture-claude.sh`, which builds a made-up cockpit (`tools/claude-demo`: invented sessions, todos, pull requests and usage) in a tmux server and a home folder of its own, so no real session, task or cost appears.
+The screenshots come from `tools/capture-claude.sh`, which builds a made-up cockpit (`claude-demo` in `apps/cockpit`: invented sessions, todos, pull requests and usage) in a tmux server and a home folder of its own, so no real session, task or cost appears.
 
 ### The column
 
@@ -179,13 +179,13 @@ Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go th
 | --- | --- |
 | [`config/bin/.local/bin/claude-sessions`](config/bin/.local/bin/claude-sessions) | The manager: tmux layout, start, resume, restart, logs, doctor |
 | [`apps/cockpit`](apps/cockpit) | The Rust programs, built with `make cockpit`: the column (Ratatui), the approval terminal, the guide window and the sandbox commands; each name in `config/bin/.local/bin` is a two-line wrapper that runs its build |
-| [`config/osd/.config/osd`](config/osd/.config/osd) | The OSD daemon: banners, the session registry, the run and guide queues |
+| [`apps/desktop`](apps/desktop) | The GTK programs: the OSD daemon (banners, the session registry, the run and guide queues), the now-playing card, the idle screen, the web placeholder |
 | [`config/claude/.claude/hooks`](config/claude/.claude/hooks) | `session-state.sh` reports states; `agent-environment.sh` tells a session what its sandbox has |
 | [`config/bin/.local/bin`](config/bin/.local/bin) | `ask-to-run`, `claude-run-approve`, `ask-to-guide`, `claude-guide`, `claude-todo`, `claude-design`: wrappers of the Rust builds |
 | [`config/tmux/.config/tmux/tmux.conf`](config/tmux/.config/tmux/tmux.conf) | The cockpit's keys |
 | [`config/hyprland/.config/hypr/apps/claude.lua`](config/hyprland/.config/hypr/apps/claude.lua), [`scratchpads.lua`](config/hyprland/.config/hypr/scratchpads.lua) | Workspace 6, window rules, the web windows |
 | [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `claude-sessions`, the health check, the version link |
-| [`tools/tests`](tools/tests) | `make test` (and the column's own tests, `cargo test`) |
+| [`apps/cockpit/tests`](apps/cockpit/tests), [`apps/desktop/src/tests.rs`](apps/desktop/src/tests.rs) | `make test`: the scripts, hooks and programs through fake commands on PATH, and the daemon's registry |
 
 ## Quickstart
 

@@ -14,5 +14,5 @@ config/OpenRGB/.config/OpenRGB/logs/
 # IntelliJ project files
 .idea/
 
-# Python bytecode caches: rewritten whenever a script runs (osd.py, card.py, vendored modules)
+# Python bytecode caches: rewritten whenever a script runs (the vendored modules of NSLGameScanner)
 __pycache__/

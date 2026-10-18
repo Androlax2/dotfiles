@@ -63,7 +63,7 @@
     "return-type": "json",
     "format": "{}",
     "escape": false,
-    "on-click": "~/.config/mpris-card/card.py toggle",
+    "on-click": "~/.local/bin/mpris-card toggle",
     "on-click-middle": "playerctl --player=playerctld play-pause",
     "on-click-right": "playerctl --player=playerctld next"
   },
@@ -182,7 +182,7 @@
   },
 
   // ---- Claude island: sessions chip, on every workspace: ● working  ○ waiting  ! needs you; a dim
-  // robot glyph with no session so the island never shows empty. ~/.config/osd/osd.py rewrites $XDG_RUNTIME_DIR/claude-sessions.json and sends
+  // robot glyph with no session so the island never shows empty. The OSD daemon (osd) rewrites $XDG_RUNTIME_DIR/claude-sessions.json and sends
   // RTMIN+16 on every change; the interval only refreshes the ages in the tooltip. Click opens the
   // most urgent session in the manager.
   "custom/claude-sessions": {
