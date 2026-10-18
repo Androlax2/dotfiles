@@ -1,6 +1,7 @@
 //! One collection (vitals-collect.timer, every minute): read everything, keep it, check it, and
 //! tell Theo what changed: an OSD banner per new problem, the bar's dot for as long as any lasts.
 
+use crate::care;
 use crate::checks::{self, DAY, Finding, TRENDED};
 use crate::facts;
 use crate::sensors::{self, Kind};
@@ -121,7 +122,16 @@ pub fn findings(store: &Store, facts: &facts::Facts, now: i64) -> rusqlite::Resu
     for (at, readings) in store.minutes(now - 5 * 60, &["temp:%"])? {
         minutes.entry(at).or_default().extend(readings);
     }
-    Ok(checks::all(&minutes, &store.limits()?, facts, now))
+    let mut found = checks::all(&minutes, &store.limits()?, facts, now);
+    found.extend(care_findings(store, now));
+    Ok(found)
+}
+
+/// Upkeep past its interval, like any other problem. Never-recorded tasks raise nothing.
+pub fn care_findings(store: &Store, now: i64) -> Vec<Finding> {
+    care::TASKS.iter().filter(|task| matches!(care::due(task, care::last_done(store, task), now), care::Due::Overdue(_)))
+        .map(|task| Finding { key: format!("care-{}", task.id), level: "warn", title: format!("Time to {}", task.title.to_lowercase()),
+                              detail: format!("{} {}", task.why, task.how) }).collect()
 }
 
 pub fn run() -> Result<(), String> {
@@ -203,6 +213,15 @@ mod tests {
         apply(&store, &[finding("hot-cpu", "warn")], 160, false, &mut send).unwrap();
         apply(&store, &[finding("hot-cpu", "warn")], 220, false, &mut send).unwrap();
         assert_eq!(tries, 2);
+    }
+
+    #[test]
+    fn overdue_upkeep_becomes_an_alert_and_unrecorded_upkeep_does_not() {
+        let store = Store::in_memory().unwrap();
+        let now = 1000 * care::DAY;
+        care::mark_done(&store, &care::TASKS[0], now - 100 * care::DAY).unwrap();
+        let keys: Vec<String> = care_findings(&store, now).into_iter().map(|finding| finding.key).collect();
+        assert_eq!(keys, ["care-dust"]);
     }
 
     #[test]

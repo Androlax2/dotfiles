@@ -147,6 +147,8 @@ pub fn label(key: &str) -> String {
         ("r8169_0_a00:00", _) => "Network chip".to_string(),
         ("prom21_xhci", _) => "USB controller".to_string(),
         // The motherboard's fan chip (it87 driver): its headers by number, as printed on the board.
+        // crate::summary::PUMP: the header the water cooling's pump is on.
+        ("it8696", "fan5") if kind == "fan" => "Pump".to_string(),
         (chip_name, fan) if chip_name.starts_with("it8") && kind == "fan" => format!("Fan header {}", fan.trim_start_matches("fan")),
         (chip_name, temp) if chip_name.starts_with("it8") => format!("Fan chip sensor {}", temp.trim_start_matches("temp")),
         _ => format!("{chip} {channel}"),
@@ -251,6 +253,7 @@ mod tests {
         assert_eq!(label("temp:spd5118 2-0053/temp1"), "RAM 0053");
         assert_eq!(label("load:cpu"), "CPU load");
         assert_eq!(label("temp:nvme/Sensor 1"), "NVMe sensor 1");
-        assert_eq!(label("fan:it8696/fan5"), "Fan header 5");
+        assert_eq!(label("fan:it8696/fan5"), "Pump");
+        assert_eq!(label("fan:it8696/fan1"), "Fan header 1");
     }
 }

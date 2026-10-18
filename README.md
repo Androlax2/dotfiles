@@ -193,7 +193,20 @@ Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs t
 
 ## Machine monitor (vitals)
 
-`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI: **Overview** (what is wrong, every temperature with its 24 h range and limit, fans, load), **Cooling** (CPU and GPU over 90 days, and the idle trend), **Disks** (SMART health, space) and **System** (failed services, kernel errors, memory, the backup).
+`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI: **Overview** (the machine in plain words, then every temperature with its 24 h range and limit, the pump, fans, load), **Cooling** (CPU and GPU over 90 days, and the idle trend), **Disks** (SMART health, space), **System** (failed services, kernel errors, memory, the backup) and **Care** (upkeep on a schedule).
+
+The Overview opens with a headline ("Your PC is healthy: nothing needs you.") and one sentence each for cooling, disk, system, backup and upkeep, saying what to do when something drifts: a CPU idling 5 °C warmer than two weeks ago means dusting the filters and the radiator, then checking the pump.
+
+| Upkeep (Care tab) | Every |
+| --- | --- |
+| Dust the filters and fans | 3 months |
+| Clean the radiator | 6 months |
+| Check the water cooling (pump noise, tubes, joints) | 6 months |
+| Renew the CPU thermal paste | 3 years |
+| Test restoring a backup | 6 months |
+| Check for a BIOS update | 6 months |
+
+`d` records a task done today, `b` moves its date a week earlier (for one done a while ago). A task past its interval raises a banner and the bar's chip like any problem; one never recorded only asks for its date.
 
 | Check | Warns when |
 | --- | --- |

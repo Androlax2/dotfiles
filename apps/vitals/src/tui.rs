@@ -4,10 +4,15 @@
 //!   2 Cooling    CPU and GPU over 90 days (daily coolest and hottest), the idle trend the checks use
 //!   3 Disks      SMART health and space
 //!   4 System     failed services, kernel errors, memory, the backup
+//!   5 Care       upkeep on a schedule (dusting, radiator, water cooling, paste, restore, BIOS):
+//!                ↑ ↓ pick a task, d records it done today, b moves its date a week earlier
 //!
-//! Tab / ← → or 1-4 switch, r refreshes, q or Esc quits. Refreshes every 5 s on its own.
+//! The Overview opens with the machine in plain words (summary.rs). Tab / ← → or 1-5 switch, r
+//! refreshes, q or Esc quits. Refreshes every 5 s on its own.
 
+use crate::care::{self, Due};
 use crate::checks::{self, DAY, TRENDED};
+use crate::summary::{self, Machine};
 use crate::facts::{self, Facts};
 use crate::sensors::{self, Kind, Reading, label};
 use crate::store::{Alert, Store};
@@ -23,7 +28,8 @@ use std::time::{Duration, Instant};
 
 const REFRESH: Duration = Duration::from_secs(5);
 const FACTS_REFRESH: Duration = Duration::from_secs(30);
-const TABS: [&str; 4] = ["Overview", "Cooling", "Disks", "System"];
+const TABS: [&str; 5] = ["Overview", "Cooling", "Disks", "System", "Care"];
+const WEEK: i64 = 7 * DAY;
 const SPARK: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const CHART_DAYS: i64 = 90;
 
@@ -62,6 +68,10 @@ struct View {
     facts_at: Option<Instant>,
     error: Option<String>,
     collected_at: Option<i64>,
+    /// Each upkeep task's last recorded date, in care::TASKS order.
+    care_done: Vec<Option<i64>>,
+    care_selected: usize,
+    last_backup: Option<i64>,
 }
 
 fn median(mut values: Vec<f64>) -> Option<f64> {
@@ -75,7 +85,8 @@ fn median(mut values: Vec<f64>) -> Option<f64> {
 impl View {
     fn new() -> View {
         View { tab: 0, readings: Vec::new(), loads: BTreeMap::new(), alerts: Vec::new(), day: BTreeMap::new(), limits: BTreeMap::new(),
-               long: BTreeMap::new(), idle: BTreeMap::new(), facts: Facts::default(), facts_at: None, error: None, collected_at: None }
+               long: BTreeMap::new(), idle: BTreeMap::new(), facts: Facts::default(), facts_at: None, error: None, collected_at: None,
+               care_done: vec![None; care::TASKS.len()], care_selected: 0, last_backup: None }
     }
 
     fn refresh(&mut self) {
@@ -95,6 +106,8 @@ impl View {
         let store = Store::open()?;
         let now = cockpit::util::now_secs();
         self.alerts = store.alerts()?;
+        self.care_done = care::TASKS.iter().map(|task| care::last_done(&store, task)).collect();
+        self.last_backup = self.facts.last_backup.or_else(|| store.state("last_backup").ok().flatten().and_then(|stamp| stamp.parse().ok()));
         self.limits = store.limits()?;
         let latest = store.latest()?;
         self.collected_at = latest.values().map(|(at, _)| *at).max();
@@ -134,9 +147,6 @@ fn header(frame: &mut Frame, area: Rect, view: &View) {
 }
 
 fn alerts_lines(view: &View) -> Vec<Line<'_>> {
-    if view.alerts.is_empty() {
-        return vec![Line::styled("Nothing wrong.", level_style("ok"))];
-    }
     view.alerts.iter().flat_map(|alert| [
         Line::from(vec![Span::styled(if alert.level == "crit" { "● " } else { "▲ " }, level_style(&alert.level)),
                         Span::styled(alert.title.as_str(), Style::default().add_modifier(Modifier::BOLD))]),
@@ -144,10 +154,51 @@ fn alerts_lines(view: &View) -> Vec<Line<'_>> {
     ]).collect()
 }
 
+/// What the summary needs, from what the view holds.
+fn machine(view: &View) -> Machine {
+    let now = cockpit::util::now_secs();
+    let reading = |key: &str| view.readings.iter().find(|reading| reading.key == key).map(|reading| reading.value);
+    let kernel_problems = view.facts.kernel_errors.keys().map(|category| match category.as_str() {
+        "gpu" => "GPU resets", "disk" => "disk I/O errors", "hardware" => "machine checks", _ => "thermal throttling",
+    }.to_string()).collect();
+    Machine {
+        alerts: view.alerts.clone(),
+        cpu_idle: view.idle.get("cpu").copied().unwrap_or((None, None)),
+        cpu_now: reading("temp:k10temp/Tctl"),
+        pump_rpm: reading(summary::PUMP),
+        disk: view.facts.disks.first().map(|disk| (disk.device.clone(), disk.percentage_used,
+                                                   disk.critical_warning == 0 && disk.available_spare >= disk.spare_threshold)),
+        fullest: view.facts.disk_usage.iter().cloned().max_by(|a, b| a.1.total_cmp(&b.1)),
+        failed_units: view.facts.failed_units.clone(),
+        kernel_problems,
+        backup_age_days: view.last_backup.map(|at| (now - at).div_euclid(DAY)),
+        care: care::TASKS.iter().zip(&view.care_done).map(|(task, done)| (task.title, care::due(task, *done, now))).collect(),
+    }
+}
+
+fn summary_lines(view: &View) -> Vec<Line<'static>> {
+    let machine = machine(view);
+    let (headline, level) = summary::headline(&machine);
+    let mut lines = vec![Line::styled(headline, level_style(level).add_modifier(Modifier::BOLD)), Line::from("")];
+    for sentence in summary::sentences(&machine) {
+        lines.push(Line::from(vec![Span::styled(format!("{:<8}", sentence.topic), level_style(sentence.level).add_modifier(Modifier::BOLD)),
+                                   Span::raw(sentence.text)]));
+    }
+    lines
+}
+
 fn overview(frame: &mut Frame, area: Rect, view: &View) {
-    let alert_height = (view.alerts.len().max(1) * 2 + 2) as u16;
-    let [alerts_area, table_area] = Layout::vertical([Constraint::Length(alert_height.min(area.height / 2)), Constraint::Min(5)]).areas(area);
-    frame.render_widget(Paragraph::new(alerts_lines(view)).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Now ")), alerts_area);
+    let mut summary: Vec<Line> = summary_lines(view);
+    if !view.alerts.is_empty() {
+        summary.push(Line::from(""));
+        summary.extend(alerts_lines(view));
+    }
+    // Sized to its text as wrapped in this window, borders included.
+    let inner_width = area.width.saturating_sub(2).max(1) as usize;
+    let wrapped: usize = summary.iter().map(|line| line.width().div_ceil(inner_width).max(1)).sum();
+    let height = (wrapped as u16 + 2).min(area.height * 2 / 3);
+    let [summary_area, table_area] = Layout::vertical([Constraint::Length(height), Constraint::Min(5)]).areas(area);
+    frame.render_widget(Paragraph::new(summary).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Your PC ")), summary_area);
     let mut rows = Vec::new();
     let mut temperatures: Vec<&Reading> = view.readings.iter().filter(|reading| reading.kind == Kind::Temperature).collect();
     temperatures.sort_by_key(|reading| sensors::rank(&reading.key));
@@ -263,6 +314,44 @@ fn system(frame: &mut Frame, area: Rect, view: &View) {
     frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" System ")), area);
 }
 
+fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
+    let now = cockpit::util::now_secs();
+    let [table_area, detail_area] = Layout::vertical([Constraint::Length(care::TASKS.len() as u16 + 3), Constraint::Min(4)]).areas(area);
+    let rows: Vec<Row> = care::TASKS.iter().zip(&view.care_done).enumerate().map(|(index, (task, done))| {
+        let (status, level) = match care::due(task, *done, now) {
+            Due::Unknown => ("no date yet: d if done today, then b per week back".to_string(), "warn"),
+            Due::In(days) => (format!("due in {}", care::days(days)), "ok"),
+            Due::Overdue(days) => (format!("{} overdue", care::days(days)), "crit"),
+        };
+        let last = done.map(|at| format!("{} ago", care::days((now - at).div_euclid(DAY)))).unwrap_or_else(|| "–".into());
+        let style = if index == view.care_selected { Style::default().add_modifier(Modifier::REVERSED) } else { Style::default() };
+        Row::new(vec![Cell::from(task.title), Cell::from(format!("every {}", care::days(task.every_days))).style(dim()),
+                      Cell::from(last), Cell::from(status).style(level_style(level))]).style(style)
+    }).collect();
+    let table = Table::new(rows, [Constraint::Length(30), Constraint::Length(16), Constraint::Length(14), Constraint::Min(20)])
+        .header(Row::new(["Task", "Every", "Last done", "Status"]).style(dim()))
+        .block(Block::default().borders(Borders::ALL).title(" Upkeep "));
+    frame.render_widget(table, table_area);
+    let task = &care::TASKS[view.care_selected];
+    let detail = vec![Line::styled(task.title, Style::default().add_modifier(Modifier::BOLD)), Line::from(""),
+                      Line::from(vec![Span::styled("Why  ", dim()), Span::raw(task.why)]),
+                      Line::from(vec![Span::styled("How  ", dim()), Span::raw(task.how)])];
+    frame.render_widget(Paragraph::new(detail).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL)), detail_area);
+}
+
+/// d: done today; b: the recorded date a week earlier (for a task done a while ago).
+fn record_care(view: &mut View, earlier: bool) {
+    let task = &care::TASKS[view.care_selected];
+    let date = match (earlier, view.care_done[view.care_selected]) {
+        (true, Some(done)) => done - WEEK,
+        _ => cockpit::util::now_secs(),
+    };
+    match Store::open().and_then(|store| care::mark_done(&store, task, date)) {
+        Ok(()) => view.care_done[view.care_selected] = Some(date),
+        Err(error) => view.error = Some(format!("cannot record {}: {error}", task.title)),
+    }
+}
+
 fn draw(frame: &mut Frame, view: &View) {
     let [top, body, footer] = Layout::vertical([Constraint::Length(1), Constraint::Min(5), Constraint::Length(1)]).areas(frame.area());
     header(frame, top, view);
@@ -270,9 +359,11 @@ fn draw(frame: &mut Frame, view: &View) {
         0 => overview(frame, body, view),
         1 => cooling(frame, body, view),
         2 => disks(frame, body, view),
-        _ => system(frame, body, view),
+        3 => system(frame, body, view),
+        _ => care_tab(frame, body, view),
     }
-    frame.render_widget(Paragraph::new(Line::styled("1-4 / Tab switch · r refresh · q quit", dim())), footer);
+    let keys = if view.tab == 4 { "↑↓ pick · d done today · b a week earlier · 1-5 / Tab switch · q quit" } else { "1-5 / Tab switch · r refresh · q quit" };
+    frame.render_widget(Paragraph::new(Line::styled(keys, dim())), footer);
 }
 
 fn event_loop(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
@@ -289,7 +380,11 @@ fn event_loop(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                 }
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                    KeyCode::Char(digit @ '1'..='4') => view.tab = digit as usize - '1' as usize,
+                    KeyCode::Char(digit @ '1'..='5') => view.tab = digit as usize - '1' as usize,
+                    KeyCode::Up | KeyCode::Char('k') if view.tab == 4 => view.care_selected = view.care_selected.saturating_sub(1),
+                    KeyCode::Down | KeyCode::Char('j') if view.tab == 4 => view.care_selected = (view.care_selected + 1).min(care::TASKS.len() - 1),
+                    KeyCode::Char('d') if view.tab == 4 => record_care(&mut view, false),
+                    KeyCode::Char('b') if view.tab == 4 => record_care(&mut view, true),
                     KeyCode::Tab | KeyCode::Right => view.tab = (view.tab + 1) % TABS.len(),
                     KeyCode::BackTab | KeyCode::Left => view.tab = (view.tab + TABS.len() - 1) % TABS.len(),
                     KeyCode::Char('r') => {
@@ -335,6 +430,6 @@ mod tests {
             terminal.draw(|frame| draw(frame, &view)).unwrap();
         }
         let screen: String = terminal.backend().buffer().content().iter().map(|cell| cell.symbol()).collect();
-        assert!(screen.contains("1-4 / Tab switch"));
+        assert!(screen.contains("Tab switch"));
     }
 }

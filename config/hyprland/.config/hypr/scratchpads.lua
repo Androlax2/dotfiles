@@ -248,3 +248,5 @@ for name, scratchpad in pairs(scratchpads) do
     end
 end
 hl.window_rule({ match = { class = "^(dotfiles\\.[a-z]+-placeholder)$" }, opacity = "1 1" })
+-- The machine monitor is read, not glanced at: no see-through background behind its numbers.
+hl.window_rule({ match = { class = "^(vitals)$" }, opacity = "1 1" })
