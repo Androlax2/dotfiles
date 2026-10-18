@@ -16,8 +16,11 @@ hl.on("hyprland.start", function()
         "GDK_BACKEND", "QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME", "SDL_VIDEODRIVER",
         "MOZ_ENABLE_WAYLAND", "ELECTRON_OZONE_PLATFORM_HINT", "OZONE_PLATFORM",
     }, " ")
+    -- restart, not start: the units are enabled at login, so systemd may have started them before
+    -- Hyprland existed, without its display; walker's apps then fail to open.
     hl.exec_cmd("systemctl --user import-environment " .. session_environment
-        .. " && systemctl --user start osd.service claude-sessions.service elephant.service walker.service")
+        .. " && systemctl --user restart osd.service elephant.service walker.service"
+        .. " && systemctl --user start claude-sessions.service")
     hl.exec_cmd("~/.config/mpris-card/card.py") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")

@@ -429,7 +429,25 @@ def resolve_target(target: dict) -> dict:
     return without_dead_kitty(target)
 
 
+def refresh_hyprland_instance():
+    """hyprctl finds Hyprland through HYPRLAND_INSTANCE_SIGNATURE. Processes that outlive a Hyprland
+    restart, or start outside it (the manager's tmux server, systemd units), hold a stale or no
+    value: take the running instance, the newest $XDG_RUNTIME_DIR/hypr/<id> with a socket."""
+    base = os.path.join(RUNTIME_DIR, "hypr")
+    current = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+    if current and os.path.exists(os.path.join(base, current, ".socket.sock")):
+        return
+    try:
+        running = [entry for entry in os.scandir(base) if os.path.exists(os.path.join(entry.path, ".socket.sock"))]
+    except OSError:
+        return
+    if running:
+        os.environ["HYPRLAND_INSTANCE_SIGNATURE"] = max(running, key=lambda entry: entry.stat().st_mtime).name
+
+
 def run_command(command: list[str], ok_exit_codes=(0,)) -> bool:
+    if command[0] == "hyprctl":
+        refresh_hyprland_instance()
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
     except (OSError, subprocess.TimeoutExpired) as error:
@@ -447,6 +465,7 @@ def hyprctl_eval(expression: str) -> bool:
 
 
 def claude_workspace_active() -> bool:
+    refresh_hyprland_instance()
     try:
         result = subprocess.run(["hyprctl", "-j", "activeworkspace"], capture_output=True, text=True, timeout=COMMAND_TIMEOUT_S)
         return result.returncode == 0 and json.loads(result.stdout).get("id") == CLAUDE_WORKSPACE

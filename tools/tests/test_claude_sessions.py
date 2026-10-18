@@ -1,6 +1,7 @@
 """The session manager script (config/bin/.local/bin/claude-sessions) against a fake tmux."""
 
 import json
+import os
 import time
 import subprocess
 import unittest
@@ -225,6 +226,18 @@ esac""")
         before = len(self.calls("hyprctl"))
         self.run_manager("prs", SHIM_WS="2")
         self.assertFalse(any("SCRATCHPAD" in call for call in self.calls("hyprctl")[before:]))
+
+    def test_a_stale_hyprland_id_is_replaced_by_the_running_instance(self):
+        for name, age in (("old_instance", 100), ("running_instance", 0)):
+            folder = self.runtime / "hypr" / name
+            folder.mkdir(parents=True)
+            (folder / ".socket.sock").write_text("")
+            os.utime(folder, (time.time() - age, time.time() - age))
+        self.shim("hyprctl", 'echo "id=$HYPRLAND_INSTANCE_SIGNATURE" >> "$SHIM_LOG"; echo \'{"id": 2}\'')
+        self.run_manager("zoom", HYPRLAND_INSTANCE_SIGNATURE="gone")
+        self.run_manager("show", HYPRLAND_INSTANCE_SIGNATURE="gone", SHIM_WS="2")
+        self.assertIn("id=running_instance", self.log.read_text())
+        self.assertNotIn("id=gone", self.log.read_text())
 
     def test_pull_requests_without_a_github_repository_show_the_window_as_it_was(self):
         self.prs_shims()

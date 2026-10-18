@@ -194,6 +194,16 @@ class RegistryTests(Sandbox):
         self.sessions.prune_dead()
         self.assertIn(SESSION_A, self.banners.dropped)
 
+    def test_hyprctl_gets_the_running_hyprland_when_its_id_is_stale(self):
+        self.registry.RUNTIME_DIR = str(self.runtime)
+        folder = self.runtime / "hypr" / "running_instance"
+        folder.mkdir(parents=True)
+        (folder / ".socket.sock").write_text("")
+        os.environ["HYPRLAND_INSTANCE_SIGNATURE"] = "gone"
+        self.addCleanup(os.environ.pop, "HYPRLAND_INSTANCE_SIGNATURE", None)
+        self.registry.refresh_hyprland_instance()
+        self.assertEqual(os.environ["HYPRLAND_INSTANCE_SIGNATURE"], "running_instance")
+
     def test_notices_are_validated_like_session_text(self):
         notice = self.registry.parse_notice(json.dumps({"id": "claude-usage-80", "title": "Claude · This week at 82%", "message": "Resets Sat"}))
         self.assertEqual(notice["id"], "claude-usage-80")
