@@ -502,6 +502,24 @@ class LayoutTests(Sandbox):
         self.assertEqual(self.sidebar.TodoList().items[0]["project"], "runway")  # reloaded from disk
         self.assertEqual(panel.lines[1].right[0][0], "bug")
 
+    def test_the_list_is_ordered_by_priority_across_typed_items_and_issues(self):
+        app, _ = self.todo_app()
+        app.todos.add("runway", "/r/runway", "normal typed")
+        app.todos.add("runway", "/r/runway", "becomes urgent")
+        app.reviews.issues = self.sidebar.parse_issues(json.dumps([
+            {"number": 1, "title": "minor", "updatedAt": "2026-10-17T00:00:00Z", "labels": [{"name": "priority: low"}]},
+            {"number": 2, "title": "outage", "updatedAt": "2026-10-16T00:00:00Z", "labels": [{"name": "P1"}]},
+            {"number": 3, "title": "plain", "updatedAt": "2026-10-15T00:00:00Z", "labels": []}]), "o/runway")
+        panel = app.panels[4]
+        panel.build(app)
+        panel.selected = 2  # "becomes urgent", after the P1 issue and "normal typed"
+        self.assertEqual(panel.items[2]["text"], "becomes urgent")
+        panel.handle(ord("+"), app, None)
+        order = [item.get("text") or item.get("title") for item in panel.items]
+        self.assertEqual(order, ["becomes urgent", "outage", "normal typed", "plain", "minor"])
+        self.assertEqual(panel.selected, 0)  # the cursor follows the item
+        self.assertEqual(self.sidebar.TodoList().items[1]["priority"], 3)
+
     def test_enter_sends_to_the_running_session_or_starts_one(self):
         app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1}])
         app.todos.add("runway", "/r/runway", "add a healthcheck")

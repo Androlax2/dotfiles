@@ -129,6 +129,23 @@ class ApproveTests(Sandbox):
         result = self.result(request_id)
         self.assertEqual((result["output"], result["output_withheld"]), ("", True))
 
+    def test_hidden_characters_are_shown_escaped_and_flagged(self):
+        request_id = self.file("ls\x1b[2K\r; rm -rf ~ \u202e")
+        shown = self.approve(request_id, "\n\n")
+        self.assertNotIn("\x1b[2K", shown)
+        self.assertIn("\\u001b", shown)
+        self.assertIn("\\u202e", shown)
+        self.assertIn("hidden characters", shown)
+        self.assertEqual(self.result(request_id), {"status": "declined"})
+
+    def test_the_project_comes_from_the_directory_not_the_request(self):
+        (self.root / ".git").mkdir()
+        request = {"id": "0123456789ab", "command": "true", "cwd": str(self.root), "project": "dotfiles", "requested_at": int(time.time())}
+        (self.runs / "0123456789ab.request").write_text(json.dumps(request))
+        shown = self.approve("0123456789ab", "\n\n")
+        self.assertIn(f"Claude · {self.root.name}", shown)
+        self.assertNotIn("Claude · dotfiles", shown)
+
     def test_stale_and_answered_requests_are_refused(self):
         stale = self.file(age=3600)
         self.assertIn("older than 15 minutes", self.approve(stale, "y\n\n"))

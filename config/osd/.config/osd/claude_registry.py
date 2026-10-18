@@ -516,7 +516,9 @@ class RunRequests:
             return
         try:
             with open(os.path.join(RUNS_DIR, f"{request_id}.request")) as file:
-                project = str(json.load(file).get("project", "?"))
+                cwd = str(json.load(file).get("cwd", ""))
+            # From the directory, not the request's own label, which a requester could fake.
+            project = project_of(cwd, "?") if os.path.isdir(cwd) else "?"
             validate_text("project", project)
         except (OSError, ValueError, AttributeError):
             project = "?"
