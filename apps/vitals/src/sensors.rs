@@ -86,7 +86,11 @@ pub fn read_hwmon(root: &Path) -> Vec<Reading> {
             if channel.starts_with("temp") {
                 let limit = |suffix: &str| read_number(&folder.join(format!("{channel}_{suffix}"))).and_then(|millis| sane_limit(millis / 1000.0));
                 let critical = limit("crit");
-                let high = limit("max").or_else(|| critical.map(|critical| critical - 10.0));
+                // A DDR5 stick's sensor (spd5118) comes with a 55 °C "max" that is only its default
+                // alarm setting: DDR5 runs up to 85 °C (past it, it just refreshes more often), and
+                // 55–60 °C under a game is ordinary. Its critical limit says more.
+                let max = if chip.starts_with("spd5118") { None } else { limit("max") };
+                let high = max.or_else(|| critical.map(|critical| critical - 10.0));
                 readings.push(Reading { key: format!("temp:{chip}/{label}"), kind: Kind::Temperature, value: raw / 1000.0, high, critical });
             } else {
                 readings.push(Reading { key: format!("fan:{chip}/{label}"), kind: Kind::Fan, value: raw, high: None, critical: None });
@@ -229,6 +233,14 @@ mod tests {
         let root = scratch();
         chip(&root, 8, "it8696", &[("temp1_input", "30000"), ("temp1_max", "127000")], None);
         assert_eq!(read_hwmon(&root)[0].high, None);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn a_ddr5_stick_warns_ten_degrees_under_its_critical_limit_not_at_55() {
+        let root = scratch();
+        chip(&root, 4, "spd5118", &[("temp1_input", "59000"), ("temp1_max", "55000"), ("temp1_crit", "85000")], None);
+        assert_eq!(read_hwmon(&root)[0].high, Some(75.0));
         fs::remove_dir_all(root).unwrap();
     }
 
