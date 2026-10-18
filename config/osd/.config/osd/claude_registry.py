@@ -617,6 +617,83 @@ class RunRequests:
         return True
 
 
+GUIDES_DIR = os.environ.get("CLAUDE_GUIDES_DIR", os.path.expanduser("~/.cache/claude/guides"))
+GUIDE = os.path.expanduser("~/.local/bin/claude-guide")
+class GuideRequests:
+    """Steps Claude hands Theo to do by hand (ask-to-guide). Each guide is claude-guide in a kitty
+    window of its own (class claude-guide: floating at the right edge, apps/claude.lua), opened on
+    the workspace Theo is on, one guide at a time. It is an ordinary window: he moves it to the
+    workspace and place he needs. Never opened while he games (it waits for him to stop); closing
+    the window closes the guide, and Claude is told where he stopped."""
+
+    def __init__(self, banners, schedule_repeating):
+        self.banners = banners
+        self.queue: list[str] = []
+        self.current = ""
+        self.window = None  # the kitty window's process
+        schedule_repeating(1, self.tick)
+
+    def request(self, guide_id: str):
+        if not RUN_ID.fullmatch(guide_id):
+            raise ValueError("not a guide id")
+        if guide_id in self.queue or guide_id == self.current:
+            return
+        try:
+            with open(os.path.join(GUIDES_DIR, f"{guide_id}.guide")) as file:
+                cwd = str(json.load(file).get("cwd", ""))
+            project = project_of(cwd, "?") if os.path.isdir(cwd) else "?"
+            validate_text("project", project)
+        except (OSError, ValueError, AttributeError):
+            project = "?"
+        if not gaming():
+            self.banners.raise_notice({"id": f"guide-{guide_id}", "title": f"Claude · {project}",
+                                       "message": "steps for you to do by hand"})
+        log(f"guide {guide_id} from {project}")
+        self.queue.append(guide_id)
+        self.next()
+
+    def next(self):
+        if self.current or gaming():
+            return
+        while self.queue:
+            guide_id = self.queue.pop(0)
+            if os.path.exists(os.path.join(GUIDES_DIR, f"{guide_id}.result")):
+                continue
+            try:
+                self.window = subprocess.Popen(["kitty", "--class", "claude-guide", "-T", "Claude · steps for you", GUIDE, guide_id],
+                                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            except OSError as error:
+                log(f"cannot open guide {guide_id}: {error}")
+                continue
+            self.current = guide_id
+            return
+
+    def finish(self):
+        self.banners.drop(f"notice:guide-{self.current}")
+        result = os.path.join(GUIDES_DIR, f"{self.current}.result")
+        if not os.path.exists(result):
+            # The window was closed: Claude must not wait on it, and learns where Theo stopped.
+            try:
+                with open(os.path.join(GUIDES_DIR, f"{self.current}.progress")) as file:
+                    progress = json.load(file)
+            except (OSError, ValueError):
+                progress = {}
+            try:
+                with open(result, "w") as file:
+                    json.dump({"status": "closed", "step": progress.get("step", "?"), "total": progress.get("total", "?")}, file)
+            except OSError as error:
+                log(f"cannot close guide {self.current}: {error}")
+        self.current, self.window = "", None
+        self.next()
+
+    def tick(self) -> bool:
+        if self.current and self.window is not None and self.window.poll() is not None:
+            self.finish()
+        elif not self.current and self.queue:
+            self.next()
+        return True
+
+
 class SessionRegistry:
     """Every live Claude session, keyed by session id, mirrored to the snapshot file and to Hyprland.
 
@@ -628,6 +705,7 @@ class SessionRegistry:
         self.sessions: dict[str, dict] = {}
         self.held: dict[str, dict] = {}  # session -> its latest banner, kept back during a meeting
         self.runs = RunRequests(banners, schedule_repeating)
+        self.guides = GuideRequests(banners, schedule_repeating)
         self.recent_written = (0.0, frozenset())  # when recent-sessions.json was written, for which ids
         self.load_snapshot()
         schedule_repeating(SESSION_PRUNE_INTERVAL_S, self.prune_dead)

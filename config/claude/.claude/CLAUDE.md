@@ -223,10 +223,26 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **Files you cannot reach** (my dotfiles, `/etc`, `~/.local/bin`): write the new version to
   `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
   to paste long files into the terminal.
-- **Commands I must run**: ask with `ask-to-run '<command>'` (`--cwd DIR` when the directory
-  matters). A terminal opens for me to read and approve it, outside the sandbox, and its output
+- **Commands I must run**: ask with `ask-to-run --why '<explanation>' '<command>'` (`--cwd DIR`
+  when the directory matters). `--why` is required and shown under the command: in two or three
+  plain sentences, what the command does, why it is needed now, and what I should expect (a
+  password prompt, a diff to confirm, a minute of output, a service restart). A terminal opens for
+  me to read and approve it, outside the sandbox, and its output
   comes back as the tool result (exit 125: I declined; 124: no answer yet, then
   `ask-to-run --wait <id>`). Steps that belong together go in one request, joined with `; and`.
   `sudo` and prompts work there. Only when it exits 126 (no daemon), fall back to one fish block,
   output piped to `wl-copy` so I can paste it back (`begin; …; end 2>&1 | wl-copy; and echo
   copied`), with `sudo` and interactive commands kept out of the pipe and no secrets in it.
+- **Todo list**: my cockpit keeps a todo list per project; `claude-todo list` shows this
+  repository's items. A message ending in `(todo <id>: …)` came from that list: run
+  `claude-todo done <id>` once the work is finished. When I ask in the chat for something that
+  matches an item, run `claude-todo start <id>` before and `claude-todo done <id>` after. Add a
+  follow-up we agreed to leave for later with `claude-todo add '<text>'`.
+- **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat. Hand
+  them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
+  indented `open: <url>`, `copy: <value>`, `ask: <question>`, `run: <command>` under a step; the
+  header of `ask-to-guide` has the format). They show in a panel on the right edge of my screen,
+  one at a time, and the answers, outputs, or the step I got stuck on come back. Prefer a command
+  through `ask-to-run` over clicking whenever a CLI can do the step. Exit 3: I am stuck (my note
+  says why); 125: I closed it; 124: still open, `ask-to-guide --wait <id>`; 126: no daemon, list
+  the steps in the chat.

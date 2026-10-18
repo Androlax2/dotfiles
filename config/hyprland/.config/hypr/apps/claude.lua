@@ -51,3 +51,12 @@ hl.layer_rule({ match = { namespace = "^claude-idle$" }, blur = true, ignore_alp
 -- The approval window for a command Claude asks to run outside the sandbox (claude-run-approve),
 -- when the cockpit is not on screen: floating, centred, above the work.
 hl.window_rule({ match = { class = "^claude-run$" }, float = true, center = true, size = "1100 640" })
+
+-- Steps Claude hands over to do by hand (claude-guide): a narrow floating window at the right edge,
+-- next to the browser; an ordinary window otherwise, moved to any workspace like the rest.
+hl.window_rule({
+    match = { class = "^claude-guide$" },
+    float = true,
+    size = "560 (monitor_h*0.85)",
+    move = "(monitor_w-window_w-24) (monitor_h*0.08)",
+})

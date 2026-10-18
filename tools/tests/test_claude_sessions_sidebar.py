@@ -3,7 +3,9 @@
 import importlib.machinery
 import importlib.util
 import json
+import pathlib
 import os
+import subprocess
 import time
 import unittest
 
@@ -479,6 +481,8 @@ class LayoutTests(Sandbox):
     def todo_app(self, sessions=()):
         self.sidebar.style = lambda *arguments, **keywords: 0
         self.sidebar.TODO_PATH = str(self.state / "todo.json")
+        self.sidebar.TODO_UPDATES = str(self.root / "todo-updates.jsonl")
+        self.sidebar.CURRENT_PATH = str(self.runtime / "claude-sessions.current")
         self.sidebar.SNAPSHOT_PATH = str(self.runtime / "claude-sessions.json")
         (self.runtime / "claude-sessions.json").write_text(json.dumps({"sessions": list(sessions)}))
         self.sidebar.tmux_claude_panes = lambda: []
@@ -518,8 +522,20 @@ class LayoutTests(Sandbox):
         sessions = [{"session": "a", "project": "opusline", "started": 1}, {"session": "b", "project": "runway", "started": 2},
                     {"session": "c", "project": "opusline", "started": 3}, {"session": "d", "project": "dotfiles", "started": 4, "pinned": True}]
         grouped = self.sidebar.grouped_by_project(sessions)
-        self.assertEqual([(session["session"], session["follows"]) for session in grouped],
-                         [("d", False), ("a", False), ("c", True), ("b", False)])
+        self.assertEqual([(session["session"], session["group_size"], session["group_position"]) for session in grouped],
+                         [("d", 1, 0), ("a", 2, 0), ("c", 2, 1), ("b", 1, 0)])
+
+    def test_a_repository_with_several_sessions_gets_one_heading_and_railed_cards(self):
+        app, _ = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "opusline", "cwd": "/r/opusline", "since": 1, "started": 1},
+                                {"session": SESSION_B, "state": "working", "project": "opusline", "cwd": "/r/clone", "since": 2, "started": 2}])
+        self.sidebar.git_branch = lambda cwd: {"/r/opusline": "feat/report-sender", "/r/clone": "feat/net-amounts"}[cwd]
+        panel = app.panels[1]
+        panel.build(app)
+        texts = ["".join(segment[1] for segment in line.segments) for line in panel.lines]
+        self.assertEqual(texts[0], "opusline· 2 sessions")
+        self.assertEqual(sum(text.startswith("│") for text in texts), len(texts) - 2)  # heading and the closing gap
+        self.assertIn("│" + self.sidebar.GLYPHS["working"] + "feat/net-amounts", texts)
+        self.assertNotIn("", texts[:-1])  # no gap between the two cards
 
     def test_the_list_is_ordered_by_priority_across_typed_items_and_issues(self):
         app, _ = self.todo_app()
@@ -539,6 +555,26 @@ class LayoutTests(Sandbox):
         self.assertEqual(panel.selected, 0)  # the cursor follows the item
         self.assertEqual(self.sidebar.TodoList().items[1]["priority"], 3)
 
+    def test_ctrl_r_restarts_the_waiting_sessions_and_names_the_busy_ones(self):
+        app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1},
+                                    {"session": SESSION_B, "state": "working", "project": "opusline", "cwd": "/r/opusline", "since": 2}])
+        self.sidebar.confirm = lambda screen, app, question: True
+        message = app.panels[1].handle(self.sidebar.KEY_CTRL_R, app, None)
+        self.assertEqual(calls, [("background", "restart-all", SESSION_A)])
+        self.assertIn("busy, not restarted: opusline", message)
+
+    def test_plus_raises_up_to_four_marks_and_minus_goes_down_to_low(self):
+        app, _ = self.todo_app()
+        item_id = app.todos.add("runway", "/r/runway", "deploy")
+        marks = []
+        for step in (1, 1, 1, 1, 1):
+            app.todos.change_priority(item_id, step)
+            marks.append(self.sidebar.priority_mark(app.todos.items[0]["priority"])[0])
+        self.assertEqual(marks, ["!", "!!", "!!!", "!!!!", "!!!!"])
+        for step in (-1,) * 6:
+            app.todos.change_priority(item_id, step)
+        self.assertEqual(self.sidebar.priority_mark(app.todos.items[0]["priority"])[0], "↓")
+
     def test_enter_sends_to_the_running_session_or_starts_one(self):
         app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1}])
         app.todos.add("runway", "/r/runway", "add a healthcheck")
@@ -549,8 +585,56 @@ class LayoutTests(Sandbox):
         self.assertEqual(panel.handle(self.sidebar.KEY_ENTER_LF, app, None), "sent to runway")
         panel.selected = 1
         panel.handle(self.sidebar.KEY_ENTER_LF, app, None)
-        self.assertEqual(calls, [("now", "say", SESSION_A, "add a healthcheck"), ("background", "new", "/r/homelab", "bump postgres")])
-        self.assertTrue(all(item["sent"] for item in app.todos.items))
+        ids = {item["text"]: item["id"] for item in app.todos.items}
+        self.assertEqual(calls, [("now", "say", SESSION_A, self.sidebar.with_todo_note("add a healthcheck", ids["add a healthcheck"])),
+                                 ("background", "new", "/r/homelab", self.sidebar.with_todo_note("bump postgres", ids["bump postgres"]))])
+        self.assertIn(f"claude-todo done {ids['add a healthcheck']}", calls[0][3])
+        self.assertTrue(all(item["status"] == "doing" for item in app.todos.items))
+
+    def test_the_list_shows_only_the_viewed_sessions_project(self):
+        app, _ = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "opusline", "cwd": "/r/opusline", "since": 1}])
+        app.todos.add("opusline", "/r/opusline", "net amounts")
+        app.todos.add("runway", "/r/runway", "healthcheck")
+        panel = app.panels[4]
+        panel.build(app)
+        self.assertEqual(len(panel.items), 2)  # no session viewed: every project
+        (self.runtime / "claude-sessions.current").write_text(SESSION_A)
+        panel.build(app)
+        self.assertEqual([item["text"] for item in panel.items], ["net amounts"])
+        self.assertTrue(panel.subtitle(app).startswith("opusline"))
+
+    def test_i_and_d_set_in_progress_and_done_and_toggle_back(self):
+        app, _ = self.todo_app()
+        app.todos.add("runway", "/r/runway", "deploy")
+        panel = app.panels[4]
+        panel.build(app)
+        statuses = []
+        for key in "iidd":
+            panel.handle(ord(key), app, None)
+            statuses.append(self.sidebar.TodoList().items[0]["status"])
+        self.assertEqual(statuses, ["doing", "todo", "done", "todo"])
+
+    def test_a_session_marks_items_through_the_updates_file(self):
+        app, _ = self.todo_app()
+        item_id = app.todos.add("runway", "/r/runway", "deploy")
+        checkout = self.root / "opusline"
+        (checkout / ".git").mkdir(parents=True)
+        (checkout / "src").mkdir()
+        updates = [{"action": "doing", "id": item_id, "session": "s"}, {"action": "done", "id": "o/runway#12"},
+                   {"action": "add", "text": "follow-up", "cwd": str(checkout / "src")},
+                   {"action": "done", "id": "not an id"}, {"action": "rm", "id": item_id}, "garbage"]
+        pathlib.Path(self.sidebar.TODO_UPDATES).write_text("\n".join(json.dumps(update) for update in updates) + "\nnot json\n")
+        self.assertEqual(app.todos.apply_updates(), 3)
+        self.assertFalse(os.path.exists(self.sidebar.TODO_UPDATES))
+        reloaded = self.sidebar.TodoList()
+        self.assertEqual(reloaded.status_of(item_id), "doing")
+        self.assertEqual(reloaded.status_of("o/runway#12"), "done")
+        self.assertEqual([(item["project"], item["text"]) for item in reloaded.items][1], ("opusline", "follow-up"))
+
+    def test_the_old_list_format_is_read_with_sent_items_in_progress(self):
+        self.sidebar.TODO_PATH = str(self.state / "todo.json")
+        (self.state / "todo.json").write_text(json.dumps([{"id": "0123abcd", "project": "p", "cwd": "/", "text": "t", "sent": True, "created": 1}]))
+        self.assertEqual(self.sidebar.TodoList().status_of("0123abcd"), "doing")
 
     def test_an_issue_without_a_local_checkout_says_so(self):
         app, calls = self.todo_app()
@@ -667,3 +751,37 @@ class KillTests(Sandbox):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClaudeTodoTests(Sandbox):
+    """claude-todo, the command sessions use inside the sandbox: reads the list, appends updates."""
+
+    def claude_todo(self, *arguments, cwd=None):
+        env = {**self.env, "CLAUDE_TODO_PATH": str(self.state / "todo.json"), "CLAUDE_TODO_UPDATES": str(self.root / "updates.jsonl"),
+               "CLAUDE_CODE_SESSION_ID": SESSION_A}
+        return subprocess.run([str(BIN / "claude-todo"), *arguments], cwd=cwd or self.root, env=env, capture_output=True, text=True)
+
+    def updates(self):
+        return [json.loads(line) for line in (self.root / "updates.jsonl").read_text().splitlines()]
+
+    def test_start_and_done_append_an_update_with_the_session(self):
+        self.assertEqual(self.claude_todo("start", "0123abcd").returncode, 0)
+        self.assertEqual(self.claude_todo("done", "o/runway#12").returncode, 0)
+        self.assertEqual([(update["action"], update["id"], update["session"]) for update in self.updates()],
+                         [("doing", "0123abcd", SESSION_A), ("done", "o/runway#12", SESSION_A)])
+
+    def test_a_malformed_id_is_refused(self):
+        result = self.claude_todo("done", "rm -rf")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse((self.root / "updates.jsonl").exists())
+
+    def test_list_shows_the_items_of_this_directorys_repository(self):
+        checkout = self.root / "runway"
+        (checkout / ".git").mkdir(parents=True)
+        (self.state / "todo.json").write_text(json.dumps({"items": [
+            {"id": "0123abcd", "project": "runway", "text": "deploy", "status": "doing"},
+            {"id": "4567cdef", "project": "homelab", "text": "postgres", "status": "todo"}], "issues": {}}))
+        listed = self.claude_todo("list", cwd=checkout).stdout
+        self.assertIn("0123abcd", listed)
+        self.assertNotIn("4567cdef", listed)
+        self.assertIn("4567cdef", self.claude_todo("list", "--all", cwd=checkout).stdout)

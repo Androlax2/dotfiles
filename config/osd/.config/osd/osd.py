@@ -18,6 +18,8 @@ by the Claude Code hook ~/.claude/hooks/session-state.sh:
                             and claude-run-approve in a tmux session shown in the cockpit, and in a
                             floating window while it needs Theo
     run-phase <id> <phase>  claude-run-approve's asking / running / done
+    guide-request <id>      steps for Theo to do by hand (ask-to-guide): a banner, and claude-guide
+                            in a floating window of its own
     notice-clear <id>       drop the banner a notice raised
     notice <json>           a sticky banner of its own ({"id", "title", "message"}); a click
                             dismisses it (the session manager's budget alerts)
@@ -241,6 +243,12 @@ class Osd:
             parts = rest.split()
             if len(parts) == 2:
                 self.registry.runs.phase_changed(parts[0], parts[1])
+            return
+        if command == "guide-request":
+            try:
+                self.registry.guides.request(rest.strip())
+            except ValueError as error:
+                print(f"osd: bad guide request {rest!r}: {error}", file=sys.stderr)
             return
         if command == "run-request":
             try:

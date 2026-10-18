@@ -36,9 +36,9 @@ class AskToRunTests(Sandbox):
         (self.runs / f"{request['id']}.result").write_text(json.dumps(result))
 
     def test_a_request_is_filed_announced_and_answered_with_the_output(self):
-        asking = self.ask("--cwd", str(self.root), "uname -r")
+        asking = self.ask("--cwd", str(self.root), "--why", "The kernel version, to pick the right headers.", "uname -r")
         request = self.request()
-        self.assertEqual((request["command"], request["cwd"]), ("uname -r", str(self.root)))
+        self.assertEqual((request["command"], request["cwd"], request["why"]), ("uname -r", str(self.root), "The kernel version, to pick the right headers."))
         self.answer(request, {"status": "ran", "exit": 3, "output": "\x1b=6.17.1\x1b[31m-arch\x1b[0m\r\n\x1b>"})
         stdout, _ = asking.communicate(timeout=5)
         self.assertEqual(asking.returncode, 3)
@@ -49,14 +49,14 @@ class AskToRunTests(Sandbox):
         self.assertEqual(self.reader.communicate(timeout=5)[0].strip(), f"run-request {request['id']}")
 
     def test_a_declined_request_exits_125(self):
-        asking = self.ask("rm -rf /")
+        asking = self.ask("--why", "x", "rm -rf /")
         self.answer(self.request(), {"status": "declined"})
         stdout, _ = asking.communicate(timeout=5)
         self.assertEqual(asking.returncode, 125)
         self.assertIn("declined", stdout)
 
     def test_no_answer_in_time_says_how_to_keep_waiting(self):
-        asking = self.ask("true", wait="1")
+        asking = self.ask("--why", "x", "true", wait="1")
         request = self.request()
         stdout, _ = asking.communicate(timeout=5)
         self.assertEqual(asking.returncode, 124)
@@ -66,10 +66,18 @@ class AskToRunTests(Sandbox):
         self.holder.kill()
         self.reader.kill()
         self.fifo.unlink()
-        asking = self.ask("true")
+        asking = self.ask("--why", "x", "true")
         stdout, _ = asking.communicate(timeout=5)
         self.assertEqual(asking.returncode, 126)
         self.assertEqual(list(self.runs.glob("*.request")), [])
+
+
+    def test_a_command_without_why_is_refused_before_anything_is_filed(self):
+        asking = self.ask("--cwd", str(self.root), "uname -r")
+        _, stderr = asking.communicate(timeout=5)
+        self.assertEqual(asking.returncode, 2)
+        self.assertIn("--why is required", stderr)
+        self.assertFalse(self.runs.exists() and list(self.runs.glob("*.request")))
 
 
 class ApproveTests(Sandbox):
@@ -84,9 +92,9 @@ class ApproveTests(Sandbox):
         self.editor.write_text("#!/bin/sh\necho 'echo edited' > \"$1\"\n")
         self.editor.chmod(0o755)
 
-    def file(self, command="echo hi", age=0, request_id="0123456789ab"):
+    def file(self, command="echo hi", age=0, request_id="0123456789ab", why="Says hi."):
         (self.runs / f"{request_id}.request").write_text(json.dumps(
-            {"id": request_id, "command": command, "cwd": str(self.root), "project": "dotfiles", "requested_at": int(time.time()) - age}))
+            {"id": request_id, "command": command, "why": why, "cwd": str(self.root), "project": "dotfiles", "requested_at": int(time.time()) - age}))
         return request_id
 
     def approve(self, request_id, keys, before_answer=None, **env):
@@ -137,6 +145,16 @@ class ApproveTests(Sandbox):
         self.assertIn("\\u202e", shown)
         self.assertIn("hidden characters", shown)
         self.assertEqual(self.result(request_id), {"status": "declined"})
+
+    def test_claudes_explanation_shows_under_the_command_escaped(self):
+        request_id = self.file(why="Restarts the OSD daemon\x1b[2K so it loads the guide code.")
+        shown = self.approve(request_id, "\n\n")
+        self.assertIn("Why, in Claude's words", shown)
+        self.assertIn("Restarts the OSD daemon\\u001b[2K so it loads the guide code.", shown)
+
+    def test_a_request_without_explanation_says_to_ask_claude(self):
+        shown = self.approve(self.file(why=""), "\n\n")
+        self.assertIn("No explanation given", shown)
 
     def test_the_project_comes_from_the_directory_not_the_request(self):
         (self.root / ".git").mkdir()

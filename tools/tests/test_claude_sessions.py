@@ -194,6 +194,7 @@ class ManagerTests(Sandbox):
         split = self.tmux_calls("split-window")[-1]
         self.assertIn("-v -d", split)
         self.assertTrue(split.endswith("attach-session -t =claude-run-0123456789ab"))
+        self.assertTrue(any("remain-on-exit off" in call for call in self.tmux_calls("set-option")))  # never left dead
         self.assertEqual(self.run_manager("approval-pane", "../x").returncode, 1)
 
     def test_zoom_toggles_the_viewer_pane(self):
