@@ -167,14 +167,15 @@ Nothing outside the sandbox runs git on a session's folder, since a session can 
 
 What sessions can and cannot do to the machine (audits of 2026-10-18 and 2026-10-19):
 
-- They report on `osd.fifo` (their state, their requests); banners, focus, clearing the column and approval phases only come through `osd-host.fifo`, which no sandbox can open.
+- They report their state on a socket (`osd-report.socket`): the daemon asks the kernel which process sent a report and takes the tmux pane from its first ancestor outside the sandbox, so no session can claim another's pane or card. Requests go on `osd.fifo`; banners, focus, clearing the column and approval phases only come through `osd-host.fifo`, which no sandbox can open.
+- `~/.ssh/known_hosts` is read-only for sessions.
 - Theo's answers (run results, guide progress) go to `~/.cache/claude-answers`, which sessions read but cannot write: no session can forge another's approved output.
 - Commands are shown as they run: run through `sh` exactly as quoted, in the folder resolved before Theo answers, with hidden characters, blank-line padding and non-ASCII letters flagged; output goes back with secrets redacted.
 - Claude Code updates only from outside the sandbox (`claude-update.timer`); sessions cannot write the versions folder.
 - `make system` and `make handoff-install` show every file (new ones whole, control characters visible) and refuse setuid bits and symlinked destinations.
 - Todo items lose control characters, show "by Claude" when a session filed them, and go to sessions by folder, never by project name; the queue waits while Theo games.
 
-Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs that run outside it (`config/bin`, `apps/target`, the greywall launcher), and every session can write `~/.claude.json`, the memory folders and the shared todo updates. So a compromised project could reach a dotfiles session (an MCP server added for it, a planted memory or todo item) and, through it, run code with my rights. Locking those paths would mean routing every cockpit change through `.handoff/`.
+Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs that run outside it (`config/bin`, `apps/target`, the greywall launcher), and every session can write `~/.claude.json`, the memory folders and the shared todo updates. So a compromised project could reach a dotfiles session (an MCP server added for it, a planted memory or todo item) and, through it, run code with my rights. Locking those paths would mean routing every cockpit change through `.handoff/`. Also accepted (2026-10-19): `jobpilot-apply.timer` runs `~/IdeaProjects/jobpilot` code hourly with my rights, code that a Claude session working in jobpilot can edit.
 
 ### Around it
 
