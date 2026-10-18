@@ -82,11 +82,11 @@ class LayoutTests(Sandbox):
         self.sidebar.style = lambda *arguments, **keywords: 0
         app = self.sidebar.App()
         app.panels[0].build(app)  # no usage cache: one explanatory line, three with the borders
-        self.assertEqual(app.layout(45), [3, 20, 10, 10])
+        self.assertEqual(app.layout(45), [3, 22, 6, 6, 6])
         app.focus = 3
-        self.assertEqual(app.layout(45), [3, 10, 10, 20])
+        self.assertEqual(app.layout(45), [3, 6, 6, 22, 6])
         app.focus = 0
-        self.assertEqual(app.layout(45), [3, 20, 10, 10])
+        self.assertEqual(app.layout(45), [3, 22, 6, 6, 6])
         self.assertTrue(all(height >= 3 for height in app.layout(12)))
 
     def test_tab_digits_and_function_keys_move_the_focus(self):
@@ -97,7 +97,7 @@ class LayoutTests(Sandbox):
         app.handle(ord("0"), None)
         self.assertEqual(app.focus, 0)
         app.handle(self.sidebar.curses.KEY_BTAB, None)
-        self.assertEqual(app.focus, 3)
+        self.assertEqual(app.focus, 4)
         app.handle(ord("/"), None)
         app.handle(self.sidebar.curses.KEY_F1, None)
         self.assertEqual((app.focus, app.filtering), (1, False))
@@ -459,7 +459,7 @@ class LayoutTests(Sandbox):
         keys = {(panel, key) for panel, key, _ in entries}
         self.assertIn((1, "e"), keys)
         self.assertIn((None, "a"), keys)
-        self.assertFalse(any(key in ("j/k ↑↓", "0-3", ":") for _, key, _ in entries))
+        self.assertFalse(any(key in ("j/k ↑↓", "0-4", ":") for _, key, _ in entries))
         app.focus = 3
         self.sidebar.run_palette_entry(app, (1, "f", "focus"), None)
         self.assertEqual((app.focus, app.focus_waiting), (1, True))
@@ -475,6 +475,54 @@ class LayoutTests(Sandbox):
         database.close()
         self.assertEqual(self.sidebar.greyproxy_held(str(path)), ["api.stripe.com:443"])
         self.assertEqual(self.sidebar.greyproxy_held(str(self.root / "missing.db")), [])
+
+    def todo_app(self, sessions=()):
+        self.sidebar.style = lambda *arguments, **keywords: 0
+        self.sidebar.TODO_PATH = str(self.state / "todo.json")
+        self.sidebar.SNAPSHOT_PATH = str(self.runtime / "claude-sessions.json")
+        (self.runtime / "claude-sessions.json").write_text(json.dumps({"sessions": list(sessions)}))
+        self.sidebar.tmux_claude_panes = lambda: []
+        self.sidebar.statusline_facts = lambda session_id: {}
+        calls = []
+        self.sidebar.manager = lambda *arguments: calls.append(("now",) + arguments) or ""
+        self.sidebar.manager_in_background = lambda *arguments: calls.append(("background",) + arguments)
+        app = self.sidebar.App()
+        app.panels[1].build(app)
+        return app, calls
+
+    def test_typed_items_persist_and_issues_are_listed_after_them(self):
+        app, _ = self.todo_app()
+        app.todos.add("runway", "/r/runway", "add  a   healthcheck")
+        app.reviews.issues = self.sidebar.parse_issues(json.dumps([
+            {"number": 12, "title": "Broken login", "url": "u", "updatedAt": "2026-10-17T00:00:00Z", "labels": [{"name": "bug"}]}]), "o/runway")
+        panel = app.panels[4]
+        panel.build(app)
+        self.assertEqual([item["kind"] for item in panel.items], ["typed", "issue"])
+        self.assertEqual(panel.items[0]["text"], "add a healthcheck")
+        self.assertEqual(self.sidebar.TodoList().items[0]["project"], "runway")  # reloaded from disk
+        self.assertEqual(panel.lines[1].right[0][0], "bug")
+
+    def test_enter_sends_to_the_running_session_or_starts_one(self):
+        app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1}])
+        app.todos.add("runway", "/r/runway", "add a healthcheck")
+        app.todos.add("homelab", "/r/homelab", "bump postgres")
+        panel = app.panels[4]
+        panel.build(app)
+        panel.selected = 0
+        self.assertEqual(panel.handle(self.sidebar.KEY_ENTER_LF, app, None), "sent to runway")
+        panel.selected = 1
+        panel.handle(self.sidebar.KEY_ENTER_LF, app, None)
+        self.assertEqual(calls, [("now", "say", SESSION_A, "add a healthcheck"), ("background", "new", "/r/homelab", "bump postgres")])
+        self.assertTrue(all(item["sent"] for item in app.todos.items))
+
+    def test_an_issue_without_a_local_checkout_says_so(self):
+        app, calls = self.todo_app()
+        app.reviews.issues = self.sidebar.parse_issues(json.dumps([{"number": 3, "title": "x", "updatedAt": ""}]), "o/elsewhere")
+        panel = app.panels[4]
+        panel.build(app)
+        self.assertIn("no local checkout of elsewhere", panel.handle(self.sidebar.KEY_ENTER_LF, app, None))
+        self.assertEqual(calls, [])
+        self.assertIn("gh issue view 3", self.sidebar.issue_prompt(app.reviews.issues[0]))
 
     def test_status_falls_back_to_the_flat_windows_without_a_limits_list(self):
         (self.runtime / "claude-usage.json").write_text(json.dumps({
