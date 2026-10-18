@@ -1,7 +1,10 @@
 [package]
-name = "claude-sessions-sidebar"
+name = "cockpit"
 version = "0.1.0"
 edition = "2024"
+
+[lib]
+path = "src/lib.rs"
 
 [dependencies]
 chrono = "0.4.45"
@@ -14,3 +17,6 @@ serde_json = "1.0.154"
 sha1_smol = "1.0.1"
 unicode-width = "0.2.2"
 ureq = "3.4.2"
+
+[dev-dependencies]
+libc = "0.2.191"

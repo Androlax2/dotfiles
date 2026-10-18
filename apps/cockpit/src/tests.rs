@@ -897,3 +897,53 @@ fn logging_never_fails_on_a_read_only_state_dir() {
     fs::write(fixture.path("state/claude-sessions"), "a file where the folder should be").unwrap();
     util::log_event("INFO", "nowhere to go");
 }
+
+// ---- Design sessions ----
+
+const CANVAS: &str = "https://claude.ai/artifact/d31175a3-dc24-4166-aa81-2ccdf5efe83a";
+
+#[test]
+fn a_design_session_shows_its_canvas_and_o_opens_it() {
+    let fixture = Fixture::new();
+    fixture.snapshot(json!([session(SESSION_A, "waiting", "opusline", "/r/opusline", 1)]));
+    fixture.write(&format!("home/.cache/claude/designs/{SESSION_A}.json"), &json!({"url": CANVAS, "title": "Checkout redesign"}).to_string());
+    let mut app = fixture.app();
+    assert!(texts(&app, 1).contains(&"◆ Checkout redesign".to_string()));
+    assert!(app.sessions_hints().contains(&("o", "canvas")));
+    app.handle(Key::Char('o'), &mut FakeScreen::default());
+    assert_eq!(fixture.wait_for_calls("xdg-open", 1), vec![format!("xdg-open {CANVAS}")]);
+}
+
+#[test]
+fn a_link_that_is_not_a_canvas_is_ignored_on_the_card() {
+    let fixture = Fixture::new();
+    fixture.snapshot(json!([session(SESSION_A, "waiting", "opusline", "/r/opusline", 1)]));
+    fixture.write(&format!("home/.cache/claude/designs/{SESSION_A}.json"), &json!({"url": "https://evil.example/x", "title": "Trap"}).to_string());
+    let app = fixture.app();
+    assert!(!texts(&app, 1).iter().any(|line| line.contains("Trap")));
+}
+
+#[test]
+fn v_starts_a_design_session_on_the_canvas_in_the_chosen_project() {
+    let fixture = Fixture::new();
+    let mut app = fixture.app();
+    let chat_link = "https://claude.ai/chat/7efffff6-0466-41ab-83d1-3f1d403d357d?artifact=d31175a3-dc24-4166-aa81-2ccdf5efe83a";
+    app.handle(Key::Char('V'), &mut FakeScreen::typing(&[chat_link, "/r/opusline"]));
+    assert_eq!(app.message, "starting a design session in opusline …");
+    let log = {
+        fixture.wait_for_calls("claude-sessions", 1);
+        fs::read_to_string(fixture.path("calls.log")).unwrap()
+    };
+    assert!(log.contains(&format!("claude-sessions new /r/opusline This is a design session for the Claude Design canvas {CANVAS}")), "{log}");
+    assert!(log.contains(&format!("claude-design link {CANVAS}")) && log.contains("ArtifactComments"));
+}
+
+#[test]
+fn v_refuses_a_link_that_is_not_a_canvas() {
+    let fixture = Fixture::new();
+    let mut app = fixture.app();
+    app.handle(Key::Char('V'), &mut FakeScreen::typing(&["https://example.com/x"]));
+    assert!(app.message.starts_with("not a canvas link"));
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(fixture.calls("claude-sessions").is_empty());
+}

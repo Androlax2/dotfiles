@@ -2,20 +2,9 @@
 //! three reports it prints for the manager: usage (the plan's usage, redrawn in the session pane),
 //! costs (the API-price estimate) and digest (the morning digest).
 
-mod app;
-mod costs;
-mod errors;
-mod paths;
-mod reviews;
-mod sessions;
-mod status;
-mod todo;
-mod usage;
-mod util;
-#[cfg(test)]
-mod tests;
 
-use app::{App, Key, Screen};
+use cockpit::app::{self, App, Key, Screen};
+use cockpit::{costs, usage, util};
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode};
 use crossterm::{cursor, execute};

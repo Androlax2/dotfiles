@@ -4,7 +4,6 @@ import json
 import os
 import subprocess
 import time
-from unittest import mock
 
 from support import BIN, Sandbox
 
@@ -178,106 +177,6 @@ class ApproveTests(Sandbox):
         holder.kill()
         phases = [line.split()[-1] for line in reader.communicate(timeout=5)[0].splitlines() if line.startswith("run-phase")]
         self.assertEqual(phases, ["asking", "running", "asking", "done"])
-
-    def test_output_stopped_mid_line_during_the_run_does_not_ask_for_theo(self):
-        module = self.load_approve()
-        log = self.root / "out.log"
-        log.write_text("Downloading 40%")
-
-        class Child:
-            polls, returncode = 0, 0
-
-            def poll(self):
-                self.polls += 1
-                return None if self.polls < 30 else 0
-
-        clock = iter(range(1000))  # a second per check: well past any "waits for input" delay
-        phases = []
-        module.LOG_DIR = str(self.root / "logs")
-        module.phase = lambda request_id, name: phases.append(name)
-        terminal = mock.Mock(isatty=lambda: True)
-        with mock.patch.object(module.subprocess, "Popen", lambda *arguments, **options: Child()), \
-                mock.patch.object(module.os, "get_terminal_size", lambda *arguments: os.terminal_size((80, 24))), \
-                mock.patch.object(module.time, "time", lambda: next(clock)), \
-                mock.patch.object(module.time, "sleep", lambda seconds: None), \
-                mock.patch.object(module.sys, "stdout", terminal):
-            self.assertEqual(module.run("sleep 30", str(self.root), str(log)), 0)
-        self.assertEqual(phases, [])
-
-    def load_approve(self):
-        import importlib.machinery, importlib.util
-        loader = importlib.machinery.SourceFileLoader("approve", str(BIN / "claude-run-approve"))
-        module = importlib.util.module_from_spec(importlib.util.spec_from_loader("approve", loader))
-        loader.exec_module(module)
-        return module
-
-    def test_output_stopped_mid_line_reads_as_a_prompt(self):
-        module = self.load_approve()
-        log = self.root / "out.log"
-        log.write_text("[sudo] password for theo: ")
-        self.assertTrue(module.waits_for_input(str(log), 2.0))
-        self.assertFalse(module.waits_for_input(str(log), 0.5))
-        log.write_text("built 12 targets\n")
-        self.assertFalse(module.waits_for_input(str(log), 5.0))
-
-    def run_in_terminal(self, command):
-        """run() in a pseudo-terminal of 24 rows; returns the child's pid, the terminal's fd, and
-        pump(seconds, until=None), which collects what is drawn into the returned bytearray."""
-        import fcntl, pty, select, struct, termios
-        module = self.load_approve()
-        pid, fd = pty.fork()
-        if pid == 0:
-            try:
-                fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
-                os.environ["PATH"] = "/usr/bin:/bin"  # the real script, not the test shim
-                module.LOG_DIR = str(self.root / "logs")
-                os._exit(module.run(command, str(self.root), str(self.root / "logs" / "run.log")))
-            except BaseException:
-                os._exit(99)
-        screen = bytearray()
-
-        def pump(seconds, until=None):
-            end = time.time() + seconds
-            while time.time() < end and not (until and until in screen):
-                if select.select([fd], [], [], 0.05)[0]:
-                    try:
-                        screen.extend(os.read(fd, 65536))
-                    except OSError:
-                        return
-        return module, pid, fd, screen, pump
-
-    def test_a_question_without_newline_stays_on_screen_until_answered(self):
-        question = b"Install x? [y/N] "
-        module, pid, fd, screen, pump = self.run_in_terminal(
-            "sh -c 'printf \"Install x? [y/N] \"; read answer; echo \"got $answer\"'")
-        pump(10, until=question)
-        self.assertIn(question, screen)
-        pump(module.PROMPT_IDLE_S + 0.5)
-        settled = len(screen)
-        pump(1.0)
-        after_question = bytes(screen[screen.rindex(question):])
-        self.assertIn(b"waiting for your answer above", after_question)
-        self.assertNotIn(b"running", after_question[len(question):].split(b"waiting for your answer")[-1])
-        self.assertEqual(bytes(screen[settled:]), b"", "nothing is drawn while the question waits")
-        os.write(fd, b"y\n")
-        pump(5, until=b"got y")
-        pump(1)
-        _, status = os.waitpid(pid, 0)
-        self.assertIn(b"got y", screen)
-        self.assertEqual(os.waitstatus_to_exitcode(status), 0)
-
-    def test_a_resize_moves_the_reserved_row_to_the_new_bottom(self):
-        import fcntl, struct, termios
-        _, pid, fd, screen, pump = self.run_in_terminal("sleep 1.5")
-        pump(10, until=b"running")
-        self.assertIn(b"\033[1;23r", screen)
-        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 80, 0, 0))
-        pump(0.5)
-        resized = bytes(screen[screen.rindex(b"\033[1;23r"):])
-        self.assertIn(b"\033[1;39r", resized)
-        self.assertIn(b"\033[40;1H", resized)
-        pump(3)
-        os.waitpid(pid, 0)
 
     def test_stale_and_answered_requests_are_refused(self):
         stale = self.file(age=3600)

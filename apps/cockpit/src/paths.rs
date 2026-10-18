@@ -50,6 +50,7 @@ pub fn recent_sessions() -> PathBuf { state_dir().join("recent-sessions.json") }
 pub fn ended_sessions() -> PathBuf { state_dir().join("ended-sessions") }
 pub fn clones_dir() -> PathBuf { from_env("CLAUDE_SESSIONS_CLONES", home().join("IdeaProjects/.parallel")) }
 pub fn greyproxy_db() -> PathBuf { from_env("CLAUDE_SESSIONS_GREYPROXY_DB", home().join(".local/share/greyproxy/greyproxy.db")) }
+pub fn designs() -> PathBuf { from_env("CLAUDE_DESIGNS_DIR", home().join(".cache/claude/designs")) }
 pub fn dotfiles() -> PathBuf { home().join("dotfiles") }
 pub fn reviews_fixture() -> Option<PathBuf> { env::var("CLAUDE_REVIEWS_FIXTURE").ok().map(PathBuf::from) }
 pub fn claude_status_url() -> String {

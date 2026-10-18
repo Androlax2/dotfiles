@@ -30,6 +30,38 @@ pub fn glyph(state: &str) -> &'static str {
     GLYPHS.iter().find(|(name, _)| *name == state).map(|(_, glyph)| *glyph).unwrap_or("·")
 }
 
+/// The Claude Design canvas a session works on (claude-design link, from inside the session).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Design {
+    pub url: String,
+    pub title: String,
+}
+
+/// https://claude.ai/artifact/<id> from a canvas address or a chat address with ?artifact=<id>;
+/// None for anything else. Same rule as claude-design.
+pub fn canvas_address(text: &str) -> Option<String> {
+    let text = text.trim();
+    let canvas = regex::Regex::new(r"^https://claude\.ai/(?:code/)?artifact/([A-Za-z0-9-]{8,64})/?$").unwrap();
+    let chat = regex::Regex::new(r"^https://claude\.ai/chat/[A-Za-z0-9-]+\?(?:.*&)?artifact=([A-Za-z0-9-]{8,64})(?:&.*)?$").unwrap();
+    let id = canvas.captures(text).or_else(|| chat.captures(text))?.get(1)?.as_str().to_string();
+    Some(format!("https://claude.ai/artifact/{id}"))
+}
+
+pub fn design_of(session_id: &str) -> Option<Design> {
+    let link = read_json(&paths::designs().join(format!("{session_id}.json")))?;
+    let url = canvas_address(link.get("url")?.as_str()?)?;
+    let title = link.get("title").and_then(Value::as_str).unwrap_or("canvas").to_string();
+    Some(Design { url, title })
+}
+
+/// The first message of a design session: link the card, watch the comments, then wait.
+pub fn design_prompt(url: &str) -> String {
+    format!("This is a design session for the Claude Design canvas {url}. First read it with the Artifact tool, then run \
+             claude-design link {url} '<the canvas title>' so the cockpit's card shows it, and watch the canvas's comments \
+             with ArtifactComments so the comments I leave there reach you. Then tell me in one line what the canvas holds and wait \
+             for what I want changed; after each change, say in one line what changed.")
+}
+
 /// The status line's last report for a session.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Facts {
@@ -55,6 +87,7 @@ pub struct Session {
     pub outcome: String,
     pub update: bool,
     // Added by the column.
+    pub design: Option<Design>,
     pub facts: Facts,
     pub title: String,
     pub pinned: bool,

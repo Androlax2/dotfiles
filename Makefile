@@ -134,10 +134,10 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 test: ## [read-only] Run the unit tests in tools/tests (wrappers, the Claude session manager, its daemon and hook) and the cockpit column's
 	python3 -m unittest discover -s tools/tests -v
-	cargo test --release --quiet --manifest-path apps/claude-sessions-sidebar/Cargo.toml
+	cargo test --release --quiet --manifest-path apps/Cargo.toml
 
-cockpit: ## Build the Claude cockpit's left column (Rust, apps/claude-sessions-sidebar); claude-sessions reload shows it
-	cargo build --release --manifest-path apps/claude-sessions-sidebar/Cargo.toml
+cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); claude-sessions reload shows the column
+	cargo build --release --manifest-path apps/Cargo.toml
 
 handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)
 	@tools/handoff-install.sh

@@ -179,11 +179,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "claude-sessions-sidebar"
+name = "cockpit"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "crossterm",
+ "libc",
  "ratatui",
  "regex",
  "rusqlite",

@@ -247,3 +247,6 @@ assumptions, and tell me when it reports something missing that the task needs.
   through `ask-to-run` over clicking whenever a CLI can do the step. Exit 3: I am stuck (my note
   says why); 125: I closed it; 124: still open, `ask-to-guide --wait <id>`; 126: no daemon, list
   the steps in the chat.
+- **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
+  `claude-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
+  canvas and opens it; watch the canvas's comments with ArtifactComments.

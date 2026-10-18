@@ -43,11 +43,12 @@ pub const EFFORT_LEVELS: [&str; 5] = ["low", "medium", "high", "xhigh", "max"];
 const PANEL_NAMES: [&str; 4] = ["Status", "Sessions", "Pull requests", "Todo"];
 const PANEL_KEYS: [&str; 4] = ["0", "1", "2", "3"];
 const GLOBAL_HINTS: [(&str, &str); 6] = [("⇥", "panel"), ("/", "filter"), (":", "actions"), ("a", "new"), ("?", "help"), ("q", "close")];
-const GLOBAL_HELP: [(&str, &str); 15] = [
+const GLOBAL_HELP: [(&str, &str); 16] = [
     ("0-3", "focus a panel"), ("H", "resume a past session, searched by project and prompt"),
     ("^1 ^2 ^3", "focus a panel from inside the session (tmux)"), ("⇥ ⇧⇥", "next / previous panel"), ("j/k ↑↓", "move inside the panel"),
     ("/", "filter the focused panel, Esc clears"), (":", "every action, searchable"), ("a", "new session in a project"),
     ("A", "new session on its own branch, in a separate clone (parallel work on one repository)"),
+    ("V", "a design session: a Claude Design canvas, worked on by a session in a project (link, then project)"),
     ("D", "the digest: yesterday, today, plan usage, who waits, pull requests (also once a day by itself)"),
     ("P W G", "windows on top: pull requests, Claude on the web, greyproxy (also Super+Ctrl+P/A/G)"),
     ("≈ $", "today's Claude Code replies on this machine at API prices (the plan is flat); week and month in Status"),
@@ -128,7 +129,7 @@ pub fn fit(text: &str, available: usize) -> String {
 }
 
 /// Writes text at (row, column), never past the column's last cell but one (like curses addnstr).
-fn put(buffer: &mut Buffer, row: u16, column: u16, text: &str, style: Style) {
+pub fn put(buffer: &mut Buffer, row: u16, column: u16, text: &str, style: Style) {
     let area = buffer.area;
     if row >= area.height || column + 1 >= area.width {
         return;
@@ -457,6 +458,7 @@ impl App {
                 session.title = self.history.title(&session.session);
             }
             session.pinned = self.view.pinned.contains(&session.session);
+            session.design = sessions::design_of(&session.session);
         }
         // A card keeps its place: pinned first, then in the order the sessions started.
         let running = sessions::grouped_by_project(running);
@@ -560,6 +562,10 @@ impl App {
             }
             right.retain(|p| !p.text.is_empty());
             lines.push(Line { segments: [rail.clone(), vec![segment(2 + indent, title, style(FG))]].concat(), right, item: Some(index), accent });
+            if let Some(design) = &session.design {
+                lines.push(Line { segments: [rail.clone(), vec![segment(2 + indent, format!("◆ {}", design.title), style(MAGENTA))]].concat(),
+                                  right: vec![part("o canvas", dim(FG_DARK))], item: Some(index), accent });
+            }
             let task = sessions::visible_task(session);
             let asks = sessions::waiting_request(session);
             let extra = if !asks.is_empty() {
@@ -605,6 +611,9 @@ impl App {
         if selected.update {
             return vec![("⏎", "open"), ("r", "restart to apply the update"), ("e", "effort"), ("g", "git"), ("x", "exit")];
         }
+        if selected.design.is_some() {
+            return vec![("⏎", "open"), ("o", "canvas"), ("n", "peek"), ("e", "effort"), ("g", "git"), ("x", "exit")];
+        }
         vec![("⏎", "open"), ("n", "peek"), ("+", "another"), ("e", "effort"), ("g", "git"), ("z", "zoom"), ("x", "exit")]
     }
 
@@ -621,7 +630,8 @@ impl App {
              ("z", "the session over the whole window; Ctrl+Tab comes back"),
              ("f", "focus: only the sessions waiting on you; f again shows all"),
              ("Y N", "approve or decline the permission a card asks for, after a y/n confirmation"),
-             ("m", "a message for the session without opening it: sent at its prompt, queued while it works")]
+             ("m", "a message for the session without opening it: sent at its prompt, queued while it works"),
+             ("o", "open the Claude Design canvas a design session works on (◆ on its card)")]
     }
 
     pub(crate) fn handle_sessions(&mut self, key: Key, screen: &mut dyn Screen) -> String {
@@ -691,6 +701,13 @@ impl App {
                 None => String::new(),
             },
             Key::Char('z') => manager(&["zoom"]),
+            Key::Char('o') => match session.and_then(|s| s.design) {
+                Some(design) => {
+                    let _ = Command::new("xdg-open").arg(&design.url).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+                    format!("opening {} …", design.title)
+                }
+                None => "no canvas: V starts a design session".into(),
+            },
             Key::Char(answer @ ('Y' | 'N')) => match session.filter(|s| s.state == "needs-you") {
                 Some(s) => {
                     let approve = answer == 'Y';
@@ -1361,6 +1378,7 @@ impl App {
                     }
                 }
             }
+            Key::Char('V') => self.message = self.start_design_session(screen),
             Key::Char('P') => self.message = manager(&["prs"]),
             Key::Char('W') => self.message = open_in_scratchpad("claude", ""),
             Key::Char('G') => self.message = open_in_scratchpad("greyproxy", ""),
@@ -1371,6 +1389,23 @@ impl App {
             }
             _ => self.message = self.handle_panel(key, screen),
         }
+    }
+
+    /// V: the canvas link, then the project; the session links its card and watches the comments.
+    pub(crate) fn start_design_session(&mut self, screen: &mut dyn Screen) -> String {
+        let typed = input_line(screen, "Claude Design canvas (its claude.ai link, empty cancels)> ");
+        if typed.is_empty() {
+            return String::new();
+        }
+        let Some(url) = sessions::canvas_address(&typed) else {
+            return "not a canvas link: claude.ai/artifact/<id>, or a chat link with ?artifact=<id>".into();
+        };
+        let directory = screen.outside(&mut || pick_project()).unwrap_or_default();
+        if directory.is_empty() {
+            return String::new();
+        }
+        manager_in_background(&["new", &directory, &sessions::design_prompt(&url)]);
+        format!("starting a design session in {} …", project_name(&directory))
     }
 
     /// Every single-key action from the help tables: "panel\tkey\tlabel" lines for fzf
