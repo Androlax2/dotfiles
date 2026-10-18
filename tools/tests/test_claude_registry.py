@@ -30,6 +30,9 @@ class FakeBanners:
     def raise_banner(self, banner):
         self.raised.append(banner["session"])
 
+    def showing(self, session):
+        return session in self.raised and session not in self.dropped
+
     def drop(self, session):
         self.dropped.append(session)
 
@@ -184,6 +187,12 @@ class RegistryTests(Sandbox):
         self.report(SESSION_A, state="waiting", message="Finished, waiting for you")
         self.assertEqual(self.snapshot()[0]["outcome"], "1 commit · 1 file changed, +2 −0 uncommitted")
         self.assertEqual(self.registry.turn_outcome(str(self.root), ""), "")  # not a repository
+
+    def test_a_banner_left_up_while_the_session_works_is_removed(self):
+        self.report(SESSION_A, state="needs-you", message="Claude needs your permission to use Bash", sticky=True)
+        self.sessions.sessions[SESSION_A]["state"] = "working"  # the report that should have removed it was missed
+        self.sessions.prune_dead()
+        self.assertIn(SESSION_A, self.banners.dropped)
 
     def test_notices_are_validated_like_session_text(self):
         notice = self.registry.parse_notice(json.dumps({"id": "claude-usage-80", "title": "Claude · This week at 82%", "message": "Resets Sat"}))

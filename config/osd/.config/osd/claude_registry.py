@@ -530,8 +530,10 @@ class SessionRegistry:
                       "message": report["message"], "sticky": report["sticky"]}
             if in_meeting():
                 self.held[session] = banner
+                log(f"banner held (meeting) for {session[:8]} ({entry['project']}): {report['message']}")
             else:
                 self.banners.raise_banner(banner)
+                log(f"banner {'sticky ' if report['sticky'] else ''}for {session[:8]} ({entry['project']}): {report['message']}")
 
         # The window a session moved away from (tmux session re-attached elsewhere) loses its
         # tag unless another session still lives there; the new one is tagged.
@@ -682,7 +684,16 @@ class SessionRegistry:
                 self.remove(session)
         self.reconcile_with_panes()
         self.release_held()
+        self.drop_stale_banners()
         return True  # keep the repeating schedule
+
+    def drop_stale_banners(self):
+        """A working session asks for nothing: its banner goes, even if the report that should have
+        removed it was missed (a banner once stayed up after its prompt was answered in the session)."""
+        for session, entry in self.sessions.items():
+            if entry["state"] == "working" and self.banners.showing(session):
+                log(f"banner for {session[:8]} ({entry['project']}) still up while it works: removed")
+                self.banners.drop(session)
 
     def reconcile_with_panes(self):
         """The pane's last lines say what Claude is doing now; they win over stale hook states."""

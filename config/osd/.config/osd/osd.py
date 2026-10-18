@@ -143,6 +143,9 @@ class BannerStack:
         if not self.rows:
             self.window.set_visible(False)
 
+    def showing(self, session: str) -> bool:
+        return session in self.rows
+
     def activate(self, session: str):
         show_in_manager(session)
         self.drop(session)
