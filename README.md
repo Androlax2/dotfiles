@@ -126,6 +126,67 @@ One palette, Tokyo Night (night), applied the same way everywhere:
 | `XF86MonBrightnessDown` | Brightness down |
 | `XF86MonBrightnessUp` | Brightness up |
 
+## Claude Code cockpit
+
+Workspace 6 is a cockpit for every Claude Code session on the machine. `claude-sessions` keeps a tmux session, `claude-manager`, with a column of panels on the left and the selected session on the right. Every session runs inside greywall; Claude Code hooks report each session's state to the OSD daemon, which keeps the registry the column reads.
+
+![The cockpit: plan usage, grouped sessions, pull requests and the todo list beside a session](assets/claude-cockpit.png)
+
+![The Todo panel focused: priorities, in-progress items and GitHub issues](assets/claude-cockpit-todo.png)
+
+![A guide window beside the cockpit, one step at a time](assets/claude-guide.png)
+
+The screenshots come from `tools/capture-claude.sh`, which builds a made-up cockpit (`tools/claude-demo`: invented sessions, todos, pull requests and usage) in a tmux server and a home folder of its own, so no real session, task or cost appears.
+
+### The column
+
+| Key | Panel | What it shows |
+| --- | --- | --- |
+| `0` | Status | Plan usage per window (5 hours, week, per model), the cost at API prices today, this week, this month and all time, and Claude's own status from [status.claude.com](https://status.claude.com); `o` opens that page |
+| `1` | Sessions | One card per running session: state, project, branch, title, model, effort (click to change), context use, and badges for `/compact`, an installed update, a needed restart, Remote Control and pins. A repository's sessions sit under one heading |
+| `2` | Pull requests | The pull requests of the sessions' repositories, with CI and review state; `c` starts a review session in a separate clone |
+| `3` | Todo | Typed items and the open GitHub issues of the viewed session's project, by priority (`+` up to `!!!!`), to do / in progress / done; Enter hands an item to Claude, and Claude updates the list itself with `claude-todo` |
+
+Above the cards, the Sessions panel warns about requests greyproxy is holding, sessions to bring back after a reboot (`B`), a Claude incident, and sessions started before a change to CLAUDE.md, the settings, plugins, hooks or the sandbox (`^R` restarts the ones waiting at their prompt).
+
+Sessions keys: Enter opens a session, `n` peeks at the next one waiting for you, `a` starts one in a project, `A` / `+` another one on the same repository in its own clone, `r` restarts in place, `e` changes the effort, `x` exits, `R` toggles Remote Control, `p` pins, `g` opens lazygit, `C` sends `/compact`, `z` zooms, `Y` / `N` answer a permission request, `m` sends a message, `f` keeps only the sessions waiting for you. Everywhere: `H` resumes a past session (searchable), `/` filters, `:` lists every action, `D` shows the daily digest, `P` `W` `G` open the pull requests, Claude on the web and greyproxy's dashboard, `?` the help.
+
+Moving around: Ctrl+Tab between the column and the session, Ctrl+1/2/3 to a panel from inside the session, `l` or → into the session, ← back to the column.
+
+### Out of the sandbox, with my approval
+
+| Command (inside a session) | What happens outside |
+| --- | --- |
+| `ask-to-run --why '…' '<command>'` | An approval terminal shows the command and Claude's explanation, in a pane under the session in the cockpit and in a floating window elsewhere. Nothing runs without "Run it"; the output goes back only if I agree. Hidden characters are shown escaped |
+| `ask-to-guide` | Steps I do by hand (a browser, a console) in a floating window, one at a time, with links to open, values to copy and questions to answer; the answers, or the step I got stuck on, go back to Claude |
+| `claude-todo start/done/add` | Updates the Todo panel |
+
+Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go through `.handoff/` and `make handoff-install`, which shows each diff and asks first.
+
+### Around it
+
+- **Banners** at the top of the screen when a session needs me or finishes, held during a meeting (khal) or a game.
+- **A loading screen** over the session pane while a session restarts, changes effort or starts.
+- **Error hand-off**: an error in the claude-sessions log goes to a dotfiles session to be fixed, once a day per error and three a day at most.
+- **Idle**: workspace 6 locks after 10 minutes, after a full-screen "Still there?" prompt; a lock hands the sessions to Remote Control.
+- **Web windows** for pull requests, Claude on the web and greyproxy, one tab each.
+- **Waybar** shows the sessions and the plan usage.
+- **Health**: `claude-sessions doctor` checks every piece, `claude-sessions logs` shows the log, and a weekly timer runs the checks.
+
+### Where it lives
+
+| Path | Role |
+| --- | --- |
+| [`config/bin/.local/bin/claude-sessions`](config/bin/.local/bin/claude-sessions) | The manager: tmux layout, start, resume, restart, logs, doctor |
+| [`config/bin/.local/bin/claude-sessions-sidebar`](config/bin/.local/bin/claude-sessions-sidebar) | The column (Python, curses) |
+| [`config/osd/.config/osd`](config/osd/.config/osd) | The OSD daemon: banners, the session registry, the run and guide queues |
+| [`config/claude/.claude/hooks`](config/claude/.claude/hooks) | `session-state.sh` reports states; `agent-environment.sh` tells a session what its sandbox has |
+| [`config/bin/.local/bin`](config/bin/.local/bin) | `ask-to-run`, `claude-run-approve`, `ask-to-guide`, `claude-guide`, `claude-todo` |
+| [`config/tmux/.config/tmux/tmux.conf`](config/tmux/.config/tmux/tmux.conf) | The cockpit's keys |
+| [`config/hyprland/.config/hypr/apps/claude.lua`](config/hyprland/.config/hypr/apps/claude.lua), [`scratchpads.lua`](config/hyprland/.config/hypr/scratchpads.lua) | Workspace 6, window rules, the web windows |
+| [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `claude-sessions`, the health check, the version link |
+| [`tools/tests`](tools/tests) | `make test` |
+
 ## Quickstart
 
 ### Prerequisites

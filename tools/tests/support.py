@@ -53,6 +53,7 @@ class Sandbox(unittest.TestCase):
             "XDG_STATE_HOME": str(self.state),
             "PATH": f"{self.shims}:{self.home / '.local/bin'}:{os.environ['PATH']}",
             "SHIM_LOG": str(self.log),
+            "CLAUDE_STATUS_URL": "",  # no network: status.claude.com is not fetched
         }
 
     def shim(self, name: str, body: str):

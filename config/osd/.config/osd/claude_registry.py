@@ -521,8 +521,8 @@ RUN_PHASES = ("asking", "running", "done")
 class RunRequests:
     """Commands Claude asks Theo to run outside the sandbox (ask-to-run). The daemon runs nothing
     itself: each request gets claude-run-approve in a tmux session of its own (claude-run-<id>),
-    one request at a time. That session shows in a pane under the cockpit's session pane, without
-    taking the cursor, and in a floating window on the current workspace only while it needs Theo
+    one request at a time. That session shows in a pane under the cockpit's session pane (it takes
+    the cursor when Theo is in the session pane), and in a floating window on the current workspace only while it needs Theo
     (claude-run-approve reports asking / running / done), never while he games."""
 
     def __init__(self, banners, schedule_repeating):

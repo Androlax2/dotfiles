@@ -17,10 +17,11 @@ case $1 in
     elif [[ $* == *@role* ]]; then cat "$roles" 2>/dev/null
     else printf '0\n1\n'; fi ;;
   has-session) [[ $3 == "=claude-manager" ]] && exit 0; (( $(grep -c "send-keys" "$SHIM_LOG") < ${SHIM_EXIT_AFTER:-1} )) ;;
-  display-message) if [[ $* == *pane_dead* ]]; then echo 0; elif [[ $* == *pane_id* ]]; then echo "%10"; else echo "claude-retry-9-9"; fi ;;
+  display-message) if [[ $* == *pane_dead* ]]; then echo 0; elif [[ $* == *pane_active* ]]; then echo "${SHIM_VIEWER_ACTIVE:-0}"; elif [[ $* == *pane_id* ]]; then echo "%10"; else echo "claude-retry-9-9"; fi ;;
   split-window) [[ $* == *-P* ]] && echo "%1$(( $(wc -l < "$roles" 2>/dev/null || echo 0) + 1 ))" ;;
   set-option) if [[ $2 == -p && $5 == @role ]]; then echo "$4 $6" >> "$roles"; fi ;;
   capture-pane) printf '%b' "$SHIM_PANE_TEXT" ;;
+  list-clients) echo "/dev/pts/9" ;;
 esac
 '''
 
@@ -92,8 +93,19 @@ class ManagerTests(Sandbox):
 
     def test_exit_types_slash_exit_at_an_idle_prompt(self):
         self.run_manager("exit", SESSION_A, SHIM_PANE_TEXT="done\n❯ \n", SHIM_EXIT_AFTER="1")
-        self.assertEqual(self.tmux_calls("send-keys"), ["tmux send-keys -t %4 /exit Enter"])
+        self.assertEqual(self.tmux_calls("send-keys"), ["tmux send-keys -t %4 -l -- /exit", "tmux send-keys -t %4 Enter"])
         self.assertEqual(self.tmux_calls("kill-session"), [])
+
+    def test_prompt_commands_pause_between_the_text_and_its_enter(self):
+        # Sent in one burst, Claude reads the text and Enter as a paste: the Enter becomes a newline,
+        # /exit never runs and every restart ended in kill-session ("did not exit").
+        self.shim("sleep", 'exec /usr/bin/sleep "$@"')
+        for command, text in (("exit", "/exit"), ("compact", "/compact")):
+            with self.subTest(command=command):
+                self.reset_log()
+                self.run_manager(command, SESSION_A, SHIM_PANE_TEXT="done\n❯ \n", SHIM_EXIT_AFTER="1")
+                typed = [line for line in self.log.read_text().splitlines() if line.startswith(("tmux send-keys", "sleep"))]
+                self.assertEqual(typed[:3], [f"tmux send-keys -t %4 -l -- {text}", "sleep 0.15", "tmux send-keys -t %4 Enter"])
 
     def test_exit_sends_two_quick_ctrl_c_while_busy(self):
         self.run_manager("exit", SESSION_A, SHIM_PANE_TEXT="✻ Flowing… (11s)\n❯ \n", SHIM_EXIT_AFTER="2")
@@ -107,7 +119,7 @@ class ManagerTests(Sandbox):
     def test_restart_exits_then_resumes_the_same_conversation(self):
         self.run_manager("restart", SESSION_A, SHIM_PANE_TEXT="done\n❯ \n", SHIM_EXIT_AFTER="1")
         calls = self.calls("tmux")
-        exit_index = calls.index("tmux send-keys -t %4 /exit Enter")
+        exit_index = calls.index("tmux send-keys -t %4 -l -- /exit")
         resume = next(index for index, call in enumerate(calls) if "claude --resume $argv" in call)
         self.assertLess(exit_index, resume)
         self.assertTrue(calls[resume].endswith(SESSION_A))
@@ -155,7 +167,7 @@ class ManagerTests(Sandbox):
 
     def test_compact_is_typed_only_at_the_prompt(self):
         self.assertEqual(self.run_manager("compact", SESSION_A, SHIM_PANE_TEXT="done\n❯ \n").returncode, 0)
-        self.assertIn("tmux send-keys -t %4 /compact Enter", self.calls("tmux"))
+        self.assertIn("tmux send-keys -t %4 -l -- /compact", self.calls("tmux"))
         busy = self.run_manager("compact", SESSION_A, SHIM_PANE_TEXT="✻ Flowing… (11s)\n")
         self.assertEqual(busy.returncode, 1)
         self.assertIn("busy", busy.stderr)
@@ -196,6 +208,45 @@ class ManagerTests(Sandbox):
         self.assertTrue(split.endswith("attach-session -t =claude-run-0123456789ab"))
         self.assertTrue(any("remain-on-exit off" in call for call in self.tmux_calls("set-option")))  # never left dead
         self.assertEqual(self.run_manager("approval-pane", "../x").returncode, 1)
+
+    def test_the_approval_takes_the_cursor_only_from_the_session_pane(self):
+        self.run_manager("approval-pane", "0123456789ab")
+        self.assertEqual(self.tmux_calls("select-pane"), [])
+        (self.root / "roles").write_text("%10 sidebar\n%11 viewer\n")
+        self.run_manager("approval-pane", "0123456789ab", SHIM_VIEWER_ACTIVE="1")
+        approval = [line.split()[0] for line in (self.root / "roles").read_text().splitlines() if line.endswith(" approval")][-1]
+        self.assertEqual(self.tmux_calls("select-pane")[-1], f"tmux select-pane -t {approval}")
+
+    def test_a_restart_covers_the_session_pane_with_a_loading_screen(self):
+        self.run_manager("restart", SESSION_A)
+        popup = self.wait_for_calls("tmux display-popup", 1)
+        self.assertTrue(popup, "no popup over the viewer")
+        self.assertIn("-t %11 -x #{popup_pane_left} -y #{popup_pane_bottom}", popup[0])
+        self.assertTrue(popup[0].endswith("claude-sessions loading-screen"))
+        label = (self.runtime / "claude-sessions-loading").read_text().splitlines()[0]
+        self.assertEqual(label, "Resuming proj-a …")  # the restart's text, then the resume's
+
+    def test_the_loading_screen_closes_once_the_session_reports_in(self):
+        since = int(time.time()) - 1
+        (self.runtime / "claude-sessions-loading").write_text(f"Resuming proj-a …\n{self.project}\n{SESSION_A}\n{since}\n")
+        self.snapshot.write_text(json.dumps({"sessions": [{"session": SESSION_A, "cwd": str(self.project), "started": since + 1}]}))
+        started = time.time()
+        self.assertEqual(self.run_manager("loading-screen").returncode, 0)
+        self.assertLess(time.time() - started, 5)
+        self.assertFalse((self.runtime / "claude-sessions-loading").exists())
+
+    def test_the_loading_screen_gives_up_and_logs_it(self):
+        since = int(time.time())
+        (self.runtime / "claude-sessions-loading").write_text(f"Starting Claude in proj-a …\n{self.project}\n\n{since}\n")
+        self.run_manager("loading-screen", CLAUDE_SESSIONS_LOADING_TIMEOUT_S="0")
+        self.assertIn("loading screen timed out", (self.state / "claude-sessions/log").read_text())
+
+    def test_a_background_session_gets_its_own_tmux_session_and_leaves_the_viewer_alone(self):
+        self.assertEqual(self.run_manager("background", str(self.project), "fix this").returncode, 0)
+        started = self.tmux_calls("new-session")[-1]
+        self.assertRegex(started, r"new-session -d -s claude-retry-bg-\d+ ")
+        self.assertTrue(started.endswith("fish -ic claude $argv fix this"))
+        self.assertEqual(self.tmux_calls("respawn-pane"), [])
 
     def test_zoom_toggles_the_viewer_pane(self):
         self.run_manager("zoom")

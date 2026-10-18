@@ -83,12 +83,12 @@ class LayoutTests(Sandbox):
     def test_focused_panel_takes_half_the_column_after_the_fixed_status(self):
         self.sidebar.style = lambda *arguments, **keywords: 0
         app = self.sidebar.App()
-        app.panels[0].build(app)  # no usage cache: one explanatory line, three with the borders
-        self.assertEqual(app.layout(45), [3, 22, 6, 6, 6])
+        app.panels[0].build(app)  # no usage cache: one explanatory line and the Claude status line, four with the borders
+        self.assertEqual(app.layout(45), [4, 19, 10, 10])
         app.focus = 3
-        self.assertEqual(app.layout(45), [3, 6, 6, 22, 6])
+        self.assertEqual(app.layout(45), [4, 10, 10, 19])
         app.focus = 0
-        self.assertEqual(app.layout(45), [3, 22, 6, 6, 6])
+        self.assertEqual(app.layout(45), [4, 19, 10, 10])
         self.assertTrue(all(height >= 3 for height in app.layout(12)))
 
     def test_tab_digits_and_function_keys_move_the_focus(self):
@@ -99,7 +99,7 @@ class LayoutTests(Sandbox):
         app.handle(ord("0"), None)
         self.assertEqual(app.focus, 0)
         app.handle(self.sidebar.curses.KEY_BTAB, None)
-        self.assertEqual(app.focus, 4)
+        self.assertEqual(app.focus, 3)
         app.handle(ord("/"), None)
         app.handle(self.sidebar.curses.KEY_F1, None)
         self.assertEqual((app.focus, app.filtering), (1, False))
@@ -499,7 +499,7 @@ class LayoutTests(Sandbox):
         app.todos.add("runway", "/r/runway", "add  a   healthcheck")
         app.reviews.issues = self.sidebar.parse_issues(json.dumps([
             {"number": 12, "title": "Broken login", "url": "u", "updatedAt": "2026-10-17T00:00:00Z", "labels": [{"name": "bug"}]}]), "o/runway")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         self.assertEqual([item["kind"] for item in panel.items], ["typed", "issue"])
         self.assertEqual(panel.items[0]["text"], "add a healthcheck")
@@ -545,7 +545,7 @@ class LayoutTests(Sandbox):
             {"number": 1, "title": "minor", "updatedAt": "2026-10-17T00:00:00Z", "labels": [{"name": "priority: low"}]},
             {"number": 2, "title": "outage", "updatedAt": "2026-10-16T00:00:00Z", "labels": [{"name": "P1"}]},
             {"number": 3, "title": "plain", "updatedAt": "2026-10-15T00:00:00Z", "labels": []}]), "o/runway")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         panel.selected = 2  # "becomes urgent", after the P1 issue and "normal typed"
         self.assertEqual(panel.items[2]["text"], "becomes urgent")
@@ -554,6 +554,48 @@ class LayoutTests(Sandbox):
         self.assertEqual(order, ["becomes urgent", "outage", "normal typed", "plain", "minor"])
         self.assertEqual(panel.selected, 0)  # the cursor follows the item
         self.assertEqual(self.sidebar.TodoList().items[1]["priority"], 3)
+
+    def test_sessions_started_before_a_global_change_are_told_to_restart(self):
+        changed = self.root / "CLAUDE.md"
+        changed.write_text("rules")
+        os.utime(changed, (1000, 1000))
+        self.sidebar.SESSION_START_FILES = {"CLAUDE.md": str(changed), "missing": str(self.root / "absent")}
+        app, _ = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1, "started": 900},
+                                {"session": SESSION_B, "state": "waiting", "project": "opusline", "cwd": "/r/opusline", "since": 1, "started": 1100}])
+        panel = app.panels[1]
+        panel.build(app)
+        texts = ["".join(segment[1] for segment in line.segments) for line in panel.lines]
+        self.assertEqual(texts[0], "⟳ 1 session started before a change to CLAUDE.md")
+        badged = [line.item for line in panel.lines if any(part[0] == "⟳ restart" for part in line.right)]
+        self.assertEqual([panel.items[index]["session"] for index in badged], [SESSION_A])
+
+    def test_right_moves_into_the_session_from_any_panel(self):
+        app, _ = self.todo_app()
+        moved = []
+        self.sidebar.focus_viewer = lambda: moved.append(app.focus)
+        for panel in (0, 3):
+            app.focus_panel(panel)
+            app.handle(self.sidebar.curses.KEY_RIGHT, None)
+        self.assertEqual(moved, [0, 3])
+
+    def test_h_resumes_the_past_session_picked(self):
+        app, _ = self.todo_app()
+        past = {"session": "past-1", "cwd": "/r/runway", "project": "runway", "since": 1, "prompt": "fix login"}
+        self.sidebar.run_outside_curses = lambda screen, action: past
+        resumed = []
+        self.sidebar.activate = lambda session, view: resumed.append(session["session"]) or "resuming"
+        app.handle(ord("H"), None)
+        self.assertEqual((resumed, app.message), (["past-1"], "resuming"))
+
+    def test_coming_back_to_a_panel_shows_it_from_the_top(self):
+        app, _ = self.todo_app()
+        app.panels[1].scroll = 7  # scrolled while it was small, under the focused Todo panel
+        app.focus_panel(3)
+        app.focus_panel(1)
+        self.assertEqual(app.panels[1].scroll, 0)
+        app.panels[1].scroll = 3
+        app.focus_panel(1)  # already focused: j/k scrolling is left alone
+        self.assertEqual(app.panels[1].scroll, 3)
 
     def test_ctrl_r_restarts_the_waiting_sessions_and_names_the_busy_ones(self):
         app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1},
@@ -579,7 +621,7 @@ class LayoutTests(Sandbox):
         app, calls = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "runway", "cwd": "/r/runway", "since": 1}])
         app.todos.add("runway", "/r/runway", "add a healthcheck")
         app.todos.add("homelab", "/r/homelab", "bump postgres")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         panel.selected = 0
         self.assertEqual(panel.handle(self.sidebar.KEY_ENTER_LF, app, None), "sent to runway")
@@ -595,7 +637,7 @@ class LayoutTests(Sandbox):
         app, _ = self.todo_app([{"session": SESSION_A, "state": "waiting", "project": "opusline", "cwd": "/r/opusline", "since": 1}])
         app.todos.add("opusline", "/r/opusline", "net amounts")
         app.todos.add("runway", "/r/runway", "healthcheck")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         self.assertEqual(len(panel.items), 2)  # no session viewed: every project
         (self.runtime / "claude-sessions.current").write_text(SESSION_A)
@@ -606,7 +648,7 @@ class LayoutTests(Sandbox):
     def test_i_and_d_set_in_progress_and_done_and_toggle_back(self):
         app, _ = self.todo_app()
         app.todos.add("runway", "/r/runway", "deploy")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         statuses = []
         for key in "iidd":
@@ -639,7 +681,7 @@ class LayoutTests(Sandbox):
     def test_an_issue_without_a_local_checkout_says_so(self):
         app, calls = self.todo_app()
         app.reviews.issues = self.sidebar.parse_issues(json.dumps([{"number": 3, "title": "x", "updatedAt": ""}]), "o/elsewhere")
-        panel = app.panels[4]
+        panel = app.panels[3]
         panel.build(app)
         self.assertIn("no local checkout of elsewhere", panel.handle(self.sidebar.KEY_ENTER_LF, app, None))
         self.assertEqual(calls, [])
@@ -785,3 +827,129 @@ class ClaudeTodoTests(Sandbox):
         self.assertIn("0123abcd", listed)
         self.assertNotIn("4567cdef", listed)
         self.assertIn("4567cdef", self.claude_todo("list", "--all", cwd=checkout).stdout)
+
+
+class ErrorHandOffTests(Sandbox):
+    """Errors in the shared log go to a dotfiles session, once a day each, at most three a day."""
+
+    def setUp(self):
+        super().setUp()
+        self.sidebar = load_sidebar(self)
+        self.log_path = self.root / "log"
+        self.log_path.write_text("2026-10-18T10:00:00+02:00 ERROR manager: logged before the column started\n")
+        self.sidebar.LOG_PATH = str(self.log_path)
+        self.sidebar.ERROR_REPORTS_PATH = str(self.root / "error-reports.json")
+        self.sidebar.gaming = lambda: self.is_gaming
+        self.is_gaming = False
+        self.handed = []
+        self.sidebar.manager = lambda *arguments: self.handed.append(("say",) + arguments[1:]) or ""
+        self.sidebar.manager_in_background = lambda *arguments: self.handed.append(arguments)
+        self.reporter = self.sidebar.ErrorReporter()
+
+    def append_log(self, *lines):
+        with open(self.log_path, "a") as file:
+            file.write("".join(line + "\n" for line in lines))
+
+    def tick(self, sessions=()):
+        self.reporter.checked_at = 0
+        self.reporter.tick(list(sessions))
+
+    def test_ids_and_numbers_are_masked_in_the_signature(self):
+        signature = self.sidebar.error_signature
+        self.assertEqual(signature("2026-10-18T13:03:32+02:00 ERROR manager: claude-sessions: 5a0bb934-9e25-4b52-af1f-f4fb8752dfcd did not exit"),
+                         signature("2026-10-18T13:15:58+02:00 ERROR manager: claude-sessions: 4e0eda6a-202a-4c97-af82-c6e19e431f15 did not exit"))
+
+    def test_a_new_error_starts_a_dotfiles_session_with_the_log_before_it(self):
+        self.append_log("2026-10-18T13:00:00+02:00 INFO manager: restart abc", "2026-10-18T13:00:01+02:00 ERROR manager: it broke")
+        self.tick()
+        self.assertEqual(len(self.handed), 1)
+        verb, directory, prompt = self.handed[0]
+        self.assertEqual((verb, directory), ("background", self.sidebar.DOTFILES_DIR))
+        self.assertIn("ERROR manager: it broke", prompt)
+        self.assertIn("INFO manager: restart abc", prompt)
+        self.assertNotIn("logged before the column started", prompt.split("Error:")[1].split("The log")[0])
+
+    def test_a_waiting_dotfiles_session_gets_it_as_a_message(self):
+        self.append_log("2026-10-18T13:00:01+02:00 ERROR manager: it broke")
+        self.tick([{"session": "s1", "project": "dotfiles", "state": "waiting"}])
+        self.assertEqual(self.handed[0][:2], ("say", "s1"))
+
+    def test_the_same_error_goes_once_a_day_and_three_errors_at_most(self):
+        self.append_log(*[f"2026-10-18T13:00:0{index}+02:00 ERROR manager: failure {letter}" for index, letter in enumerate("aabcde")])
+        self.tick()
+        self.assertEqual(len(self.handed), 3)  # a (once), b, c; d and e over the day's limit
+        self.append_log("2026-10-18T14:00:00+02:00 ERROR manager: failure a")
+        self.tick()
+        self.assertEqual(len(self.handed), 3)
+
+    def test_errors_wait_while_gaming(self):
+        self.is_gaming = True
+        self.append_log("2026-10-18T13:00:01+02:00 ERROR manager: it broke")
+        self.tick()
+        self.assertEqual(self.handed, [])
+        self.is_gaming = False
+        self.tick()
+        self.assertEqual(len(self.handed), 1)
+
+
+class ClaudeStatusTests(Sandbox):
+    """status.claude.com in the Status panel, and in the Sessions header when something is wrong."""
+
+    SUMMARY = {"status": {"indicator": "minor", "description": "Partially Degraded Service"},
+               "components": [{"name": "Claude API (api.anthropic.com)", "status": "operational"},
+                              {"name": "Claude Code", "status": "partial_outage"},
+                              {"name": "A group", "status": "major_outage", "group": True}],
+               "incidents": [{"name": "Elevated errors on Claude Code", "status": "investigating"},
+                             {"name": "Old one", "status": "resolved"}]}
+
+    def setUp(self):
+        super().setUp()
+        self.sidebar = load_sidebar(self)
+        self.sidebar.style = lambda *arguments, **keywords: 0
+        self.sidebar.LOG_PATH = str(self.root / "log")
+
+    def fetched(self, summary) -> object:
+        path = self.root / "summary.json"
+        path.write_text(json.dumps(summary))
+        self.sidebar.CLAUDE_STATUS_URL = path.as_uri()
+        status = self.sidebar.ClaudeStatus()
+        status._fetch()
+        return status
+
+    def texts(self, lines):
+        return ["".join(segment[1] for segment in line.segments) for line in lines]
+
+    def test_the_summary_keeps_products_not_operational_and_open_incidents(self):
+        parsed = self.sidebar.parse_claude_status(self.SUMMARY)
+        self.assertEqual(parsed["indicator"], "minor")
+        self.assertEqual(parsed["degraded"], [("Claude Code", "partial outage")])
+        self.assertEqual(parsed["incidents"], ["Elevated errors on Claude Code"])
+
+    def test_the_status_panel_shows_the_state_and_what_is_degraded(self):
+        status = self.fetched(self.SUMMARY)
+        current, error, _ = status.snapshot()
+        texts = self.texts(self.sidebar.claude_status_lines(current, error, 4))
+        self.assertEqual(texts, ["Claude● Partially Degraded Service", "Claude Code: partial outage"])
+        self.assertIn("WARN sidebar: Claude status: Partially Degraded Service", (self.root / "log").read_text())
+
+    def test_an_unreachable_status_page_says_so_without_an_error_hand_off(self):
+        self.sidebar.CLAUDE_STATUS_URL = (self.root / "missing.json").as_uri()
+        status = self.sidebar.ClaudeStatus()
+        status._fetch()
+        current, error, _ = status.snapshot()
+        self.assertIsNone(current)
+        self.assertIn("status.claude.com unreachable", self.texts(self.sidebar.claude_status_lines(current, error, 4))[0])
+        self.assertNotIn(" ERROR ", (self.root / "log").read_text())
+
+    def test_the_sessions_header_warns_only_when_claude_is_not_fine(self):
+        self.sidebar.TODO_PATH = str(self.state / "todo.json")
+        self.sidebar.SNAPSHOT_PATH = str(self.runtime / "claude-sessions.json")
+        self.sidebar.tmux_claude_panes = lambda: []
+        app = self.sidebar.App()
+        app.claude_status = self.fetched(self.SUMMARY)
+        app.panels[1].build(app)
+        self.assertEqual(self.texts(app.panels[1].lines)[:2], ["⚠ Claude: Partially Degraded Service",
+                                                               "Claude Code: partial outage · Elevated errors on Claude Code"])
+        app.claude_status = self.fetched({"status": {"indicator": "none", "description": "All Systems Operational"}, "components": []})
+        app.panels[1].build(app)
+        self.assertFalse(any(text.startswith("⚠ Claude") for text in self.texts(app.panels[1].lines)))

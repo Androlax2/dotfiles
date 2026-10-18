@@ -238,8 +238,9 @@ assumptions, and tell me when it reports something missing that the task needs.
   `claude-todo done <id>` once the work is finished. When I ask in the chat for something that
   matches an item, run `claude-todo start <id>` before and `claude-todo done <id>` after. Add a
   follow-up we agreed to leave for later with `claude-todo add '<text>'`.
-- **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat. Hand
-  them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
+- **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat, and
+  don't open them unannounced: first say in one or two lines what they are for and how long they
+  take, ask whether I am ready, and stop there. Only after my yes, hand them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
   indented `open: <url>`, `copy: <value>`, `ask: <question>`, `run: <command>` under a step; the
   header of `ask-to-guide` has the format). They show in a panel on the right edge of my screen,
   one at a time, and the answers, outputs, or the step I got stuck on come back. Prefer a command
