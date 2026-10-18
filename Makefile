@@ -15,7 +15,7 @@ pnpm_global = env PATH="$(pnpm_home)/bin:$$PATH" pnpm
 
 # One command per package manager, each printing its globally installed packages one per line.
 # packages/<manager>.txt is the versioned copy of that output.
-package_managers = pacman aur npm pnpm pip cargo go composer skills
+package_managers = pacman aur npm pnpm pip cargo go composer skills plugins
 installed_pacman = pacman -Qqen
 installed_aur = pacman -Qqm
 installed_npm = npm ls -g --depth=0 --parseable | tail -n +2 | sed "s|^$$(npm root -g)/||"
@@ -26,6 +26,10 @@ installed_go = for binary in "$$(go env GOPATH)"/bin/*; do if [ -f "$$binary" ];
 installed_composer = composer --working-dir="$$(composer config --global home)" show --direct --name-only
 # Agent skills installed with `npx skills add -g`, as "owner/repo skill-name".
 installed_skills = jq -r '.skills | to_entries[] | "\(.value.source) \(.key)"' ~/.agents/.skill-lock.json
+# Claude Code plugins, as "owner/repo plugin@marketplace" (the repo is the marketplace's source).
+installed_plugins = { jq -r --slurpfile marketplaces ~/.claude/plugins/known_marketplaces.json \
+    '.plugins | keys[] as $$plugin | ($$plugin | split("@")[1]) as $$marketplace | "\($$marketplaces[0][$$marketplace].source.repo // $$marketplace) \($$plugin)"' \
+    ~/.claude/plugins/installed_plugins.json 2>/dev/null || true; }
 
 # Skills written by hand are versioned as files in the claude stow package. In ~/.claude/skills
 # they are the real directories owned by neither the skills CLI (its lock file) nor Claude's
@@ -83,7 +87,7 @@ zen: ## Link the Zen userChrome and prefs into the default Zen profile
 # Skills are grouped per source repo so each repo is cloned once, and target claude-code
 # because it is the only agent here that needs links outside ~/.agents/skills.
 missing = comm -23 <(sort packages/$(1).txt) <($(installed_$(1)) | sort)
-global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages and agent skills
+global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages, agent skills and Claude plugins
 	$(call missing,npm) | xargs --no-run-if-empty npm install -g
 	$(call missing,pnpm) | xargs --no-run-if-empty $(pnpm_global) add -g
 	$(call missing,pip) | xargs --no-run-if-empty python3 -m pip install --user --break-system-packages
@@ -92,6 +96,14 @@ global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages and 
 	$(call missing,composer) | xargs --no-run-if-empty composer global require
 	$(call missing,skills) | awk '{skills[$$1] = skills[$$1] " --skill " $$2} END {for (source in skills) print source skills[source]}' \
 	    | xargs --no-run-if-empty -L1 npx --yes skills add --global --agent claude-code --yes
+	@# The real binary: the fish `claude` function would run this inside greywall, where ~/.claude/plugins
+	@# is read-only. The same goes for the plugin's data folder, which Claude Code creates before running
+	@# a plugin's hooks; it is made here once, or every sandboxed session fails at start (EROFS).
+	$(call missing,plugins) | while read -r repository plugin; do \
+	    ~/.local/bin/claude plugin marketplace add "$$repository"; \
+	    ~/.local/bin/claude plugin install "$$plugin"; \
+	    mkdir -p ~/.claude/plugins/data/"$${plugin/@/-}"; \
+	done
 
 system: ## [sudo] Copy system/ into /, replacing changed files
 	@for path in $(system_files); do \
