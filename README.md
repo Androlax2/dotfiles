@@ -143,7 +143,7 @@ The screenshots come from `tools/capture-claude.sh`, which builds a made-up cock
 | Key | Panel | What it shows |
 | --- | --- | --- |
 | `0` | Status | Plan usage per window (5 hours, week, per model), the cost at API prices today, this week, this month and all time, and Claude's own status from [status.claude.com](https://status.claude.com); `o` opens that page |
-| `1` | Sessions | One card per running session: state, project, branch, title, model, effort (click to change), context use, and badges for `/compact`, an installed update, a needed restart, Remote Control and pins. A repository's sessions sit under one heading |
+| `1` | Sessions | One card per running session: state, project, branch, title, model, effort (click to change), context use, and badges for `/compact`, an installed update, a needed restart, Remote Control and pins. Once a turn ends, the card says what it left: commits, uncommitted changes, whether its last test run passed or failed, and a todo item closed (worked out by the hook inside the sandbox, from git and the turn's transcript). A repository's sessions sit under one heading |
 | `2` | Pull requests | The pull requests of the sessions' repositories, with CI and review state; `c` starts a review session in a separate clone |
 | `3` | Todo | Typed items and the open GitHub issues of the viewed session's project, by priority (`+` up to `!!!!`), to do / in progress / done; Enter hands an item to Claude, and Claude updates the list itself with `claude-todo`. `Q` queues an item: a session of its project idle at its prompt for 5 minutes takes the first queued one by priority, one at a time (never the session on screen) |
 
