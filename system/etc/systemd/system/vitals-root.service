@@ -1,0 +1,24 @@
+# vitals (apps/vitals) runs as Theo; disk health and the kernel log need root. This unit runs only
+# system tools and leaves their output, readable by all, in /var/lib/vitals: no program from the
+# dotfiles runs as root, and the file in /etc only changes through `make system` (sudo).
+[Unit]
+Description=vitals: disk health (SMART) and kernel errors for the unprivileged collector
+
+[Service]
+Type=oneshot
+StateDirectory=vitals
+StateDirectoryMode=0755
+UMask=0022
+ProtectSystem=strict
+ReadWritePaths=/var/lib/vitals
+PrivateTmp=true
+NoNewPrivileges=true
+ExecStart=/bin/sh -c 'mkdir -p /var/lib/vitals/smart; \
+    for disk in /dev/nvme[0-9]*n[0-9]; do \
+        [ -e "$disk" ] || continue; \
+        name=$(basename "$disk"); \
+        smartctl -j -a "$disk" > "/var/lib/vitals/smart/$name.json.new"; \
+        mv "/var/lib/vitals/smart/$name.json.new" "/var/lib/vitals/smart/$name.json"; \
+    done; \
+    journalctl -k -p err --since=-24h -o short-iso --no-pager > /var/lib/vitals/kernel-errors.log.new; \
+    mv /var/lib/vitals/kernel-errors.log.new /var/lib/vitals/kernel-errors.log'

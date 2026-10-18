@@ -21,3 +21,4 @@ sshd.service
 systemd-resolved-monitor.socket
 systemd-resolved-varlink.socket
 tailscaled.service
+vitals-root.timer

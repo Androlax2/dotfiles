@@ -146,6 +146,7 @@ window#waybar {
 }
 
 /* ===== RIGHT: mode chips, tinted 24 px boxes shown only while a mode is active ===== */
+#custom-vitals,
 #custom-recording,
 #submap,
 #hyprland-submap,
@@ -160,6 +161,17 @@ window#waybar {
     font-weight: 600;
     background: alpha(@textActive, 0.10);
     color: @textDim;
+}
+
+/* The machine monitor: yellow for a warning, red when critical; dim when its collector stopped. */
+#custom-vitals.warn {
+    background: alpha(@yellow, 0.16);
+    color: @yellow;
+}
+
+#custom-vitals.crit {
+    background: alpha(@red, 0.16);
+    color: @red;
 }
 
 /* Red: someone can see your screen. */

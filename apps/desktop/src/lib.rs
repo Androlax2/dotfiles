@@ -1,10 +1,9 @@
-//! The desktop programs of the dotfiles (GTK windows, the OSD daemon and its Claude session registry,
-//! small system checks) and what they share.
+//! The desktop programs of the dotfiles that use GTK (the OSD daemon and its Claude session registry,
+//! the now-playing card, the idle screen, the web placeholder) and what they share.
 
 pub mod fifo;
 pub mod mpris;
 pub mod registry;
-pub mod temperature;
 
 #[cfg(test)]
 mod tests;

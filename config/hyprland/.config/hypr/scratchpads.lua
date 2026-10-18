@@ -6,6 +6,7 @@
 --   prs       GitHub pull requests waiting for my review, 1600x1000 centred
 --   claude    Claude Code on the web (claude.ai/code), 1600x1000 centred
 --   greyproxy greyproxy's dashboard: pending requests to approve, 1400x900 centred
+--   vitals    the machine monitor's TUI (apps/vitals), 1400x900 centred; also the bar's warning dot
 -- Each web scratchpad is a site in its own Zen profile (compact mode, its own logins),
 -- recognised by its command line and tagged with its name. A cold start takes seconds, so
 -- a spinner placeholder window opens first and is closed once the Zen window is there.
@@ -39,6 +40,17 @@ local scratchpads = {
                 float = true,
                 size = "(monitor_w*0.6) (monitor_h*0.45)",
                 move = "(monitor_w*0.2) 44",
+            })
+        end,
+    },
+    vitals = {
+        present = function(window) return window.class == "vitals" end,
+        spawn = function()
+            hl.exec_cmd("kitty --class vitals -T vitals ~/.local/bin/vitals", {
+                workspace = "special:vitals silent",
+                float = true,
+                center = true,
+                size = "1400 900",
             })
         end,
     },
@@ -137,6 +149,7 @@ OPEN_IN_SCRATCHPAD = open_in
 local bind = require("binds").bind
 bind("CTRL + code:49", function() toggle("term") end, { description = "Dropdown terminal" })
 bind("CTRL + M", function() toggle("music") end, { description = "Apple Music" })
+bind("SUPER + CTRL + M", function() toggle("vitals") end, { description = "Machine monitor (vitals)" })
 -- SUPER + CTRL is physical Ctrl + Cmd, like the walker pickers in bindings.lua. These three
 -- are cockpit keys: they act on the Claude workspace only (the key is still swallowed elsewhere).
 -- Pull requests: the list of the repository of the session in the cockpit's pane (claude-sessions prs).

@@ -191,6 +191,24 @@ Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs t
 | [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `claude-sessions`, the health check, the version link |
 | [`apps/cockpit/tests`](apps/cockpit/tests), [`apps/desktop/src/tests.rs`](apps/desktop/src/tests.rs) | `make test`: the scripts, hooks and programs through fake commands on PATH, and the daemon's registry |
 
+## Machine monitor (vitals)
+
+`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI: **Overview** (what is wrong, every temperature with its 24 h range and limit, fans, load), **Cooling** (CPU and GPU over 90 days, and the idle trend), **Disks** (SMART health, space) and **System** (failed services, kernel errors, memory, the backup).
+
+| Check | Warns when |
+| --- | --- |
+| Limits | A temperature stays at its limit for 3 minutes (the driver's, else 90 °C for the CPU, 85 °C otherwise); critical at the driver's critical limit |
+| Idle trend | The idle temperature (10th percentile of idle minutes) of the last two weeks is 5 °C above the two before: dust, the pump, the paste |
+| Load trend | The temperature under the same load (≥ 70 %) is 5 °C above three weeks earlier |
+| Fans | A fan or pump that spun this week reads 0 RPM while its chip is above 60 °C |
+| Disks | A SMART critical warning, spare blocks under their threshold, 80 % wear, new media errors, a file system over 90 % |
+| System | Failed services, kernel GPU resets, disk I/O errors, machine checks or throttling, low memory or memory pressure, no successful backup in two days |
+
+- `vitals-collect.timer` (user, every minute) runs `vitals collect`: one SQLite file in `~/.local/state/vitals`, every reading for 35 days and hourly summaries for good. A new problem raises a banner (held while gaming) and a chip in the bar until it clears.
+- `vitals-root.timer` (system, every 10 minutes, in `system/`) runs only `smartctl` and `journalctl` as root and leaves their output in `/var/lib/vitals`: no program from the dotfiles runs as root.
+- Pump and case fan speeds need the motherboard's fan chip driver. The kernel's `it87` does not know this board's chip; once a driver exposes it, its fans appear on their own.
+- `vitals import` loaded the temperature log kept since February (`log-temps.sh`, now retired with `check-temp-trends`).
+
 ## Quickstart
 
 ### Prerequisites
