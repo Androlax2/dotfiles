@@ -163,6 +163,10 @@ Moving around: Ctrl+Tab between the column and the session, Ctrl+1/2/3 to a pane
 
 Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go through `.handoff/` and `make handoff-install`, which shows each diff and asks first.
 
+Nothing outside the sandbox runs git on a session's folder, since a session can write that repository's configuration: the hook works out what a turn changed inside the sandbox, the daemon reads project names from the `.git` files, and `g` opens lazygit inside greywall.
+
+Accepted risk (audit of 2026-10-18): a dotfiles session can write the programs that run outside it (`config/bin`, `apps/target`, the greywall launcher), and every session can write `~/.claude.json`, the memory folders and the shared todo updates. So a compromised project could reach a dotfiles session (an MCP server added for it, a planted memory or todo item) and, through it, run code with my rights. Locking those paths would mean routing every cockpit change through `.handoff/`.
+
 ### Around it
 
 - **Banners** at the top of the screen when a session needs me or finishes, held during a meeting (khal) or a game.
