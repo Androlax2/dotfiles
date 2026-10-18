@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Loading placeholder for the Apple Music scratchpad.
+"""Loading placeholder for a web scratchpad: web-placeholder.py <name> <title>.
 
-A cold start of the Zen "music" profile takes a few seconds before it has a window, and
-Hyprland closes an empty special workspace, so nothing would show until then. This window
-maps in a fraction of a second with a spinner; scratchpads.lua spawns it next to
-music-launch.sh, shows the special workspace when it opens, and closes it once the Zen
-window is there. It quits by itself after TIMEOUT_SECONDS in case that never happens.
+A cold start of a Zen profile takes a few seconds before it has a window, and Hyprland
+closes an empty special workspace, so nothing would show until then. This window maps in a
+fraction of a second with a spinner; scratchpads.lua spawns it next to web-launch.sh, shows
+the special workspace when it opens, and closes it once the Zen window is there (its class
+is dotfiles.<name>-placeholder). It quits by itself after TIMEOUT_SECONDS in case that
+never happens.
 """
 
 import os
@@ -23,22 +24,25 @@ TIMEOUT_SECONDS = 60
 
 
 def main():
-    app = Gtk.Application(application_id="dotfiles.music-placeholder", flags=Gio.ApplicationFlags.NON_UNIQUE)
+    if len(sys.argv) != 3:
+        sys.exit("usage: web-placeholder.py <name> <title>")
+    name, title = sys.argv[1], sys.argv[2]
+    app = Gtk.Application(application_id=f"dotfiles.{name}-placeholder", flags=Gio.ApplicationFlags.NON_UNIQUE)
 
     def on_activate(application):
         provider = Gtk.CssProvider()
-        provider.load_from_path(os.path.join(CONFIG_DIR, "music-placeholder.css"))
+        provider.load_from_path(os.path.join(CONFIG_DIR, "web-placeholder.css"))
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-        window = Gtk.Window(application=application, title="Apple Music")
-        window.add_css_class("music-placeholder")
+        window = Gtk.Window(application=application, title=title)
+        window.add_css_class("web-placeholder")
         window.set_default_size(1400, 900)
 
         spinner = Gtk.Spinner(spinning=True)
         spinner.set_size_request(40, 40)
-        label = Gtk.Label(label="Apple Music")
+        label = Gtk.Label(label=title)
         label.add_css_class("title")
         box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=16, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER

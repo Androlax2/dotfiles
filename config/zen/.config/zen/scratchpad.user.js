@@ -1,6 +1,6 @@
-// Zen profile "music": a compact-mode window for music.apple.com, opened by
-// ~/.config/hypr/scripts/scratchpad.sh music. Copied to ~/.zen/music/user.js on first run.
-user_pref("browser.startup.homepage", "https://music.apple.com");
+// Prefs of every web scratchpad profile (music, prs, claude, greyproxy): a compact-mode window
+// on one site. ~/.config/hypr/scripts/web-launch.sh copies this to ~/.zen/<profile>/user.js on
+// the first run and appends the site as browser.startup.homepage.
 user_pref("browser.startup.page", 1);
 user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("browser.shell.checkDefaultBrowser", false);

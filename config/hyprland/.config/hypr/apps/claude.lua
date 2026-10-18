@@ -5,6 +5,8 @@
 local colors = require("colors")
 local STATE_TAGS = { "claude-working", "claude-waiting", "claude-needs-you" }
 -- Workspace 6: right after Steam (5); the games moved to 7 to make room.
+-- The same number lives in waybar/scripts/on-claude-workspace.sh (what every script asks) and in
+-- scratchpads.lua (CLAUDE_WORKSPACE): change all three together.
 local WORKSPACE = 6
 
 hl.window_rule({ match = { tag = "claude-needs-you", focus = true }, border_color = "rgba(" .. colors.red .. "ee)" })
@@ -41,3 +43,7 @@ function CLAUDE_WINDOW_STATE(pid, state)
         hl.dispatch(hl.dsp.window.tag({ window = window, tag = "+claude-" .. state }))
     end
 end
+
+-- The "still there?" screen before the lock on this workspace (scripts/claude-idle.sh) sits over
+-- a blurred desktop; it is translucent itself, so what is behind it stays readable.
+hl.layer_rule({ match = { namespace = "^claude-idle$" }, blur = true, ignore_alpha = 0.3 })

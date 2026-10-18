@@ -1,0 +1,13 @@
+[Unit]
+Description=Walker launcher kept resident so it opens instantly (restarted whenever it stops, except by systemctl stop)
+After=graphical-session.target elephant.service
+Wants=elephant.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/walker --gapplication-service
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Elephant, the data provider behind walker's menus (restarted whenever it stops, except by systemctl stop)
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/elephant
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

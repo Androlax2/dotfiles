@@ -5,8 +5,19 @@ hl.on("hyprland.start", function()
     -- Its log goes to the runtime dir so a slow start can be timed against Hyprland's own log.
     hl.exec_cmd('waybar > "$XDG_RUNTIME_DIR/waybar.log" 2>&1')
     hl.exec_cmd("swaync")
-    hl.exec_cmd("~/.config/osd/osd.py")
-    hl.exec_cmd("claude-sessions prepare")
+    -- The OSD daemon, the Claude session manager, elephant and walker are systemd user units
+    -- (journal logs, restart on failure): hand them the session's environment first, then start
+    -- them. Apps launched from walker inherit it, so it carries everything envs.lua sets (theme,
+    -- cursor, Wayland backends) and PATH, as an app started from a Hyprland bind would get.
+    local session_environment = table.concat({
+        "WAYLAND_DISPLAY", "DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE", "PATH",
+        "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "XDG_SESSION_TYPE",
+        "XCURSOR_THEME", "XCURSOR_SIZE", "HYPRCURSOR_THEME", "HYPRCURSOR_SIZE",
+        "GDK_BACKEND", "QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME", "SDL_VIDEODRIVER",
+        "MOZ_ENABLE_WAYLAND", "ELECTRON_OZONE_PLATFORM_HINT", "OZONE_PLATFORM",
+    }, " ")
+    hl.exec_cmd("systemctl --user import-environment " .. session_environment
+        .. " && systemctl --user start osd.service claude-sessions.service elephant.service walker.service")
     hl.exec_cmd("~/.config/mpris-card/card.py") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")
@@ -18,8 +29,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("hypridle")
     -- Routes the media keys and the bar's mpris island to the last active player.
     hl.exec_cmd("playerctld daemon")
-    hl.exec_cmd("elephant")
-    hl.exec_cmd("walker --gapplication-service")
     hl.exec_cmd("~/.config/hypr/hotcorner.sh")
     hl.exec_cmd("~/.config/hypr/wallpaper-rotator.sh")
     hl.exec_cmd("~/.config/hypr/scripts/dofus-mouse-remap.sh")

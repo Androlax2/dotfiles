@@ -78,6 +78,7 @@ end
 
 -- The Claude session manager: a sidebar of every session plus the selected one (~/.local/bin/claude-sessions).
 bind(mainMod .. " + C", hl.dsp.exec_cmd("claude-sessions show"), { description = "Claude sessions" })
+bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("claude-sessions handoff"), { description = "Hand Claude sessions to Remote Control" })
 
 -- The dropdown terminal and Apple Music scratchpads are bound in scratchpads.lua.
 bind(mainMod .. " + SHIFT + S", hl.dsp.workspace.toggle_special("magic"), { description = "Scratch workspace" })

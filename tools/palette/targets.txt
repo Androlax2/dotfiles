@@ -15,4 +15,5 @@ osd-style.css.tpl	config/osd/.config/osd/style.css
 slurp-colors.tpl	config/screen-record/.config/slurp-colors
 zen-userChrome.css.tpl	config/zen/.config/zen/userChrome.css
 mpris-card-style.css.tpl	config/mpris-card/.config/mpris-card/style.css
-music-placeholder-style.css.tpl	config/hyprland/.config/hypr/scripts/music-placeholder.css
+web-placeholder-style.css.tpl	config/hyprland/.config/hypr/scripts/web-placeholder.css
+claude-idle-style.css.tpl	config/hyprland/.config/hypr/scripts/claude-idle.css
