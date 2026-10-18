@@ -254,14 +254,37 @@ class RegistryTests(Sandbox):
         self.assertIn(["claude-sessions", "approval-pane", "close"], commands)
         self.assertEqual(runs.current, "bbbbbbbbbbbb")
 
-    def test_the_window_shows_only_while_it_needs_theo_off_the_cockpit(self):
+    def test_the_window_opens_while_it_needs_theo_off_the_cockpit(self):
         runs, _, windows = self.run_setup()
         runs.request("aaaaaaaaaaaa")
         self.assertEqual(windows[0].command[-1], "=claude-run-aaaaaaaaaaaa")
+
+    def test_the_window_stays_open_while_the_command_runs(self):
+        runs, _, windows = self.run_setup()
+        runs.request("aaaaaaaaaaaa")
         runs.phase_changed("aaaaaaaaaaaa", "running")
-        self.assertTrue(windows[0].terminated)
+        runs.tick()
+        self.assertEqual(len(windows), 1)
+        self.assertFalse(windows[0].terminated)
+
+    def test_a_window_closed_during_the_run_is_not_reopened_until_the_last_question(self):
+        runs, _, windows = self.run_setup()
+        runs.request("aaaaaaaaaaaa")
+        runs.phase_changed("aaaaaaaaaaaa", "running")
+        windows[0].terminate()
+        runs.tick()
+        runs.tick()
+        self.assertEqual(len(windows), 1)
         runs.phase_changed("aaaaaaaaaaaa", "asking")
         self.assertEqual(len(windows), 2)
+
+    def test_the_running_window_closes_when_a_game_starts(self):
+        runs, _, windows = self.run_setup()
+        runs.request("aaaaaaaaaaaa")
+        runs.phase_changed("aaaaaaaaaaaa", "running")
+        self.registry.quiet = lambda: True
+        runs.tick()
+        self.assertTrue(windows[0].terminated)
 
     def test_no_window_on_the_cockpit_or_while_gaming(self):
         for on_cockpit, quiet in ((True, False), (False, True)):

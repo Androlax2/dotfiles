@@ -527,8 +527,8 @@ class RunRequests:
     """Commands Claude asks Theo to run outside the sandbox (ask-to-run). The daemon runs nothing
     itself: each request gets claude-run-approve in a tmux session of its own (claude-run-<id>),
     one request at a time. That session shows in a pane under the cockpit's session pane (it takes
-    the cursor when Theo is in the session pane), and in a floating window on the current workspace only while it needs Theo
-    (claude-run-approve reports asking / running / done), never while he games."""
+    the cursor when Theo is in the session pane), and in a floating window on the current workspace while it needs Theo
+    (claude-run-approve reports asking / running / done), kept open while the command runs, never while he games."""
 
     def __init__(self, banners, schedule_repeating):
         self.banners = banners
@@ -584,9 +584,14 @@ class RunRequests:
             self.show()
 
     def show(self):
-        """The floating window while the approval needs Theo, he is off the cockpit, and not gaming."""
-        wanted = self.phase == "asking" and not claude_workspace_active() and not quiet()
+        """The floating window while the approval needs Theo, he is off the cockpit, and not gaming.
+        While the command runs, the window he approved in stays where it is (sudo prompts answer
+        there) and none opens on the workspace he moves to; closed, it is back for the last question."""
         open_now = self.window is not None and self.window.poll() is None
+        if self.phase == "running":
+            wanted = open_now and not quiet()
+        else:
+            wanted = self.phase == "asking" and not claude_workspace_active() and not quiet()
         if wanted and not open_now:
             try:
                 self.window = subprocess.Popen(
