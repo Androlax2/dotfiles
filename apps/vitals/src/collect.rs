@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 const WAYBAR_SIGNAL: &str = "-RTMIN+17";
-const NOTICE_TITLE: &str = "Machine";
+const NOTICE_TITLE: &str = "PC";
 
 pub fn status_path() -> PathBuf {
     cockpit::paths::runtime_dir().join("vitals.json")
@@ -130,7 +130,7 @@ pub fn findings(store: &Store, facts: &facts::Facts, now: i64) -> rusqlite::Resu
 /// Upkeep past its interval, like any other problem. Never-recorded tasks raise nothing.
 pub fn care_findings(store: &Store, now: i64) -> Vec<Finding> {
     care::TASKS.iter().filter(|task| matches!(care::due(task, care::last_done(store, task), now), care::Due::Overdue(_)))
-        .map(|task| Finding { key: format!("care-{}", task.id), level: "warn", title: format!("Time to {}", task.title.to_lowercase()),
+        .map(|task| Finding { key: format!("care-{}", task.id), level: "warn", title: format!("Il est temps de {}", task.title.to_lowercase()),
                               detail: format!("{} {}", task.why, task.how) }).collect()
 }
 

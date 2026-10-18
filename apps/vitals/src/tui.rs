@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 
 const REFRESH: Duration = Duration::from_secs(5);
 const FACTS_REFRESH: Duration = Duration::from_secs(30);
-const TABS: [&str; 5] = ["Overview", "Cooling", "Disks", "System", "Care"];
+const TABS: [&str; 5] = ["Aperçu", "Refroidissement", "Disques", "Système", "Entretien"];
 const WEEK: i64 = 7 * DAY;
 const SPARK: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const CHART_DAYS: i64 = 90;
@@ -98,7 +98,7 @@ impl View {
         }
         match self.load_history() {
             Ok(()) => self.error = None,
-            Err(error) => self.error = Some(format!("history: {error}")),
+            Err(error) => self.error = Some(format!("historique : {error}")),
         }
     }
 
@@ -135,13 +135,13 @@ impl View {
 }
 
 fn header(frame: &mut Frame, area: Rect, view: &View) {
-    let [tabs_area, state_area] = Layout::horizontal([Constraint::Min(30), Constraint::Length(36)]).areas(area);
+    let [tabs_area, state_area] = Layout::horizontal([Constraint::Min(30), Constraint::Length(40)]).areas(area);
     let titles: Vec<Line> = TABS.iter().enumerate().map(|(index, title)| Line::from(format!("{} {title}", index + 1))).collect();
     frame.render_widget(Tabs::new(titles).select(view.tab).highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED)), tabs_area);
     let state = match (view.alerts.iter().map(|alert| alert.level.as_str()).max_by_key(|level| *level == "crit"), view.collected_at) {
-        (_, None) => Span::styled("no collection yet", level_style("warn")),
-        (None, Some(at)) => Span::styled(format!("all fine · collected {}s ago", cockpit::util::now_secs() - at), level_style("ok")),
-        (Some(level), Some(_)) => Span::styled(format!("{} problem(s)", view.alerts.len()), level_style(level)),
+        (_, None) => Span::styled("aucune collecte pour l'instant", level_style("warn")),
+        (None, Some(at)) => Span::styled(format!("tout va bien · collecté il y a {} s", cockpit::util::now_secs() - at), level_style("ok")),
+        (Some(level), Some(_)) => Span::styled(format!("{} problème(s)", view.alerts.len()), level_style(level)),
     };
     frame.render_widget(Paragraph::new(Line::from(state)).right_aligned(), state_area);
 }
@@ -159,7 +159,7 @@ fn machine(view: &View) -> Machine {
     let now = cockpit::util::now_secs();
     let reading = |key: &str| view.readings.iter().find(|reading| reading.key == key).map(|reading| reading.value);
     let kernel_problems = view.facts.kernel_errors.keys().map(|category| match category.as_str() {
-        "gpu" => "GPU resets", "disk" => "disk I/O errors", "hardware" => "machine checks", _ => "thermal throttling",
+        "gpu" => "réinitialisations du GPU", "disk" => "erreurs d'entrée/sortie disque", "hardware" => "erreurs matérielles", _ => "bridage thermique",
     }.to_string()).collect();
     Machine {
         alerts: view.alerts.clone(),
@@ -181,7 +181,7 @@ fn summary_lines(view: &View) -> Vec<Line<'static>> {
     let (headline, level) = summary::headline(&machine);
     let mut lines = vec![Line::styled(headline, level_style(level).add_modifier(Modifier::BOLD)), Line::from("")];
     for sentence in summary::sentences(&machine) {
-        lines.push(Line::from(vec![Span::styled(format!("{:<8}", sentence.topic), level_style(sentence.level).add_modifier(Modifier::BOLD)),
+        lines.push(Line::from(vec![Span::styled(format!("{:<17}", sentence.topic), level_style(sentence.level).add_modifier(Modifier::BOLD)),
                                    Span::raw(sentence.text)]));
     }
     lines
@@ -198,7 +198,7 @@ fn overview(frame: &mut Frame, area: Rect, view: &View) {
     let wrapped: usize = summary.iter().map(|line| line.width().div_ceil(inner_width).max(1)).sum();
     let height = (wrapped as u16 + 2).min(area.height * 2 / 3);
     let [summary_area, table_area] = Layout::vertical([Constraint::Length(height), Constraint::Min(5)]).areas(area);
-    frame.render_widget(Paragraph::new(summary).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Your PC ")), summary_area);
+    frame.render_widget(Paragraph::new(summary).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Ton PC ")), summary_area);
     let mut rows = Vec::new();
     let mut temperatures: Vec<&Reading> = view.readings.iter().filter(|reading| reading.kind == Kind::Temperature).collect();
     temperatures.sort_by_key(|reading| sensors::rank(&reading.key));
@@ -219,14 +219,14 @@ fn overview(frame: &mut Frame, area: Rect, view: &View) {
         ]));
     }
     for reading in view.readings.iter().filter(|reading| reading.kind == Kind::Fan) {
-        rows.push(Row::new(vec![Cell::from(label(&reading.key)), Cell::from(format!("{:.0} RPM", reading.value)), Cell::from(""), Cell::from(""), Cell::from("")]));
+        rows.push(Row::new(vec![Cell::from(label(&reading.key)), Cell::from(format!("{:.0} tr/min", reading.value)), Cell::from(""), Cell::from(""), Cell::from("")]));
     }
     for (sensor, value) in &view.loads {
-        rows.push(Row::new(vec![Cell::from(label(sensor)), Cell::from(format!("{value:.0}%")), Cell::from(""), Cell::from(""), Cell::from("")]));
+        rows.push(Row::new(vec![Cell::from(label(sensor)), Cell::from(format!("{value:.0} %")), Cell::from(""), Cell::from(""), Cell::from("")]));
     }
     let table = Table::new(rows, [Constraint::Length(18), Constraint::Length(10), Constraint::Length(12), Constraint::Length(7), Constraint::Min(24)])
-        .header(Row::new(["Sensor", "Now", "24 h", "Limit", "Last 24 h"]).style(dim()))
-        .block(Block::default().borders(Borders::ALL).title(" Sensors "));
+        .header(Row::new(["Capteur", "Actuel", "24 h", "Limite", "Dernières 24 h"]).style(dim()))
+        .block(Block::default().borders(Borders::ALL).title(" Capteurs "));
     frame.render_widget(table, table_area);
 }
 
@@ -240,17 +240,17 @@ fn cooling(frame: &mut Frame, area: Rect, view: &View) {
         let top = days.iter().map(|day| day.2).fold(50.0, f64::max).ceil() + 5.0;
         let (recent, before) = view.idle.get(name).copied().unwrap_or((None, None));
         let idle = match (recent, before) {
-            (Some(recent), Some(before)) => format!("idle {recent:.1}°C (two weeks before: {before:.1}°C, {:+.1})", recent - before),
-            (Some(recent), None) => format!("idle {recent:.1}°C (not enough history to compare yet)"),
-            _ => "idle: not enough history yet".into(),
+            (Some(recent), Some(before)) => format!("repos {recent:.1} °C (deux semaines avant : {before:.1} °C, {:+.1})", recent - before),
+            (Some(recent), None) => format!("repos {recent:.1} °C (pas encore assez d'historique pour comparer)"),
+            _ => "repos : pas encore assez d'historique".into(),
         };
         let datasets = vec![
-            Dataset::default().name("hottest").marker(Marker::Braille).graph_type(GraphType::Line).style(Style::default().fg(Color::Red)).data(&hottest),
-            Dataset::default().name("coolest").marker(Marker::Braille).graph_type(GraphType::Line).style(Style::default().fg(Color::Cyan)).data(&coolest),
+            Dataset::default().name("plus chaud").marker(Marker::Braille).graph_type(GraphType::Line).style(Style::default().fg(Color::Red)).data(&hottest),
+            Dataset::default().name("plus frais").marker(Marker::Braille).graph_type(GraphType::Line).style(Style::default().fg(Color::Cyan)).data(&coolest),
         ];
         let chart = Chart::new(datasets)
-            .block(Block::default().borders(Borders::ALL).title(format!(" {} · {CHART_DAYS} days · {idle} ", name.to_uppercase())))
-            .x_axis(Axis::default().bounds([first, last.max(first + 1.0)]).labels([format!("{} days ago", (last - first) as i64), "today".into()]).style(dim()))
+            .block(Block::default().borders(Borders::ALL).title(format!(" {} · {CHART_DAYS} jours · {idle} ", name.to_uppercase())))
+            .x_axis(Axis::default().bounds([first, last.max(first + 1.0)]).labels([format!("il y a {} jours", (last - first) as i64), "aujourd'hui".into()]).style(dim()))
             .y_axis(Axis::default().bounds([20.0, top]).labels(["20°C".to_string(), format!("{:.0}°C", (20.0 + top) / 2.0), format!("{top:.0}°C")]).style(dim()));
         frame.render_widget(chart, areas[index]);
     }
@@ -259,59 +259,59 @@ fn cooling(frame: &mut Frame, area: Rect, view: &View) {
 fn disks(frame: &mut Frame, area: Rect, view: &View) {
     let mut lines = Vec::new();
     if view.facts.disks.is_empty() {
-        lines.push(Line::styled("No SMART data: vitals-root.timer (a system unit) writes it to /var/lib/vitals/smart.", level_style("warn")));
+        lines.push(Line::styled("Pas de données SMART : vitals-root.timer (une unité système) les écrit dans /var/lib/vitals/smart.", level_style("warn")));
     }
     for disk in &view.facts.disks {
         let healthy = disk.critical_warning == 0 && disk.available_spare >= disk.spare_threshold;
         lines.push(Line::from(vec![Span::styled(format!("{}  ", disk.device), Style::default().add_modifier(Modifier::BOLD)),
-                                   Span::styled(if healthy { "healthy" } else { "FAILING" }, level_style(if healthy { "ok" } else { "crit" }))]));
-        lines.push(Line::from(format!("  worn {}%   spare {}% (threshold {}%)   media errors {}   critical warning {:#04x}",
+                                   Span::styled(if healthy { "en bonne santé" } else { "DÉFAILLANT" }, level_style(if healthy { "ok" } else { "crit" }))]));
+        lines.push(Line::from(format!("  usure {} %   réserve {} % (seuil {} %)   erreurs de support {}   avertissement critique {:#04x}",
                                       disk.percentage_used, disk.available_spare, disk.spare_threshold, disk.media_errors, disk.critical_warning)));
-        lines.push(Line::styled(format!("  read {} min ago", (cockpit::util::now_secs() - disk.read_at) / 60), dim()));
+        lines.push(Line::styled(format!("  lu il y a {} min", (cockpit::util::now_secs() - disk.read_at) / 60), dim()));
     }
     lines.push(Line::from(""));
-    lines.push(Line::styled("Space", Style::default().add_modifier(Modifier::BOLD)));
+    lines.push(Line::styled("Espace", Style::default().add_modifier(Modifier::BOLD)));
     for (mount, used) in &view.facts.disk_usage {
         let filled = (*used / 5.0).round() as usize;
         lines.push(Line::from(vec![Span::raw(format!("  {mount:<16} ")), Span::styled("█".repeat(filled), level_style(if *used >= 90.0 { "warn" } else { "ok" })),
-                                   Span::styled("░".repeat(20 - filled.min(20)), dim()), Span::raw(format!(" {used:.0}%"))]));
+                                   Span::styled("░".repeat(20 - filled.min(20)), dim()), Span::raw(format!(" {used:.0} %"))]));
     }
-    frame.render_widget(Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(" Disks ")), area);
+    frame.render_widget(Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title(" Disques ")), area);
 }
 
 fn system(frame: &mut Frame, area: Rect, view: &View) {
     let facts = &view.facts;
     let mut lines = vec![Line::styled("Services", Style::default().add_modifier(Modifier::BOLD))];
     if facts.failed_units.is_empty() {
-        lines.push(Line::styled("  none failed", level_style("ok")));
+        lines.push(Line::styled("  aucun en échec", level_style("ok")));
     }
     lines.extend(facts.failed_units.iter().map(|unit| Line::styled(format!("  ✗ {unit}"), level_style("warn"))));
     lines.push(Line::from(""));
-    lines.push(Line::styled("Kernel errors (24 h)", Style::default().add_modifier(Modifier::BOLD)));
+    lines.push(Line::styled("Erreurs du noyau (24 h)", Style::default().add_modifier(Modifier::BOLD)));
     if facts.kernel_errors.is_empty() {
-        lines.push(Line::styled("  none of the kinds watched (GPU resets, disk I/O, machine checks, throttling)", level_style("ok")));
+        lines.push(Line::styled("  aucune de celles surveillées (réinitialisations du GPU, entrées/sorties disque, erreurs matérielles, bridage)", level_style("ok")));
     }
     for (category, entries) in &facts.kernel_errors {
-        lines.push(Line::styled(format!("  {category}: {} line(s)", entries.len()), level_style("warn")));
+        lines.push(Line::styled(format!("  {category} : {} ligne(s)", entries.len()), level_style("warn")));
         lines.extend(entries.iter().rev().take(3).map(|line| Line::styled(format!("    {line}"), dim())));
     }
     lines.push(Line::from(""));
-    lines.push(Line::styled("Memory", Style::default().add_modifier(Modifier::BOLD)));
-    lines.push(Line::from(format!("  {} free   pressure {}",
-        facts.memory_available_percent.map(|free| format!("{free:.0}%")).unwrap_or("?".into()),
-        facts.memory_pressure.map(|pressure| format!("{pressure:.1}%")).unwrap_or("?".into()))));
+    lines.push(Line::styled("Mémoire", Style::default().add_modifier(Modifier::BOLD)));
+    lines.push(Line::from(format!("  {} libre   pression {}",
+        facts.memory_available_percent.map(|free| format!("{free:.0} %")).unwrap_or("?".into()),
+        facts.memory_pressure.map(|pressure| format!("{pressure:.1} %")).unwrap_or("?".into()))));
     lines.push(Line::from(""));
-    lines.push(Line::styled("Backup", Style::default().add_modifier(Modifier::BOLD)));
+    lines.push(Line::styled("Sauvegarde", Style::default().add_modifier(Modifier::BOLD)));
     lines.push(Line::from(match facts.last_backup.or_else(|| Store::open().ok()?.state("last_backup").ok()?.and_then(|stamp| stamp.parse().ok())) {
-        Some(at) => format!("  last good backup {} h ago{}", (cockpit::util::now_secs() - at) / 3600,
-                            facts.backup_result.as_ref().filter(|result| *result != "success").map(|result| format!(" · last run: {result}")).unwrap_or_default()),
-        None => "  no backup seen yet".into(),
+        Some(at) => format!("  dernière sauvegarde réussie il y a {} h{}", (cockpit::util::now_secs() - at) / 3600,
+                            facts.backup_result.as_ref().filter(|result| *result != "success").map(|result| format!(" · dernier passage : {result}")).unwrap_or_default()),
+        None => "  aucune sauvegarde vue pour l'instant".into(),
     }));
     if let Some(error) = &view.error {
         lines.push(Line::from(""));
         lines.push(Line::styled(error.as_str(), level_style("crit")));
     }
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" System ")), area);
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL).title(" Système ")), area);
 }
 
 fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
@@ -319,23 +319,23 @@ fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
     let [table_area, detail_area] = Layout::vertical([Constraint::Length(care::TASKS.len() as u16 + 3), Constraint::Min(4)]).areas(area);
     let rows: Vec<Row> = care::TASKS.iter().zip(&view.care_done).enumerate().map(|(index, (task, done))| {
         let (status, level) = match care::due(task, *done, now) {
-            Due::Unknown => ("no date yet: d if done today, then b per week back".to_string(), "warn"),
-            Due::In(days) => (format!("due in {}", care::days(days)), "ok"),
-            Due::Overdue(days) => (format!("{} overdue", care::days(days)), "crit"),
+            Due::Unknown => ("pas de date : d si fait aujourd'hui, puis b par semaine en arrière".to_string(), "warn"),
+            Due::In(days) => (format!("dans {}", care::days(days)), "ok"),
+            Due::Overdue(days) => (format!("{} de retard", care::days(days)), "crit"),
         };
-        let last = done.map(|at| format!("{} ago", care::days((now - at).div_euclid(DAY)))).unwrap_or_else(|| "–".into());
+        let last = done.map(|at| format!("il y a {}", care::days((now - at).div_euclid(DAY)))).unwrap_or_else(|| "–".into());
         let style = if index == view.care_selected { Style::default().add_modifier(Modifier::REVERSED) } else { Style::default() };
-        Row::new(vec![Cell::from(task.title), Cell::from(format!("every {}", care::days(task.every_days))).style(dim()),
+        Row::new(vec![Cell::from(task.title), Cell::from(format!("tous les {}", care::days(task.every_days))).style(dim()),
                       Cell::from(last), Cell::from(status).style(level_style(level))]).style(style)
     }).collect();
-    let table = Table::new(rows, [Constraint::Length(30), Constraint::Length(16), Constraint::Length(14), Constraint::Min(20)])
-        .header(Row::new(["Task", "Every", "Last done", "Status"]).style(dim()))
-        .block(Block::default().borders(Borders::ALL).title(" Upkeep "));
+    let table = Table::new(rows, [Constraint::Length(46), Constraint::Length(16), Constraint::Length(16), Constraint::Min(20)])
+        .header(Row::new(["Tâche", "Fréquence", "Dernière fois", "État"]).style(dim()))
+        .block(Block::default().borders(Borders::ALL).title(" Entretien "));
     frame.render_widget(table, table_area);
     let task = &care::TASKS[view.care_selected];
     let detail = vec![Line::styled(task.title, Style::default().add_modifier(Modifier::BOLD)), Line::from(""),
-                      Line::from(vec![Span::styled("Why  ", dim()), Span::raw(task.why)]),
-                      Line::from(vec![Span::styled("How  ", dim()), Span::raw(task.how)])];
+                      Line::from(vec![Span::styled("Pourquoi    ", dim()), Span::raw(task.why)]),
+                      Line::from(vec![Span::styled("Comment     ", dim()), Span::raw(task.how)])];
     frame.render_widget(Paragraph::new(detail).wrap(Wrap { trim: false }).block(Block::default().borders(Borders::ALL)), detail_area);
 }
 
@@ -348,7 +348,7 @@ fn record_care(view: &mut View, earlier: bool) {
     };
     match Store::open().and_then(|store| care::mark_done(&store, task, date)) {
         Ok(()) => view.care_done[view.care_selected] = Some(date),
-        Err(error) => view.error = Some(format!("cannot record {}: {error}", task.title)),
+        Err(error) => view.error = Some(format!("impossible d'enregistrer « {} » : {error}", task.title)),
     }
 }
 
@@ -362,7 +362,7 @@ fn draw(frame: &mut Frame, view: &View) {
         3 => system(frame, body, view),
         _ => care_tab(frame, body, view),
     }
-    let keys = if view.tab == 4 { "↑↓ pick · d done today · b a week earlier · 1-5 / Tab switch · q quit" } else { "1-5 / Tab switch · r refresh · q quit" };
+    let keys = if view.tab == 4 { "↑↓ choisir · d fait aujourd'hui · b une semaine plus tôt · 1-5 / Tab changer d'onglet · q quitter" } else { "1-5 / Tab changer d'onglet · r rafraîchir · q quitter" };
     frame.render_widget(Paragraph::new(Line::styled(keys, dim())), footer);
 }
 
@@ -430,6 +430,6 @@ mod tests {
             terminal.draw(|frame| draw(frame, &view)).unwrap();
         }
         let screen: String = terminal.backend().buffer().content().iter().map(|cell| cell.symbol()).collect();
-        assert!(screen.contains("Tab switch"));
+        assert!(screen.contains("Tab changer d'onglet"));
     }
 }

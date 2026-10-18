@@ -81,15 +81,15 @@ pub fn over_limits(minutes: &Minutes, limits: &Limits) -> Vec<Finding> {
     for (sensor, value) in latest.iter().filter(|(sensor, _)| sensor.starts_with("temp:")) {
         let name = label(sensor);
         if let Some(critical_at) = limits.get(sensor).and_then(|limit| limit.1).filter(|critical_at| value >= critical_at) {
-            findings.push(critical(format!("hot-{}", slug(&name)), format!("{name} critical: {value:.0}°C"),
-                                   format!("{name} is at {value:.0}°C, past its critical {critical_at:.0}°C.")));
+            findings.push(critical(format!("hot-{}", slug(&name)), format!("{name} critique : {value:.0} °C"),
+                                   format!("{name} est à {value:.0} °C, au-delà de sa limite critique de {critical_at:.0} °C.")));
             continue;
         }
         let high = high_of(sensor, limits);
         let sustained = recent.len() == SUSTAINED_MINUTES && recent.iter().all(|minute| minute.get(sensor).is_some_and(|reading| *reading >= high));
         if sustained {
-            findings.push(warn(format!("hot-{}", slug(&name)), format!("{name} too hot: {value:.0}°C"),
-                               format!("{name} has stayed at or above {high:.0}°C for {SUSTAINED_MINUTES} minutes (now {value:.0}°C).")));
+            findings.push(warn(format!("hot-{}", slug(&name)), format!("{name} trop chaud : {value:.0} °C"),
+                               format!("{name} est resté à {high:.0} °C ou plus pendant {SUSTAINED_MINUTES} minutes (maintenant {value:.0} °C).")));
         }
     }
     findings
@@ -129,9 +129,9 @@ pub fn idle_trend(minutes: &Minutes, now: i64, sensor: &str, load: &str, name: &
     }
     let (now_idle, earlier_idle) = (median(&mut last)?, median(&mut before)?);
     let rise = now_idle - earlier_idle;
-    (rise >= TREND_RISE).then(|| warn(format!("idle-{name}"), format!("{} runs warmer at idle: +{rise:.1}°C", name.to_uppercase()),
-        format!("Idle {} went from {earlier_idle:.1}°C to {now_idle:.1}°C over two weeks: dust in the filters or radiator, \
-                 the pump, or the thermal paste.", name.to_uppercase())))
+    (rise >= TREND_RISE).then(|| warn(format!("idle-{name}"), format!("{} plus chaud au repos : +{rise:.1} °C", name.to_uppercase()),
+        format!("Au repos, le {} est passé de {earlier_idle:.1} °C à {now_idle:.1} °C en deux semaines : poussière dans les filtres ou le radiateur, \
+                 la pompe, ou la pâte thermique.", name.to_uppercase())))
 }
 
 /// The temperature under load this week against the same load three weeks earlier.
@@ -147,8 +147,8 @@ pub fn load_trend(minutes: &Minutes, now: i64, sensor: &str, load: &str, name: &
     }
     let (now_busy, earlier_busy) = (median(&mut this_week)?, median(&mut earlier)?);
     let rise = now_busy - earlier_busy;
-    (rise >= TREND_RISE).then(|| warn(format!("load-{name}"), format!("{} runs warmer under load: +{rise:.1}°C", name.to_uppercase()),
-        format!("Under load, {} went from {earlier_busy:.1}°C three weeks ago to {now_busy:.1}°C this week: the cooling copes less well.",
+    (rise >= TREND_RISE).then(|| warn(format!("load-{name}"), format!("{} plus chaud en charge : +{rise:.1} °C", name.to_uppercase()),
+        format!("En charge, le {} est passé de {earlier_busy:.1} °C il y a trois semaines à {now_busy:.1} °C cette semaine : le refroidissement suit moins bien.",
                 name.to_uppercase())))
 }
 
@@ -167,8 +167,8 @@ pub fn stopped_fans(minutes: &Minutes, now: i64) -> Vec<Finding> {
             .or_else(|| latest.get("temp:k10temp/Tctl").copied()).unwrap_or(0.0);
         if stopped && spun_this_week && chip_temperature >= FAN_MATTERS_FROM {
             let name = label(sensor);
-            findings.push(critical(format!("fan-{}", slug(&name)), format!("{name} stopped"),
-                                   format!("{name} reads 0 RPM while its chip is at {chip_temperature:.0}°C; it was spinning this week.")));
+            findings.push(critical(format!("fan-{}", slug(&name)), format!("{name} à l'arrêt"),
+                                   format!("{name} est à 0 tr/min alors que sa puce est à {chip_temperature:.0} °C ; il tournait cette semaine.")));
         }
     }
     findings
@@ -179,25 +179,25 @@ pub fn smart(disks: &[Smart], now: i64) -> Vec<Finding> {
     for disk in disks {
         let key = slug(&disk.device);
         if now - disk.read_at > SMART_MAX_AGE_S {
-            findings.push(warn(format!("smart-stale-{key}"), format!("No fresh health data for {}", disk.device),
-                               "vitals-root.timer has not refreshed the SMART data for two hours: is it running?"));
+            findings.push(warn(format!("smart-stale-{key}"), format!("Pas de données de santé récentes pour {}", disk.device),
+                               "vitals-root.timer n'a pas rafraîchi les données SMART depuis deux heures : tourne-t-il ?"));
             continue;
         }
         if disk.critical_warning != 0 {
-            findings.push(critical(format!("smart-{key}"), format!("{} reports a critical warning", disk.device),
-                                   format!("SMART critical warning {:#04x}: back up now and check `sudo smartctl -a /dev/{}`.", disk.critical_warning, disk.device)));
+            findings.push(critical(format!("smart-{key}"), format!("{} signale un avertissement critique", disk.device),
+                                   format!("Avertissement critique SMART {:#04x} : sauvegarde maintenant et regarde `sudo smartctl -a /dev/{}`.", disk.critical_warning, disk.device)));
         }
         if disk.available_spare < disk.spare_threshold {
-            findings.push(critical(format!("spare-{key}"), format!("{} is out of spare blocks", disk.device),
-                                   format!("Spare at {}% under its threshold {}%: the drive is failing.", disk.available_spare, disk.spare_threshold)));
+            findings.push(critical(format!("spare-{key}"), format!("{} n'a plus de blocs de réserve", disk.device),
+                                   format!("Réserve à {} %, sous son seuil de {} % : le disque lâche.", disk.available_spare, disk.spare_threshold)));
         }
         if disk.percentage_used >= DISK_WORN_PERCENT {
-            findings.push(warn(format!("worn-{key}"), format!("{} is {}% worn", disk.device, disk.percentage_used),
-                               "Its rated write endurance is mostly used: plan a replacement."));
+            findings.push(warn(format!("worn-{key}"), format!("{} est usé à {} %", disk.device, disk.percentage_used),
+                               "Son endurance en écriture est presque épuisée : prévois un remplacement."));
         }
         if disk.media_errors > disk.previous_media_errors.unwrap_or(disk.media_errors) {
-            findings.push(warn(format!("media-{key}"), format!("{} has new media errors", disk.device),
-                               format!("{} media errors, {} before.", disk.media_errors, disk.previous_media_errors.unwrap_or(0))));
+            findings.push(warn(format!("media-{key}"), format!("{} a de nouvelles erreurs de support", disk.device),
+                               format!("{} erreurs de support, {} avant.", disk.media_errors, disk.previous_media_errors.unwrap_or(0))));
         }
     }
     findings
@@ -207,35 +207,35 @@ pub fn system(facts: &Facts, now: i64) -> Vec<Finding> {
     let mut findings = Vec::new();
     for (mount, used) in &facts.disk_usage {
         if *used >= DISK_FULL_PERCENT {
-            findings.push(warn(format!("full-{}", slug(mount)), format!("{mount} is {used:.0}% full"), "Free some space before it runs out."));
+            findings.push(warn(format!("full-{}", slug(mount)), format!("{mount} est plein à {used:.0} %"), "Libère de la place avant qu'il soit plein."));
         }
     }
     if !facts.failed_units.is_empty() {
-        findings.push(warn("failed-units", format!("{} failed service(s)", facts.failed_units.len()), facts.failed_units.join(", ")));
+        findings.push(warn("failed-units", format!("{} service(s) en échec", facts.failed_units.len()), facts.failed_units.join(", ")));
     }
     for (category, lines) in &facts.kernel_errors {
         let (level, title) = match category.as_str() {
-            "gpu" => ("crit", "GPU resets or hangs"),
-            "disk" => ("crit", "Disk I/O errors"),
-            "hardware" => ("crit", "Hardware errors (machine check)"),
-            _ => ("warn", "Thermal throttling"),
+            "gpu" => ("crit", "Réinitialisations ou blocages du GPU"),
+            "disk" => ("crit", "Erreurs d'entrée/sortie disque"),
+            "hardware" => ("crit", "Erreurs matérielles (machine check)"),
+            _ => ("warn", "Bridage thermique"),
         };
-        let detail = format!("{} kernel message(s) in 24 h, the last: {}", lines.len(), lines.last().map(String::as_str).unwrap_or(""));
+        let detail = format!("{} message(s) du noyau en 24 h, le dernier : {}", lines.len(), lines.last().map(String::as_str).unwrap_or(""));
         findings.push(Finding { key: format!("kernel-{category}"), level, title: title.into(), detail: detail.chars().take(280).collect() });
     }
     if let Some(available) = facts.memory_available_percent.filter(|available| *available < MEMORY_LOW_PERCENT) {
-        findings.push(warn("memory-low", format!("Memory almost full: {available:.0}% free"), "Close something before the system starts swapping hard."));
+        findings.push(warn("memory-low", format!("Mémoire presque pleine : {available:.0} % libre"), "Ferme quelque chose avant que le système se mette à swapper fort."));
     }
     if let Some(pressure) = facts.memory_pressure.filter(|pressure| *pressure >= MEMORY_PRESSURE) {
-        findings.push(warn("memory-pressure", "Memory pressure", format!("Tasks waited on memory {pressure:.0}% of the last 5 minutes.")));
+        findings.push(warn("memory-pressure", "Pression mémoire", format!("Les tâches ont attendu la mémoire {pressure:.0} % des 5 dernières minutes.")));
     }
     if let Some(result) = facts.backup_result.as_ref().filter(|result| *result != "success") {
-        findings.push(warn("backup-failed", "Backup failed", format!("restic-backup.service ended with {result}.")));
+        findings.push(warn("backup-failed", "Sauvegarde en échec", format!("restic-backup.service s'est terminé avec {result}.")));
     }
     // Right after boot the backup has not had its turn yet (15 minutes in).
     let settled = facts.uptime_s.is_some_and(|uptime| uptime >= BACKUP_GRACE_AFTER_BOOT_S);
     if settled && facts.last_backup.is_none_or(|finished| now - finished > BACKUP_MAX_AGE_S) {
-        findings.push(warn("backup-old", "No backup for two days", "restic-backup.service has not finished successfully in two days."));
+        findings.push(warn("backup-old", "Aucune sauvegarde depuis deux jours", "restic-backup.service n'a pas réussi depuis deux jours."));
     }
     findings
 }

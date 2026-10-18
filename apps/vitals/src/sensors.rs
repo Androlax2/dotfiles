@@ -128,7 +128,7 @@ pub fn gpu_load(root: &Path) -> Option<f64> {
 /// Where a sensor sorts on screen: the CPU and GPU first, the rest after.
 pub fn rank(key: &str) -> (usize, String) {
     let name = label(key);
-    let order = ["CPU", "GPU", "RAM", "NVMe", "Board"];
+    let order = ["CPU", "GPU", "RAM", "NVMe", "Carte mère"];
     (order.iter().position(|prefix| name.starts_with(prefix)).unwrap_or(order.len()), name)
 }
 
@@ -139,26 +139,26 @@ pub fn label(key: &str) -> String {
     let driver = chip.split(' ').next().unwrap_or(chip);
     let named = match (driver, channel) {
         ("k10temp", "Tctl") | ("coretemp", "Package id 0") => "CPU".to_string(),
-        ("k10temp", ccd) if ccd.starts_with("Tccd") => format!("CPU die {}", ccd.trim_start_matches("Tccd")),
+        ("k10temp", ccd) if ccd.starts_with("Tccd") => format!("CPU puce {}", ccd.trim_start_matches("Tccd")),
         ("amdgpu", "edge") => "GPU".to_string(),
-        ("amdgpu", "junction") => "GPU hotspot".to_string(),
-        ("amdgpu", "mem") => "GPU memory".to_string(),
+        ("amdgpu", "junction") => "GPU point chaud".to_string(),
+        ("amdgpu", "mem") => "GPU mémoire".to_string(),
         ("amdgpu", fan) if kind == "fan" => format!("GPU {fan}"),
         ("nvme", "Composite") => "NVMe".to_string(),
-        ("nvme", sensor) => format!("NVMe {}", sensor.to_lowercase()),
+        ("nvme", sensor) => format!("NVMe {}", sensor.to_lowercase().replace("sensor", "capteur")),
         ("spd5118", _) => format!("RAM {}", chip.rsplit('-').next().unwrap_or(chip)),
-        ("gigabyte_wmi", temp) => format!("Board {}", temp.trim_start_matches("temp")),
-        ("r8169_0_a00:00", _) => "Network chip".to_string(),
-        ("prom21_xhci", _) => "USB controller".to_string(),
+        ("gigabyte_wmi", temp) => format!("Carte mère {}", temp.trim_start_matches("temp")),
+        ("r8169_0_a00:00", _) => "Puce réseau".to_string(),
+        ("prom21_xhci", _) => "Contrôleur USB".to_string(),
         // The motherboard's fan chip (it87 driver): its headers by number, as printed on the board.
         // crate::summary::PUMP: the header the water cooling's pump is on.
-        ("it8696", "fan5") if kind == "fan" => "Pump".to_string(),
-        (chip_name, fan) if chip_name.starts_with("it8") && kind == "fan" => format!("Fan header {}", fan.trim_start_matches("fan")),
-        (chip_name, temp) if chip_name.starts_with("it8") => format!("Fan chip sensor {}", temp.trim_start_matches("temp")),
+        ("it8696", "fan5") if kind == "fan" => "Pompe".to_string(),
+        (chip_name, fan) if chip_name.starts_with("it8") && kind == "fan" => format!("Ventilateur {}", fan.trim_start_matches("fan")),
+        (chip_name, temp) if chip_name.starts_with("it8") => format!("Capteur du contrôleur {}", temp.trim_start_matches("temp")),
         _ => format!("{chip} {channel}"),
     };
     match kind {
-        "load" => format!("{} load", rest.to_uppercase()),
+        "load" => format!("Charge {}", rest.to_uppercase()),
         _ => named,
     }
 }
@@ -261,11 +261,11 @@ mod tests {
     #[test]
     fn sensors_get_readable_names() {
         assert_eq!(label("temp:k10temp/Tctl"), "CPU");
-        assert_eq!(label("temp:amdgpu/junction"), "GPU hotspot");
+        assert_eq!(label("temp:amdgpu/junction"), "GPU point chaud");
         assert_eq!(label("temp:spd5118 2-0053/temp1"), "RAM 0053");
-        assert_eq!(label("load:cpu"), "CPU load");
-        assert_eq!(label("temp:nvme/Sensor 1"), "NVMe sensor 1");
-        assert_eq!(label("fan:it8696/fan5"), "Pump");
-        assert_eq!(label("fan:it8696/fan1"), "Fan header 1");
+        assert_eq!(label("load:cpu"), "Charge CPU");
+        assert_eq!(label("temp:nvme/Sensor 1"), "NVMe capteur 1");
+        assert_eq!(label("fan:it8696/fan5"), "Pompe");
+        assert_eq!(label("fan:it8696/fan1"), "Ventilateur 1");
     }
 }

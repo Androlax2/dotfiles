@@ -14,24 +14,24 @@ pub struct Task {
 }
 
 pub const TASKS: [Task; 6] = [
-    Task { id: "dust", title: "Dust the filters and fans", every_days: 90,
-           why: "Dust on the filters and fans raises every temperature a little more each month.",
-           how: "PC off and unplugged: a soft brush on the filters, short bursts of compressed air on the fans, held still." },
-    Task { id: "radiator", title: "Clean the radiator", every_days: 180,
-           why: "Dust packed between the radiator's fins slows the whole water loop.",
-           how: "PC off: compressed air through the radiator from the inside out, its fans held still." },
-    Task { id: "watercooling", title: "Check the water cooling", every_days: 180,
-           why: "A tiring pump or a weeping joint shows before it fails.",
-           how: "Listen for a rattling or louder pump, look along the tubes and joints for moisture; the pump's speed is in Overview." },
-    Task { id: "paste", title: "Renew the CPU thermal paste", every_days: 3 * 365,
-           why: "Paste dries out over the years and the CPU runs warmer for the same work.",
-           how: "Worth doing earlier when the Cooling tab's idle trend keeps climbing after a dusting." },
-    Task { id: "restore", title: "Test restoring a backup", every_days: 180,
-           why: "A backup that cannot be restored is not one.",
-           how: "restic restore latest --target /tmp/restore-test --include ~/dotfiles, then compare a few files." },
-    Task { id: "bios", title: "Check for a BIOS update", every_days: 180,
-           why: "Updates fix stability bugs and fan control.",
-           how: "Gigabyte's support page for the B850 AORUS ELITE WIFI7; read the release notes before flashing." },
+    Task { id: "dust", title: "Dépoussiérer les filtres et les ventilateurs", every_days: 90,
+           why: "La poussière sur les filtres et les ventilateurs fait monter toutes les températures un peu plus chaque mois.",
+           how: "PC éteint et débranché : un pinceau doux sur les filtres, de courtes rafales d'air sec sur les ventilateurs, bloqués à la main." },
+    Task { id: "radiator", title: "Nettoyer le radiateur", every_days: 180,
+           why: "La poussière tassée entre les ailettes du radiateur ralentit tout le circuit d'eau.",
+           how: "PC éteint : air sec à travers le radiateur, de l'intérieur vers l'extérieur, ses ventilateurs bloqués." },
+    Task { id: "watercooling", title: "Vérifier le watercooling", every_days: 180,
+           why: "Une pompe qui fatigue ou un raccord qui suinte se remarque avant de lâcher.",
+           how: "Écoute si la pompe claque ou fait plus de bruit, cherche de l'humidité le long des tuyaux et des raccords ; la vitesse de la pompe est dans Aperçu." },
+    Task { id: "paste", title: "Refaire la pâte thermique du CPU", every_days: 3 * 365,
+           why: "La pâte sèche avec les années et le CPU chauffe plus pour le même travail.",
+           how: "À faire plus tôt si la tendance au repos de l'onglet Refroidissement continue de monter après un dépoussiérage." },
+    Task { id: "restore", title: "Tester la restauration d'une sauvegarde", every_days: 180,
+           why: "Une sauvegarde qu'on ne peut pas restaurer n'en est pas une.",
+           how: "restic restore latest --target /tmp/restore-test --include ~/dotfiles, puis compare quelques fichiers." },
+    Task { id: "bios", title: "Chercher une mise à jour du BIOS", every_days: 180,
+           why: "Les mises à jour corrigent des bugs de stabilité et le pilotage des ventilateurs.",
+           how: "Page support Gigabyte de la B850 AORUS ELITE WIFI7 ; lis les notes de version avant de flasher." },
 ];
 
 pub const DAY: i64 = 86400;
@@ -64,14 +64,14 @@ pub fn mark_done(store: &Store, task: &Task, at: i64) -> rusqlite::Result<()> {
     store.set_state(&state_name(task), &at.to_string())
 }
 
-/// Days written for a person: "today", "in 3 days", "12 days ago".
+/// Days written for a person: "aujourd'hui", "12 jours", "3 mois".
 pub fn days(count: i64) -> String {
     match count {
-        0 => "today".into(),
-        1 => "1 day".into(),
-        many if many < 60 => format!("{many} days"),
-        many if many < 730 => format!("{} months", many / 30),
-        many => format!("{} years", many / 365),
+        0 => "aujourd'hui".into(),
+        1 => "1 jour".into(),
+        many if many < 60 => format!("{many} jours"),
+        many if many < 730 => format!("{} mois", many / 30),
+        many => format!("{} ans", many / 365),
     }
 }
 
@@ -105,6 +105,6 @@ mod tests {
 
     #[test]
     fn days_read_like_a_person_says_them() {
-        assert_eq!((days(0), days(12), days(90), days(1095)), ("today".into(), "12 days".into(), "3 months".into(), "3 years".into()));
+        assert_eq!((days(0), days(12), days(90), days(1095)), ("aujourd'hui".into(), "12 jours".into(), "3 mois".into(), "3 ans".into()));
     }
 }

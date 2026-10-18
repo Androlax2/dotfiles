@@ -11,23 +11,23 @@ const STALE_AFTER_S: i64 = 5 * 60;
 
 fn status() -> Value {
     let Some(state) = cockpit::util::read_json(&collect::status_path()) else {
-        return json!({"text": "●", "class": "stale", "tooltip": "vitals: no collection yet (vitals-collect.timer)"});
+        return json!({"text": "●", "class": "stale", "tooltip": "vitals : aucune collecte pour l'instant (vitals-collect.timer)"});
     };
     let at = state["at"].as_i64().unwrap_or(0);
     if cockpit::util::now_secs() - at > STALE_AFTER_S {
-        return json!({"text": "●", "class": "stale", "tooltip": "vitals: the collector has not run for 5 minutes (vitals-collect.timer)"});
+        return json!({"text": "●", "class": "stale", "tooltip": "vitals : la collecte n'a pas tourné depuis 5 minutes (vitals-collect.timer)"});
     }
     let level = state["level"].as_str().unwrap_or("ok");
     if level == "ok" {
-        return json!({"text": "", "class": "ok", "tooltip": "Machine: all fine"});
+        return json!({"text": "", "class": "ok", "tooltip": "PC : tout va bien"});
     }
     let titles: Vec<&str> = state["alerts"].as_array().map(|alerts| alerts.iter().filter_map(Value::as_str).collect()).unwrap_or_default();
     // The chip says what is wrong; with several problems, how many.
     let text = match titles.as_slice() {
         [only] => format!("● {only}"),
-        many => format!("● {} machine problems", many.len()),
+        many => format!("● {} problèmes sur le PC", many.len()),
     };
-    json!({"text": text, "class": level, "tooltip": format!("Machine:\n{}", titles.join("\n"))})
+    json!({"text": text, "class": level, "tooltip": format!("PC :\n{}", titles.join("\n"))})
 }
 
 fn main() {

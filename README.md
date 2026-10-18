@@ -212,18 +212,18 @@ A game window opening turns **game mode** on by itself (`config/hyprland/.config
 
 ## Machine monitor (vitals)
 
-`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI: **Overview** (the machine in plain words, then every temperature with its 24 h range and limit, the pump, fans, load), **Cooling** (CPU and GPU over 90 days, and the idle trend), **Disks** (SMART health, space), **System** (failed services, kernel errors, memory, the backup) and **Care** (upkeep on a schedule).
+`vitals` ([`apps/vitals`](apps/vitals)) watches the machine so a cooling or hardware problem shows up before it does damage. `Ctrl + Cmd + M` (or the bar's chip) opens its TUI, in French: **Aperçu** (the machine in plain words, then every temperature with its 24 h range and limit, the pump, fans, load), **Refroidissement** (CPU and GPU over 90 days, and the idle trend), **Disques** (SMART health, space), **Système** (failed services, kernel errors, memory, the backup) and **Entretien** (upkeep on a schedule).
 
-The Overview opens with a headline ("Your PC is healthy: nothing needs you.") and one sentence each for cooling, disk, system, backup and upkeep, saying what to do when something drifts: a CPU idling 5 °C warmer than two weeks ago means dusting the filters and the radiator, then checking the pump.
+Aperçu opens with a headline ("Ton PC va bien : rien à faire.") and one sentence each for cooling, disk, system, backup and upkeep, saying what to do when something drifts: a CPU idling 5 °C warmer than two weeks ago means dusting the filters and the radiator, then checking the pump.
 
-| Upkeep (Care tab) | Every |
+| Upkeep (Entretien tab) | Every |
 | --- | --- |
-| Dust the filters and fans | 3 months |
-| Clean the radiator | 6 months |
-| Check the water cooling (pump noise, tubes, joints) | 6 months |
-| Renew the CPU thermal paste | 3 years |
-| Test restoring a backup | 6 months |
-| Check for a BIOS update | 6 months |
+| Dépoussiérer les filtres et les ventilateurs | 3 months |
+| Nettoyer le radiateur | 6 months |
+| Vérifier le watercooling (pump noise, tubes, joints) | 6 months |
+| Refaire la pâte thermique du CPU | 3 years |
+| Tester la restauration d'une sauvegarde | 6 months |
+| Chercher une mise à jour du BIOS | 6 months |
 
 `d` records a task done today, `b` moves its date a week earlier (for one done a while ago). A task past its interval raises a banner and the bar's chip like any problem; one never recorded only asks for its date.
 
