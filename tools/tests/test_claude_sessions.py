@@ -204,6 +204,33 @@ class ManagerTests(Sandbox):
         self.run_manager("exit", SESSION_A, SHIM_PANE_TEXT="done\n❯ \n", SHIM_EXIT_AFTER="1")
         self.assertEqual((self.state / "claude-sessions/ended-sessions").read_text().split(), [SESSION_A])
 
+    def prs_shims(self, special=""):
+        self.shim("hyprctl", f"""case "$*" in
+  "-j activeworkspace") echo "{{\\"id\\": ${{SHIM_WS:-6}}}}" ;;
+  "-j monitors") echo '[{{"focused": true, "specialWorkspace": {{"name": "{special}"}}}}]' ;;
+esac""")
+        (self.runtime / "claude-sessions.current").write_text(SESSION_A + "\n")
+
+    def test_pull_requests_open_on_the_viewed_sessions_repository(self):
+        self.git_repository()
+        self.prs_shims()
+        self.run_manager("prs")
+        self.assertIn('hyprctl eval OPEN_IN_SCRATCHPAD("prs", "https://github.com/o/proj-a/pulls")', self.calls("hyprctl"))
+
+    def test_pull_requests_hide_when_showing_and_need_the_cockpit(self):
+        self.prs_shims(special="special:prs")
+        self.run_manager("prs")
+        self.assertIn('hyprctl dispatch hl.dsp.workspace.toggle_special("prs")', self.calls("hyprctl"))
+        self.prs_shims()
+        before = len(self.calls("hyprctl"))
+        self.run_manager("prs", SHIM_WS="2")
+        self.assertFalse(any("SCRATCHPAD" in call for call in self.calls("hyprctl")[before:]))
+
+    def test_pull_requests_without_a_github_repository_show_the_window_as_it_was(self):
+        self.prs_shims()
+        self.run_manager("prs")
+        self.assertIn('hyprctl eval TOGGLE_SCRATCHPAD("prs")', self.calls("hyprctl"))
+
     def test_git_opens_lazygit_on_the_repository_in_a_popup(self):
         self.assertEqual(self.run_manager("git", str(self.project)).returncode, 0)
         popup = self.tmux_calls("display-popup")

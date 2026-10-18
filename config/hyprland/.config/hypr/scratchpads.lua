@@ -139,7 +139,8 @@ bind("CTRL + code:49", function() toggle("term") end, { description = "Dropdown 
 bind("CTRL + M", function() toggle("music") end, { description = "Apple Music" })
 -- SUPER + CTRL is physical Ctrl + Cmd, like the walker pickers in bindings.lua. These three
 -- are cockpit keys: they act on the Claude workspace only (the key is still swallowed elsewhere).
-bind("SUPER + CTRL + P", function() toggle("prs") end, { description = "Pull requests to review" })
+-- Pull requests: the list of the repository of the session in the cockpit's pane (claude-sessions prs).
+bind("SUPER + CTRL + P", hl.dsp.exec_cmd("claude-sessions prs"), { description = "Pull requests of the viewed session's repository" })
 bind("SUPER + CTRL + A", function() toggle("claude") end, { description = "Claude on the web" })
 bind("SUPER + CTRL + G", function() toggle("greyproxy") end, { description = "greyproxy dashboard" })
 
