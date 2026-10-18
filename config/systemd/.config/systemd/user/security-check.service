@@ -4,3 +4,9 @@ Description=Compare the machine with its security baseline
 [Service]
 Type=oneshot
 ExecStart=%h/dotfiles/tools/security-check.sh notify
+# pacman -Qkk checksums every package file: about two minutes of reading, which used to fill
+# 13-20 GB of page cache charged to this unit and push other programs' data out. MemoryHigh makes
+# it recycle its own cache instead; the priorities keep it out of the way of a game or a build.
+MemoryHigh=2G
+Nice=19
+IOSchedulingClass=idle

@@ -22,7 +22,8 @@ listening_ports() {
     # Tailscale churn through; process names need root so they are left out. Normalised so a
     # reboot or an iproute2 upgrade does not churn the baseline: "*" and "[::]" are the same
     # wildcard, "%iface" scope suffixes go, and link-local addresses lose their random suffix.
-    ss -tulnH | awk '{ split($5, a, ":"); port = a[length(a)]; if (port + 0 < 32768) print $1, $5 }' \
+    # Loopback listeners (127.0.0.0/8, ::1) cannot be reached from another machine: left out.
+    ss -tulnH | awk '$5 !~ /^(127\.|\[::1\]:)/ { split($5, a, ":"); port = a[length(a)]; if (port + 0 < 32768) print $1, $5 }' \
         | sed -E 's/ \*:/ [::]:/; s/%[A-Za-z0-9_.-]+:/:/; s/\[fe80:[0-9a-f:]+\]/[fe80::link-local]/' | sort -u
 }
 
@@ -97,6 +98,10 @@ report_lines() {
     done
 }
 
+# Baselines whose entries come and go with what runs (a game, a dev container, a driver): only a
+# new entry can mean an intrusion, one that is gone is not reported.
+new_only=" listening-ports kernel-modules "
+
 compare_with_baseline() {
     local name=$1 fn=$2 file="$baseline_dir/$1.txt"
     section "$name"
@@ -104,7 +109,9 @@ compare_with_baseline() {
         finding "no baseline: run 'make dump-security' once on a machine you trust"
         return
     fi
-    report_lines <<< "$(diff <(sort "$file") <("$fn" | sort) | sed -n 's/^> /new: /p; s/^< /gone: /p')"
+    local gone='s/^< /gone: /p'
+    [[ $new_only == *" $name "* ]] && gone=''
+    report_lines <<< "$(diff <(sort "$file") <("$fn" | sort) | sed -n "s/^> /new: /p; $gone")"
 }
 
 check_package_integrity() {
@@ -116,9 +123,20 @@ check_package_integrity() {
 check_preload_and_taint() {
     section "kernel and loader"
     [[ -e /etc/ld.so.preload ]] && finding "/etc/ld.so.preload exists: $(tr '\n' ' ' < /etc/ld.so.preload)"
-    local taint
+    local taint module flags letters unknown=()
     taint=$(cat /proc/sys/kernel/tainted)
-    [[ "$taint" != "0" ]] && finding "kernel tainted (flags $taint); see /proc/sys/kernel/tainted"
+    # Out-of-tree (O, 4096) and unsigned (E, 8192) modules taint the kernel by design: DKMS
+    # drivers such as it87 (the fan chip, system/etc/modules-load.d/it87.conf). Those two flags are
+    # accepted when every module carrying them is in the kernel-modules baseline; any other flag,
+    # or a module the baseline does not know, is a finding.
+    for flags in /sys/module/*/taint; do
+        module=$(basename "$(dirname "$flags")")
+        letters=$(tr -d '[:space:]' < "$flags" 2>/dev/null)
+        [[ -n $letters ]] || continue
+        grep -qx "$module" "$baseline_dir/kernel-modules.txt" 2>/dev/null || unknown+=("$module ($letters)")
+    done
+    (( ${#unknown[@]} == 0 )) && taint=$(( taint & ~(4096 | 8192) ))
+    [[ "$taint" != "0" ]] && finding "kernel tainted (flags $taint${unknown:+, by ${unknown[*]}}); see /proc/sys/kernel/tainted"
     return 0
 }
 
