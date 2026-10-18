@@ -38,7 +38,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install cockpit \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -132,8 +132,12 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 ##@ Keep the repo in sync
 
-test: ## [read-only] Run the unit tests in tools/tests (wrappers, the Claude session manager, its daemon and hook)
+test: ## [read-only] Run the unit tests in tools/tests (wrappers, the Claude session manager, its daemon and hook) and the cockpit column's
 	python3 -m unittest discover -s tools/tests -v
+	cargo test --release --quiet --manifest-path apps/claude-sessions-sidebar/Cargo.toml
+
+cockpit: ## Build the Claude cockpit's left column (Rust, apps/claude-sessions-sidebar); claude-sessions reload shows it
+	cargo build --release --manifest-path apps/claude-sessions-sidebar/Cargo.toml
 
 handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)
 	@tools/handoff-install.sh

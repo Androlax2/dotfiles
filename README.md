@@ -178,14 +178,14 @@ Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go th
 | Path | Role |
 | --- | --- |
 | [`config/bin/.local/bin/claude-sessions`](config/bin/.local/bin/claude-sessions) | The manager: tmux layout, start, resume, restart, logs, doctor |
-| [`config/bin/.local/bin/claude-sessions-sidebar`](config/bin/.local/bin/claude-sessions-sidebar) | The column (Python, curses) |
+| [`apps/claude-sessions-sidebar`](apps/claude-sessions-sidebar) | The column (Rust, Ratatui), built with `make cockpit`; [`claude-sessions-sidebar`](config/bin/.local/bin/claude-sessions-sidebar) runs the build |
 | [`config/osd/.config/osd`](config/osd/.config/osd) | The OSD daemon: banners, the session registry, the run and guide queues |
 | [`config/claude/.claude/hooks`](config/claude/.claude/hooks) | `session-state.sh` reports states; `agent-environment.sh` tells a session what its sandbox has |
 | [`config/bin/.local/bin`](config/bin/.local/bin) | `ask-to-run`, `claude-run-approve`, `ask-to-guide`, `claude-guide`, `claude-todo` |
 | [`config/tmux/.config/tmux/tmux.conf`](config/tmux/.config/tmux/tmux.conf) | The cockpit's keys |
 | [`config/hyprland/.config/hypr/apps/claude.lua`](config/hyprland/.config/hypr/apps/claude.lua), [`scratchpads.lua`](config/hyprland/.config/hypr/scratchpads.lua) | Workspace 6, window rules, the web windows |
 | [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `claude-sessions`, the health check, the version link |
-| [`tools/tests`](tools/tests) | `make test` |
+| [`tools/tests`](tools/tests) | `make test` (and the column's own tests, `cargo test`) |
 
 ## Quickstart
 
