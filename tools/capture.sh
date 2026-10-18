@@ -51,7 +51,8 @@ close_scratch_windows
 # so its split is toggled to stack them.
 # fastfetch queries the terminal and the replies arrive after it exits, so they are
 # flushed before fish starts, or fish would echo them as "\033\033" at the top.
-spawn kitty -e sh -c 'fastfetch; sleep 0.3; python3 -c "import sys, termios; termios.tcflush(sys.stdin, termios.TCIFLUSH)"; exec fish'
+# Non-canonical with min 0 / time 0, cat reads what is queued and stops: the shell's tcflush.
+spawn kitty -e sh -c 'fastfetch; sleep 0.3; saved=$(stty -g); stty -icanon min 0 time 0; cat >/dev/null; stty "$saved"; exec fish'
 spawn kitty -e btop
 spawn kitty -e yazi ~/dotfiles
 hyprctl dispatch "hl.dsp.layout('togglesplit')" >/dev/null

@@ -16,20 +16,15 @@ cp "$here/finder-clicks.patch" "$build_dir/"
 
 cd "$build_dir"
 # Add the patch to the sources and apply it before the build.
-python3 - <<'PY'
-import pathlib, re
-pkgbuild = pathlib.Path("PKGBUILD")
-text = pkgbuild.read_text()
-text = re.sub(r"^source=\(", "source=(finder-clicks.patch\n        ", text, count=1, flags=re.M)
-text = re.sub(r"^(sha256sums|b2sums)=\(", r"\1=(SKIP\n        ", text, count=1, flags=re.M)
-if "prepare()" in text:
-    text = text.replace("prepare() {\n", "prepare() {\n  patch -d $pkgname -p1 < finder-clicks.patch\n", 1)
-else:
-    text = text.replace("\nbuild() {", "\nprepare() {\n  patch -d $pkgname -p1 < finder-clicks.patch\n}\n\nbuild() {", 1)
+sed -i '0,/^source=(/s//source=(finder-clicks.patch\n        /' PKGBUILD
+sed -i -E '0,/^(sha256sums|b2sums)=\(/s//\1=(SKIP\n        /' PKGBUILD
+if grep -q 'prepare()' PKGBUILD; then
+    sed -i '0,/prepare() {$/s//&\n  patch -d $pkgname -p1 < finder-clicks.patch/' PKGBUILD
+else
+    sed -i '0,/^build() {$/s//prepare() {\n  patch -d $pkgname -p1 < finder-clicks.patch\n}\n\nbuild() {/' PKGBUILD
+fi
 # No -debug package: makepkg -i would install it alongside.
-text += "\noptions=(!debug)\n"
-pkgbuild.write_text(text)
-PY
+printf '\noptions=(!debug)\n' >> PKGBUILD
 grep -n "finder-clicks\|^pkgrel\|^prepare" PKGBUILD
 # Same version string as the repo package, so plain -i is needed: --needed would skip it.
 makepkg -si
