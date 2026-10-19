@@ -1,6 +1,6 @@
 ---
 name: design-first
-description: For developer sessions in a project that has FigCraft designs (*.figcraft files; the session start says so). Use before implementing or changing any user interface there — a screen, a component, a flow, a state, a visual tweak — and when a task touches UI that has no design yet. Checks the design exists and holds together before coding, reports gaps, and asks for a design first instead of improvising one.
+description: For developer sessions in a project that has FigCraft designs (*.figcraft files; the session start says so). Use before implementing or changing any user interface there — a screen, a component, a flow, a state, a visual tweak — and when a task touches UI that has no design yet. Checks the design exists and holds together before coding, reports gaps, and asks for a design first instead of improvising one. Builds components first, each in Storybook, and pages only from components.
 ---
 
 # Design first
@@ -73,7 +73,37 @@ you reuse and which you create, where the state and data live, how the design's 
 the code's tokens (theme, CSS variables, Tailwind config), and what you will test. If the code side
 raises a question (a new API field, a shared component to change, a migration), ask before building.
 
-## 5. Build it faithfully
+## 5. Build from components, in Storybook
+
+Work like a frontend developer on a design system: components first, each built and reviewed in
+isolation, then pages assembled from them. Nothing visual is built directly in a page.
+
+1. **Storybook is the workshop.** Every UI component is developed and reviewed in Storybook before
+   any page uses it. If the project has no Storybook, stop and propose adding it with the setup
+   that matches its framework (`npx storybook@latest init`, or the project's own way): it changes
+   the dependency manifest and adds scripts Theo runs outside the sandbox, so ask first and say both.
+2. **Bottom-up, mirroring the FigCraft file**: tokens (from `design/tokens.*`) → primitives (button,
+   input, icon, text…) → composites (cards, rows, forms, navigation) → layouts and sections → pages.
+   A level starts only once the level below has what it needs.
+3. **One FigCraft component = one code component and its stories.** Same name as in FigCraft. Each
+   variant and state of the component set is a story, its properties as args (size, variant,
+   disabled, loading, error…), plus the edge cases (long text, empty, many items, right-to-left when
+   the product needs it). Before writing one, look in the codebase and in Storybook for a component
+   to reuse or extend: two components for one design component is a bug.
+4. **Pages are compositions only.** A page or screen holds layout and data wiring, never ad-hoc
+   styled markup: anything visual it needs is a component, and a new one goes through steps 2 and 3
+   first. Pages get stories too, with mocked data, one per designed state (empty, loading, error,
+   full).
+5. **Each story is checked against the design**: the story's screenshot (or the running story) next
+   to the FigCraft `screenshot` of the matching component and variant; list the differences.
+   Accessibility is checked in Storybook (its a11y addon when the project has it, otherwise propose
+   it) and with the `fixing-accessibility` skill. Interaction states are covered by play functions
+   or the project's story tests when the project uses them.
+6. **Done** for a UI task means: every component it touches has stories for all its designed
+   variants and states, the page's stories render each designed state, the project's Storybook build
+   and tests pass, and the frame is set `completed` in FigCraft (section 1).
+
+## 6. Build it faithfully
 
 - **Tokens come from the design's exports**, `design/tokens.json` and `design/tokens.css` (the
   designer writes them with `variable.export`): import the CSS variables, or generate the theme from
