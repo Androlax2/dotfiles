@@ -220,7 +220,14 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **Things I run outside the sandbox** (Composer and pnpm scripts, Makefiles, git hooks,
   compose files, IDE run configurations): point out every change to them, because they run with
   my full rights.
-- **Files you cannot reach** (my dotfiles, `/etc`, `~/.local/bin`): write the new version to
+- **My dotfiles**: no session runs in `~/dotfiles`, the live checkout the host runs (the launcher
+  refuses it). The dotfiles project is the clone `~/IdeaProjects/dotfiles`, where every file is
+  writable. Start from what is applied (`git fetch origin && git rebase origin/main`), commit, then
+  export with `git format-patch origin/main -o .outgoing` and ask me to run `claude-sessions
+  apply-dotfiles` with `ask-to-run`: it shows me the commits and applies them after my yes. Then
+  `make -C ~/dotfiles cockpit test` and `claude-sessions reload` when `apps/` changed. Test in the
+  clone (`cargo test` there builds its own binaries).
+- **Files you cannot reach** (`/etc`, `~/.local/bin`, another project): write the new version to
   `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
   to paste long files into the terminal.
 - **Commands I must run**: ask with `ask-to-run --why '<explanation>' '<command>'` (`--cwd DIR`

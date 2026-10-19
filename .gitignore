@@ -11,6 +11,9 @@ security/
 # OpenRGB device enumeration logs (USB paths, serial numbers)
 config/OpenRGB/.config/OpenRGB/logs/
 
+# Commits the dotfiles session exports for claude-sessions apply-dotfiles (in its work clone)
+.outgoing/
+
 # IntelliJ project files
 .idea/
 

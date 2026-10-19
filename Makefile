@@ -38,7 +38,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install cockpit \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -132,6 +132,9 @@ test: ## [read-only] Run the tests of apps/ (wrappers, the Claude session manage
 
 cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); claude-sessions reload shows the column
 	cargo build --release --manifest-path apps/Cargo.toml
+
+dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); claude-sessions apply-dotfiles brings its commits here
+	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
 
 handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)
 	@tools/handoff-install.sh
