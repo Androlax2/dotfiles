@@ -9,15 +9,24 @@ This project designs its interface in FigCraft before building it. You are the d
 what was designed, and you are the first to notice what the design forgot. An interface nobody
 thought through, neither as UI/UX nor as code, is not something to improvise in a pull request.
 
+At the start, run `claude-design role developer`: Theo's cockpit shows the role on your card and
+keeps the design to-dos for the designer session.
+
 ## 1. Find the design before writing UI code
 
-1. Locate the design: `git ls-files '*.figcraft'`, the project's design docs, the Notes page of the
-   file (the designer sessions keep the brief, decisions and open questions there).
-2. Read it through the `figcraft-app` tools (`inspect_document`, `get_node`, `screenshot`). If they
-   are not connected, ask Theo to connect FigCraft as CLAUDE.md describes (`craft-open figcraft`).
-   Never edit the design file from a developer task: that is the designer's work (the
-   `figcraft-design` skill), and only when Theo asks.
-3. Map what you will build to the design: its frames, components and variants, variables (colours,
+1. Read `DESIGN.md` at the repository root first: the brief, decisions, components, the frames
+   ready for dev and the open questions, kept by the designer sessions. Then the `.figcraft` files
+   (`git ls-files '*.figcraft'`) for the frames themselves.
+2. Read them through the `figcraft-app` tools: `inspect.readyForDev` (`run_command`) lists the
+   frames ready for dev, then `inspect_document`, `get_node`, `screenshot`. If the tools are not
+   connected, ask Theo to connect FigCraft as CLAUDE.md describes (`craft-open figcraft`).
+3. **Build only frames marked ready for dev.** A frame that exists but is not marked is a draft:
+   treat it as "no design" (section 2). A ready frame you or someone built before: run
+   `dev.compare` on it and build what changed.
+4. Never edit the design file from a developer task: that is the designer's work. The one
+   exception: once a frame is built and checked against the design, set its `devStatus` to
+   `completed` (`node.set`), and nothing else.
+5. Map what you will build to the design: its frames, components and variants, variables (colours,
    spacing, radii, type) and states.
 
 ## 2. No design: ask, don't improvise
@@ -28,7 +37,8 @@ it), stop before coding and ask with AskUserQuestion, recommendation first:
 - **Design it first** (recommended for anything a user sees beyond a trivial tweak): a FigCraft
   session wireframes it with Theo, then you build it.
 - **Build a minimal version from the existing system**: only existing components and tokens, no
-  new visual language, and the gap filed as a design to-do (`claude-todo propose`).
+  new visual language, and the gap filed for the designer (`claude-todo add '<what to design>'
+  --design`).
 - **Build without a design**: Theo decides it is fine; say what you will assume.
 
 A "trivial tweak" is one that reuses existing components and tokens unchanged (a copy fix, a field
@@ -53,8 +63,8 @@ Theo instead of patching it silently:
   unclear primary action.
 
 Report them grouped, most blocking first, each with what you suggest. Ask before deciding the
-blocking ones; file the rest with `claude-todo propose '<title>' --why '<why>'` so the designer
-session picks them up.
+blocking ones; file the rest for the designer with `claude-todo propose '<title>' --why '<why>'
+--design`: once Theo approves them, the cockpit hands them to the project's designer session.
 
 ## 4. Think the code through too
 
@@ -65,9 +75,15 @@ raises a question (a new API field, a shared component to change, a migration), 
 
 ## 5. Build it faithfully
 
-- Use the project's components and tokens matching the design's components and variables; never
-  hard-code a value the design binds to a variable. A token missing in code is added to the theme,
-  not inlined.
+- **Tokens come from the design's exports**, `design/tokens.json` and `design/tokens.css` (the
+  designer writes them with `variable.export`): import the CSS variables, or generate the theme from
+  the JSON. Never retype a value the design binds to a variable; a token missing from the exports is
+  a gap for the designer (`--design`), not a value to inline.
+- **The tokens are checked**: the project needs a check in its own test suite that fails when the
+  code's tokens differ from `design/tokens.json` (a generated theme out of date, a token missing on
+  one side). If the project has none, propose it once (`claude-todo propose`), and point out to
+  Theo that test scripts run outside the sandbox.
+- Use the project's components matching the design's components and variants.
 - Implement every designed state and breakpoint, not only the default.
 - Compare the result with the design (`screenshot` of the frame next to a screenshot of the running
   page when the project can run) and list any difference you chose or could not avoid.
