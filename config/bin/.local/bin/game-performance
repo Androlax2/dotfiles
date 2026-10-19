@@ -3,9 +3,9 @@
 # the end of a game (~/.config/gamemode.ini, [custom]); GameMode itself switches the CPU and GPU to
 # their performance modes.
 #
-#   game-performance on    freeze the Claude sessions, pause the heavy timers, drop the remaining
+#   game-performance on    freeze the agent sandboxes, pause the heavy timers, drop the remaining
 #                          background work to idle CPU and disk priority
-#   game-performance off   undo it: sessions thawed (they carry on where they stopped), priorities
+#   game-performance off   undo it: sandboxes thawed (they carry on where they stopped), priorities
 #                          back, the paused timers restarted (one that came due meanwhile runs now),
 #                          Hyprland's game mode off
 #
@@ -15,19 +15,20 @@ set -uo pipefail
 # Heavy or long jobs that can wait for the end of a game.
 PAUSED_TIMERS=(restic-backup.timer restic-maintenance.timer jobpilot-apply.timer update-check.timer
                security-check.timer claude-health-check.timer)
-# The Claude sessions: tmux starts each pane in a systemd scope of its own (tmux-spawn-*.scope), and a
-# session's scope holds everything it runs (greywall, claude, its builds and tests). Those scopes are
-# frozen (cgroup freezer), not killed: the sessions resume mid-step after the game. The column and
-# approval panes have no claude in their scope and stay usable.
+# The agent sandboxes: every agent (Claude Code, opencode, codex) runs under greywall, in the systemd
+# scope of the terminal that started it (tmux-spawn-*.scope for a tmux pane, kitty-*.scope for a
+# kitty window), and that scope holds everything it runs (the agent, its builds and tests). Those
+# scopes are frozen (cgroup freezer), not killed: the sessions resume mid-step after the game. The
+# column and approval panes have no greywall in their scope and stay usable.
 FROZEN_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.frozen"
 # Jobs of the timers above that may already be running when the game starts.
 LOWERED_UNITS=(restic-backup.service restic-maintenance.service jobpilot-apply.service
                update-check.service security-check.service claude-health-check.service)
 PAUSED_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.paused"
 
-# The systemd units (scopes) of the running Claude processes, one per line.
-claude_scopes() {
-    ps -C claude -o cgroup= 2>/dev/null | sed -n 's|.*/\([^/]*\.scope\)$|\1|p' | sort -u
+# The systemd units (scopes) of the running greywall sandboxes, one per line.
+sandbox_scopes() {
+    ps -C greywall -o cgroup= 2>/dev/null | sed -n 's|.*/\([^/]*\.scope\)$|\1|p' | sort -u
 }
 
 log() {
@@ -49,13 +50,13 @@ on() {
     local scope
     # The setting freeze-while-gaming (the cockpit's S); an unreadable answer freezes, as before.
     if [[ $(claude-sessions setting freeze-while-gaming 2>/dev/null) == *": off" ]]; then
-        log "freeze-while-gaming is off: the Claude sessions keep running"
+        log "freeze-while-gaming is off: the agent sandboxes keep running"
     else
         while read -r scope; do
             [[ -n $scope ]] && systemctl --user freeze "$scope" 2>/dev/null && echo "$scope" >> "$FROZEN_LIST"
-        done < <(claude_scopes)
+        done < <(sandbox_scopes)
     fi
-    log "game started: $(wc -l < "$FROZEN_LIST") Claude session(s) paused, $(wc -l < "$PAUSED_LIST") timer(s) paused, background work at idle priority"
+    log "game started: $(wc -l < "$FROZEN_LIST") agent sandbox(es) paused, $(wc -l < "$PAUSED_LIST") timer(s) paused, background work at idle priority"
 }
 
 off() {
@@ -77,7 +78,7 @@ off() {
         rm -f "$PAUSED_LIST"
     fi
     hyprctl eval "EXIT_GAME_MODE()" >/dev/null 2>&1 || true
-    log "game ended: Claude sessions resumed, background work back to normal"
+    log "game ended: agent sandboxes resumed, background work back to normal"
 }
 
 case "${1:-}" in
