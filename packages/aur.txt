@@ -1,5 +1,7 @@
 apache-tools
 apache-tools-debug
+apkeep
+apkeep-debug
 apple-fonts
 apple_cursor
 apple_hyprcursor
@@ -29,9 +31,13 @@ elephant-unicode
 elephant-unicode-debug
 elephant-websearch
 elephant-websearch-debug
+figcraft
+figcraft-debug
 gamescope-session-git
 gamescope-session-steam-git
 google-chrome
+gridcraft
+gridcraft-debug
 it87-dkms-git
 jetbrains-toolbox
 ledger-live
@@ -47,6 +53,8 @@ lib32-sdl2-compat-debug
 librepods
 lug-helper
 papirus-folders
+pdfcraft
+pdfcraft-debug
 plex-desktop
 proton-ge-custom-bin
 python-clickgen
@@ -65,6 +73,8 @@ walker-bin
 whitesur-icon-theme
 wl-screenrec
 wlrctl
+wordcraft
+wordcraft-debug
 xwin
 yay
 zen-browser-bin
