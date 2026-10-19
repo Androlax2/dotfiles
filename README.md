@@ -219,7 +219,7 @@ A game window opening turns **game mode** on by itself (`config/hyprland/.config
 - Hyprland drops animations, blur and rounding; banners and approval windows wait.
 - Feral GameMode (`config/gamemode`) puts the CPU governor and the GPU (`card1`) in their performance modes while the game's process runs.
 - `game-performance` (GameMode's start and end hooks) pauses the Claude sessions (cgroup freezer on each session's tmux scope: they resume mid-step after the game; the column and approval panes stay usable), the backup, jobpilot and the update, security and health checks, and drops any job already running to idle CPU and disk priority. The Todo queue waits too. `game-performance off` thaws by hand; the cockpit doctor flags sessions left frozen.
-- MangoHud (`config/MangoHud`): FPS, frame times, CPU and GPU load and temperatures, with `Right Shift + F12`. Only Steam and its games load it (`config/steam` sets `MANGOHUD=1` in Steam's launcher).
+- MangoHud (`config/MangoHud`): FPS, frame times, CPU and GPU load and temperatures, with `Left Shift + F12`. Only Steam and its games load it (`config/steam` sets `MANGOHUD=1` in Steam's launcher).
 
 ## Machine monitor (vitals)
 
