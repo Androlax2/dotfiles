@@ -256,7 +256,8 @@ assumptions, and tell me when it reports something missing that the task needs.
   are not in your tool list (FigCraft was closed when this session started), add `--session
   $CLAUDE_CODE_SESSION_ID`: the cockpit restarts you when your turn ends, keeping the
   conversation, and tells you to carry on. Exit 3 means FigCraft is open for another folder: I
-  close it first.
+  close it first. Before any design work in FigCraft, load the `figcraft-design` skill and follow
+  it: ask instead of assuming, wireframes first, auto layout and components always.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
   `claude-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
   canvas and opens it; watch the canvas's comments with ArtifactComments.
