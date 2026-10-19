@@ -1,8 +1,7 @@
 {
-  "autoupdate": true,
-  "plugins": [
-    "@ex-machina/opencode-anthropic-auth@next"
-  ],
+  // opencode-update (claude-update.timer) is the only updater: it holds a new major version, which
+  // broke the cockpit plugin once (1.x to 2.x).
+  "autoupdate": false,
   "mcp": {
     "Astro docs": {
       "type": "remote",
