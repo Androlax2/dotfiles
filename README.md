@@ -162,7 +162,7 @@ Moving around (⌘ is the physical Command key, which keyd turns into Ctrl): ⌘
 | `ask-to-run --why '…' '<command>'` | An approval terminal shows the command and Claude's explanation, in a pane under the session in the cockpit and in a floating window elsewhere. Nothing runs without "Run it"; the output then goes back to Claude, with tokens, keys, passwords and credentials replaced by `[redacted]` first. Hidden characters are shown escaped |
 | `ask-to-guide` | Steps I do by hand (a browser, a console) in a floating window, one at a time, with links to open, values to copy and questions to answer; the answers, or the step I got stuck on, go back to Claude |
 | `claude-todo start/done/add` | Updates the Todo panel |
-| `craft-open figcraft [--session <id>]` (through `ask-to-run`) | Starts FigCraft on its control port 7979, its files limited to the session's project, for the `figcraft-app` MCP server every session has (the launcher forwards 7979 into every sandbox); never replaces a FigCraft that is open. `--session` restarts a session whose server had exited (FigCraft was closed at its start) once its turn ends, then tells it to carry on. Tell a session "connect to FigCraft" |
+| `craft-open figcraft [--session <id>]` (through `ask-to-run`) | Starts FigCraft on its control port 7979, its files limited to the session's project, for the `figcraft-app` MCP server every session has (the launcher forwards 7979 only into the sandboxes of the project FigCraft serves); never replaces a FigCraft that is open, nor starts one while a sandbox of another project still has the port. `--session` restarts a session whose server had exited (FigCraft was closed at its start) once its turn ends, then tells it to carry on. Tell a session "connect to FigCraft" |
 
 Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go through `.handoff/` and `make handoff-install`, which shows each diff and asks first.
 
@@ -172,7 +172,10 @@ What sessions can and cannot do to the machine (audits of 2026-10-18 and 2026-10
 
 - They report their state on a socket (`osd-report.socket`): the daemon asks the kernel which process sent a report and takes the tmux pane from its first ancestor outside the sandbox, so no session can claim another's pane or card. Requests go on `osd.fifo`; banners, focus, clearing the column and approval phases only come through `osd-host.fifo`, which no sandbox can open.
 - `~/.ssh/known_hosts` is read-only for sessions.
-- Theo's answers (run results, guide progress) go to `~/.cache/claude-answers`, which sessions read but cannot write: no session can forge another's approved output.
+- Theo's answers (run results, guide progress) go to `$XDG_RUNTIME_DIR/claude-answers/<project>`, written only outside the sandbox: each sandbox has its own project's folder mounted read-only and sees no other, so no session forges an approved output or reads another project's.
+- `~/.claude/projects/<folder>` of every other project (memory, transcripts) is read-only in a session: the launcher writes a settings file of its own per project (`$XDG_RUNTIME_DIR/greywall-agents`), greywall.json plus those folders in `denyWrite`. Memory found for a fresh parallel clone is set aside.
+- `.git/config` and `.git/hooks` are read-only in the folder a session starts in; every host git call in claude-sessions resets the settings that run a program, and a push redirected by a push URL or URL rewrite is refused.
+- A session's folder (and so where a restart resumes it, with which project's token) is the folder its sandbox started in, read from `/proc`, never the one a report claims.
 - Commands are shown as they run: run through `sh` exactly as quoted, in the folder resolved before Theo answers, with hidden characters, blank-line padding and non-ASCII letters flagged; output goes back with secrets redacted.
 - Claude Code updates only from outside the sandbox (`claude-update.timer`); sessions cannot write the versions folder.
 - `make system` and `make handoff-install` show every file (new ones whole, control characters visible) and refuse setuid bits and symlinked destinations.
