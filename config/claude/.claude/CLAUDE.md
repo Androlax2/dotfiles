@@ -250,6 +250,13 @@ assumptions, and tell me when it reports something missing that the task needs.
   through `ask-to-run` over clicking whenever a CLI can do the step. Exit 3: I am stuck (my note
   says why); 125: I closed it; 124: still open, `ask-to-guide --wait <id>`; 126: no daemon, list
   the steps in the chat.
+- **FigCraft**: when I ask you to connect to FigCraft (or a task needs it), ask me to run
+  `craft-open figcraft` with `ask-to-run`, `--cwd` the project root. It starts FigCraft limited to
+  this project, on the port your `figcraft-app` MCP server attaches to. If the `figcraft-app` tools
+  are not in your tool list (FigCraft was closed when this session started), add `--session
+  $CLAUDE_CODE_SESSION_ID`: the cockpit restarts you when your turn ends, keeping the
+  conversation, and tells you to carry on. Exit 3 means FigCraft is open for another folder: I
+  close it first.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
   `claude-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
   canvas and opens it; watch the canvas's comments with ArtifactComments.

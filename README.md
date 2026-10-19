@@ -162,6 +162,7 @@ Moving around (⌘ is the physical Command key, which keyd turns into Ctrl): ⌘
 | `ask-to-run --why '…' '<command>'` | An approval terminal shows the command and Claude's explanation, in a pane under the session in the cockpit and in a floating window elsewhere. Nothing runs without "Run it"; the output then goes back to Claude, with tokens, keys, passwords and credentials replaced by `[redacted]` first. Hidden characters are shown escaped |
 | `ask-to-guide` | Steps I do by hand (a browser, a console) in a floating window, one at a time, with links to open, values to copy and questions to answer; the answers, or the step I got stuck on, go back to Claude |
 | `claude-todo start/done/add` | Updates the Todo panel |
+| `craft-open figcraft [--session <id>]` (through `ask-to-run`) | Starts FigCraft on its control port 7979, its files limited to the session's project, for the `figcraft-app` MCP server every session has (the launcher forwards 7979 into every sandbox); never replaces a FigCraft that is open. `--session` restarts a session whose server had exited (FigCraft was closed at its start) once its turn ends, then tells it to carry on. Tell a session "connect to FigCraft" |
 
 Files the sandbox cannot write (CLAUDE.md, hooks, greywall, fish, systemd) go through `.handoff/` and `make handoff-install`, which shows each diff and asks first.
 
