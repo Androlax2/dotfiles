@@ -213,6 +213,8 @@ case "${1:-check}" in
     dump) dump_baseline ;;
     notify)
         report=$(run_checks 2>&1) && exit 0
+        # Into the journal too: the notification goes, and a finding seen once (at boot) stays readable.
+        printf '%s\n' "$report"
         count=$(grep -c '^  ' <<< "$report")
         notify-send -u critical -t 0 "Security check: $count finding(s)" \
             "$(grep '^  ' <<< "$report" | head -8)\n\nmake check-security for the full report" || true

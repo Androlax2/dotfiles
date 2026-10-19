@@ -38,3 +38,5 @@ $HOME/IdeaProjects/**/.turbo
 $HOME/IdeaProjects/**/.next
 $HOME/IdeaProjects/**/vendor
 $HOME/IdeaProjects/**/target
+# Laravel's temporary test disks, written by the test containers as another user (unreadable here)
+$HOME/IdeaProjects/**/storage/framework/testing
