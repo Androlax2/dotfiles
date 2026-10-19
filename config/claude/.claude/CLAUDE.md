@@ -241,6 +241,11 @@ assumptions, and tell me when it reports something missing that the task needs.
   When you notice something worth doing beyond the task (an improvement, a bug, an idea), don't do
   it unasked: propose it with `claude-todo propose '<title>' --why '<why it matters>' [--notes
   '<details>']`. I approve or decline it in the Todo panel; a declined idea is not filed again.
+  When my setup keeps you from doing something the task needs (greywall hides or forbids it,
+  claude-sessions or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
+  report it with `claude-todo blocked '<what you could not do>' --why '<what stopped you, the
+  exact error>'`, from any project: it lands in my dotfiles list, queued for the dotfiles session.
+  Then tell me, and never work around the block.
 - **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat, and
   don't open them unannounced: first say in one or two lines what they are for and how long they
   take, ask whether I am ready, and stop there. Only after my yes, hand them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
