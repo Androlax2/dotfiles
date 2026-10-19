@@ -173,6 +173,7 @@ What sessions can and cannot do to the machine (audits of 2026-10-18 and 2026-10
 - They report their state on a socket (`osd-report.socket`, in `$XDG_RUNTIME_DIR/claude-report/`, a folder each sandbox mounts whole so a socket made again reaches running sessions too): the daemon asks the kernel which process sent a report and takes the tmux pane from its first ancestor outside the sandbox, so no session can claim another's pane or card. Run and guide requests go on that socket too, whole: the daemon keeps its own copy in the runtime directory at once, with the folder the sender's sandbox started in, and the approval and guide windows read only that copy (no session can rewrite another's request; a command for a folder outside the session's is flagged in red). Nothing of a sandbox's is taken on `osd.fifo` any more; banners, focus, clearing the column and approval phases only come through `osd-host.fifo`, which no sandbox can open.
 - `~/.ssh/known_hosts` is read-only for sessions.
 - Theo's answers (run results, guide progress) go to `$XDG_RUNTIME_DIR/claude-answers/<project>`, written only outside the sandbox: each sandbox has its own project's folder mounted read-only and sees no other, so no session forges an approved output or reads another project's.
+- Both launchers, `greywall-agents/claude` and `greywall-agents/opencode`, source `launcher-common.sh`: an opencode session gets the same guards, answers folder, tokens, CA bundle, Docker and forwards as a Claude one, in its own greywall profile, and never the Console's API key.
 - `~/.claude/projects/<folder>` of every other project (memory, transcripts) is read-only in a session: the launcher writes a settings file of its own per project (`$XDG_RUNTIME_DIR/greywall-agents`), greywall.json plus those folders in `denyWrite`. Memory found for a fresh parallel clone is set aside.
 - `.git/config` and `.git/hooks` are read-only in the folder a session starts in; every host git call in claude-sessions resets the settings that run a program, and a push redirected by a push URL or URL rewrite is refused.
 - A session's folder (and so where a restart resumes it, with which project's token) is the folder its sandbox started in, read from `/proc`, never the one a report claims.
@@ -541,8 +542,8 @@ These came from vendor installers, so `make` can't reinstall them:
 | Claude Code | `~/.local/bin/claude` | Updates itself; CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
 | Codex CLI | `~/.local/npm/bin/codex` | CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
 | CodeRabbit CLI | `~/.local/bin/coderabbit` | `cr` is a symlink to it |
-| greywall, greyproxy | `~/.local/bin` | The `opencode`, `codex`, and `claude` launchers in `config/bin` run through greywall; greyproxy is a user service |
-| opencode | `~/.opencode/bin` | Started through `~/.local/bin/opencode` |
+| greywall, greyproxy | `~/.local/bin` | The `opencode`, `codex`, and `claude` launchers in `config/bin/.local/bin/greywall-agents` run through greywall; greyproxy is a user service |
+| opencode | `~/.opencode/bin` | `curl -fsSL https://opencode.ai/install \| bash`; CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents`, which turns its self-update off |
 | Herd Lite | `~/.config/herd-lite` | PHP, Composer and the Laravel installer, added to `PATH` by `~/.profile` |
 | uv | `/usr/local/bin` | `make clean-caches` uses it |
 | Private Internet Access | `/opt/piavpn` | Its installer also writes `piavpn.service` and `wgpia.conf` |
