@@ -3,9 +3,10 @@
 # claude-idle.sh), lock-if-not-gaming.sh and the hot corner all run this. While the screen is
 # locked, running Claude sessions are on Remote Control (claude-sessions handoff lock), so they
 # can be followed and answered from the phone; unlocking takes back the ones handed off here.
+# The setting handoff-on-lock (the cockpit's S, or claude-sessions setting) turns that off.
 pidof hyprlock >/dev/null && exit 0
 locked_at=$(date +%s)
-claude-sessions log lock INFO "locked; handing the Claude sessions to Remote Control" 2>/dev/null
+claude-sessions log lock INFO "locked" 2>/dev/null
 claude-sessions handoff lock >/dev/null 2>&1 || true
 hyprlock
 status=$?
