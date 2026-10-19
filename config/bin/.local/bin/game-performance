@@ -31,8 +31,23 @@ sandbox_scopes() {
     ps -C greywall -o cgroup= 2>/dev/null | sed -n 's|.*/\([^/]*\.scope\)$|\1|p' | sort -u
 }
 
-log() {
-    claude-sessions log game INFO "$1" 2>/dev/null || true
+log() { # message [level]
+    claude-sessions log game "${2:-INFO}" "$1" 2>/dev/null || true
+}
+
+# The running Hyprland's instance. GameMode runs this from its own service, which keeps the
+# HYPRLAND_INSTANCE_SIGNATURE of the session it started in, and outlives a Hyprland restart: then
+# the newest instance with a live socket is the one.
+hyprland_instance() {
+    local base="${XDG_RUNTIME_DIR:-/tmp}/hypr" instance
+    if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} && -e $base/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock ]]; then
+        echo "$HYPRLAND_INSTANCE_SIGNATURE"
+        return
+    fi
+    instance=$(ls -t "$base" 2>/dev/null | while read -r instance; do
+        [[ -e $base/$instance/.socket.sock ]] && { echo "$instance"; break; }
+    done)
+    echo "$instance"
 }
 
 on() {
@@ -77,7 +92,11 @@ off() {
         done < "$PAUSED_LIST"
         rm -f "$PAUSED_LIST"
     fi
-    hyprctl eval "EXIT_GAME_MODE()" >/dev/null 2>&1 || true
+    # Hyprland's game mode (eye candy, the gamemode submap) goes with the game; a failure says so in
+    # the log, where a silent one left game mode on.
+    if ! HYPRLAND_INSTANCE_SIGNATURE=$(hyprland_instance) hyprctl eval "EXIT_GAME_MODE()" >/dev/null 2>&1; then
+        log "game ended, but Hyprland could not be told to leave game mode (ALT + G leaves it)" WARN
+    fi
     log "game ended: agent sandboxes resumed, background work back to normal"
 }
 
