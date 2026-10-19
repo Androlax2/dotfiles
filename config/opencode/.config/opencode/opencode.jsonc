@@ -3,6 +3,13 @@
   // broke the cockpit plugin once (1.x to 2.x).
   "autoupdate": false,
   "mcp": {
+    // FigCraft's tools, as Claude Code's figcraft-app: registered for every project, it reaches
+    // FigCraft only in the project FigCraft serves (the launcher forwards port 7979 there alone;
+    // craft-open starts FigCraft and restarts the session to load it).
+    "figcraft-app": {
+      "type": "local",
+      "command": ["figcraft-cli", "mcp", "--attach", "7979"]
+    },
     "Astro docs": {
       "type": "remote",
       "url": "https://mcp.docs.astro.build/mcp",
