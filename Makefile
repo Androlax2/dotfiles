@@ -236,7 +236,12 @@ agent-anthropic-key: ## Store the Console API key that credits sessions (the coc
 	@secret-tool store --label "Claude API key for credits sessions" service agent-anthropic
 
 agent-opencode-key: ## Store the Anthropic API key opencode sessions use, a greyproxy placeholder inside their sandbox; asks for it
-	@secret-tool store --label "Anthropic API key for opencode sessions" service agent-opencode-anthropic
+	@read -rsp "Anthropic API key for opencode (sk-ant-…, not shown): " key; echo; \
+	if [[ ! $$key =~ ^sk-ant-[a-z]+[0-9]*-[A-Za-z0-9_-]+$$ ]] || (( $${#key} < 80 )); then \
+	    echo "not stored: an Anthropic API key starts with sk-ant- and has 80 characters or more (this one: $${#key})" >&2; exit 1; \
+	fi; \
+	printf '%s' "$$key" | secret-tool store --label "Anthropic API key for opencode sessions" service agent-opencode-anthropic; \
+	echo "stored ($${#key} characters)"
 
 agent_github = tools/agent-github.sh
 
