@@ -36,7 +36,10 @@ function claude
                 claude-sessions new (pwd) $argv; and claude-sessions show
                 return
             case t T
-                # run right here, below
+                # Run right here, below. The marker reaches the session (the retry wrapper carries the
+                # environment): its card says "terminal", and the cockpit's restart-all, restore,
+                # queue, error hand-off, ask-to-run and ask-to-guide leave it alone.
+                set -fx CLAUDE_SESSIONS_TERMINAL 1
             case '*'
                 echo "claude: cancelled"
                 return 1
