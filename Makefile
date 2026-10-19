@@ -230,6 +230,11 @@ agent-docker-remove: ## [no undo] Delete a project's agent daemon, its user, ima
 agent-docker-status: ## [read-only] List the agent Docker daemons and whether their sockets are up
 	@$(agent_docker) status
 
+.PHONY: agent-anthropic-key
+
+agent-anthropic-key: ## Store the Console API key that credits sessions (the cockpit's $) bill instead of the subscription; asks for it
+	@secret-tool store --label "Claude API key for credits sessions" service agent-anthropic
+
 agent_github = tools/agent-github.sh
 
 .PHONY: agent-github-token agent-github-board-token agent-github-relogin agent-github-protect agent-github-check \
