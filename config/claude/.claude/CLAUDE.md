@@ -238,7 +238,9 @@ assumptions, and tell me when it reports something missing that the task needs.
   me to read and approve it, outside the sandbox, and its output
   comes back as the tool result (exit 125: I declined; 124: no answer yet, then
   `ask-to-run --wait <id>`). Steps that belong together go in one request, joined with `; and`.
-  `sudo` and prompts work there. Only when it exits 126 (no daemon), fall back to one fish block,
+  `sudo` and prompts work there. Exit 126: it cannot reach me, and its message says why and what
+  fixes it (restart this session, or a `systemctl` command): tell me that fix at once (the session
+  start already says whether ask-to-run works), and meanwhile fall back to one fish block,
   output piped to `wl-copy` so I can paste it back (`begin; …; end 2>&1 | wl-copy; and echo
   copied`), with `sudo` and interactive commands kept out of the pipe and no secrets in it.
 - **Todo list**: my cockpit keeps a todo list per project; `claude-todo list` shows this
