@@ -48,5 +48,26 @@ function claude
     node (npm root -g)/claude-auto-retry/src/launcher.js $argv
 end
 
+# Like claude: a bare interactive `opencode` asks where to run, the session manager (Enter or m,
+# its card like a Claude session's) or this terminal (t). With arguments (run, serve, auth, a
+# project) and in the manager's own launches it runs right here, through greywall-agents/opencode.
+function opencode
+    if test -z "$CLAUDE_SESSIONS_INSIDE"; and isatty stdin; and isatty stdout; and test (count $argv) -eq 0
+        set -l prompt (set_color --bold blue)'opencode'(set_color normal)'  '(set_color --bold)'⏎'(set_color normal)' session manager  '(set_color --bold)'t'(set_color normal)' this terminal  '
+        read -l -n 1 -P $prompt choice; or return 130
+        switch $choice
+            case '' m M
+                claude-sessions --agent opencode new (pwd); and claude-sessions show
+                return
+            case t T
+                set -fx CLAUDE_SESSIONS_TERMINAL 1
+            case '*'
+                echo "opencode: cancelled"
+                return 1
+        end
+    end
+    command opencode $argv
+end
+
 # fzf colours (Tokyo Night, from folke/tokyonight.nvim extras/fzf)
 source ~/.config/fzf/tokyonight_night.sh
