@@ -224,7 +224,8 @@ assumptions, and tell me when it reports something missing that the task needs.
   refuses it). The dotfiles project is the clone `~/IdeaProjects/dotfiles`, where every file is
   writable. Start from what is applied (`git fetch origin && git rebase origin/main`), commit, then
   export with `git format-patch origin/main -o .outgoing` and ask me to run `claude-sessions
-  apply-dotfiles` with `ask-to-run`: it shows me the commits and applies them after my yes. Then
+  apply-dotfiles` with `ask-to-run` (from a parallel clone, `claude-sessions apply-dotfiles <its
+  root>`): it shows me the commits and applies them after my yes. Then
   `make -C ~/dotfiles cockpit test` and `claude-sessions reload` when `apps/` changed. Test in the
   clone (`cargo test` there builds its own binaries).
 - **Files you cannot reach** (`/etc`, `~/.local/bin`, another project): write the new version to
