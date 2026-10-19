@@ -230,10 +230,13 @@ agent-docker-remove: ## [no undo] Delete a project's agent daemon, its user, ima
 agent-docker-status: ## [read-only] List the agent Docker daemons and whether their sockets are up
 	@$(agent_docker) status
 
-.PHONY: agent-anthropic-key
+.PHONY: agent-anthropic-key agent-opencode-key
 
 agent-anthropic-key: ## Store the Console API key that credits sessions (the cockpit's $) bill instead of the subscription; asks for it
 	@secret-tool store --label "Claude API key for credits sessions" service agent-anthropic
+
+agent-opencode-key: ## Store the Anthropic API key opencode sessions use, a greyproxy placeholder inside their sandbox; asks for it
+	@secret-tool store --label "Anthropic API key for opencode sessions" service agent-opencode-anthropic
 
 agent_github = tools/agent-github.sh
 
