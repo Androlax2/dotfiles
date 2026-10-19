@@ -7,6 +7,7 @@
 #   claude-idle.sh cancel   on-resume: input happened, close the screen and forget the lock
 # Any key, click or mouse move answers the screen itself; hypridle sees the same input as resumed
 # activity and runs cancel. The screen goes dark SCREEN_OFF_AFTER_S after the lock.
+# The setting idle-lock (the cockpit's S) turns it off: workspace 6 then never locks by itself.
 # CLAUDE_IDLE_GRACE_S / CLAUDE_IDLE_SCREEN_OFF_AFTER_S override the delays (tests).
 GRACE_S=${CLAUDE_IDLE_GRACE_S:-30}
 SCREEN_OFF_AFTER_S=${CLAUDE_IDLE_SCREEN_OFF_AFTER_S:-30}
@@ -16,6 +17,7 @@ PROMPT="$HOME/.local/bin/claude-idle-prompt"
 
 prompt() {
     "$ON_CLAUDE_WORKSPACE" || exit 0
+    [[ $(claude-sessions setting idle-lock 2>/dev/null) == *": off" ]] && exit 0
     # shellcheck source=/dev/null
     source "$HOME/.config/hypr/scripts/is-gaming.sh" >/dev/null 2>&1 || true
     if is_gaming; then exit 0; fi
