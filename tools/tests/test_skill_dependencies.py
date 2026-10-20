@@ -10,7 +10,7 @@ REPOSITORY = Path(__file__).resolve().parents[2]
 
 
 class SkillDependencyTests(unittest.TestCase):
-    def test_package_setup_installs_shared_helpers_for_inline_execution(self):
+    def test_package_setup_installs_required_skills_for_inline_execution(self):
         for installed_skills in ("", "obra/superpowers executing-plans\n"):
             with self.subTest(installed_skills=installed_skills):
                 with tempfile.TemporaryDirectory() as temporary:
@@ -48,8 +48,16 @@ class SkillDependencyTests(unittest.TestCase):
                                   "shared helpers must also be installed in ~/.agents/skills")
                     requested_skills = [command[index + 1] for index, argument in enumerate(command)
                                         if argument == "--skill"]
-                    self.assertIn("subagent-driven-development", requested_skills,
-                                  "executing-plans needs the sibling workspace, brief and review scripts")
+                    for required_skill in (
+                        "finishing-a-development-branch",
+                        "requesting-code-review",
+                        "subagent-driven-development",
+                        "using-git-worktrees",
+                        "verification-before-completion",
+                    ):
+                        with self.subTest(required_skill=required_skill):
+                            self.assertIn(required_skill, requested_skills,
+                                          "executing-plans requires this skill or its bundled resources")
 
 
 if __name__ == "__main__":

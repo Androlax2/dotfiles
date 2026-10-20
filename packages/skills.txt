@@ -62,9 +62,13 @@ ibelick/ui-skills ui-skills-root
 obra/superpowers brainstorming
 obra/superpowers dispatching-parallel-agents
 obra/superpowers executing-plans
+obra/superpowers finishing-a-development-branch
+obra/superpowers requesting-code-review
 obra/superpowers subagent-driven-development
 obra/superpowers systematic-debugging
 obra/superpowers test-driven-development
+obra/superpowers using-git-worktrees
+obra/superpowers verification-before-completion
 obra/superpowers writing-plans
 openai/skills cloudflare-deploy
 openai/skills security-best-practices
