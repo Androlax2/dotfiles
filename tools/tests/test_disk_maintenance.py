@@ -209,17 +209,61 @@ class MonthlyReviewTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(str(self.home / "Games"), json.loads(self.report.read_text())["unavailable_roots"])
 
-    def test_symlink_is_not_followed_and_marks_report_incomplete(self):
+    def test_symlink_is_not_followed_and_marks_size_partial_without_failing(self):
         game = self.game()
+        (self.state / "outside-asset").write_bytes(b"x" * 65536)
         (game / "outside").symlink_to(self.state, target_is_directory=True)
+        expected = game.stat().st_blocks * 512 + (game / "asset").stat().st_blocks * 512
         result = self.run_review()
-        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 0, result.stderr)
         report = json.loads(self.report.read_text())
         self.assertFalse(report["complete"])
-        self.assertTrue(report["errors"])
+        self.assertEqual(report["errors"], [])
+        self.assertEqual(report["skipped_symlinks"], 1)
         self.assertEqual(len(report["games"]), 1)
         self.assertFalse(report["games"][0]["complete"])
-        self.assertGreater(report["games"][0]["allocated_bytes"], 0)
+        self.assertEqual(report["games"][0]["allocated_bytes"], expected)
+
+    def test_symlink_root_entries_are_counted_without_following_them(self):
+        for root in ["Games", "IdeaProjects", "IdeaProjects/.parallel"]:
+            (self.home / root / "linked").symlink_to(self.state, target_is_directory=True)
+        result = self.run_review()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(self.report.read_text())
+        self.assertFalse(report["complete"])
+        self.assertEqual(report["skipped_symlinks"], 3)
+        self.assertEqual(report["games"], [])
+        self.assertEqual(report["checkouts"], [])
+        self.assertEqual(report["errors"], [])
+
+    def test_symlink_skips_leave_checkout_git_status_unknown(self):
+        project = self.repository()
+        (project / "outside").symlink_to(self.state, target_is_directory=True)
+        result = self.run_review()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        summary = json.loads(self.report.read_text())["checkouts"][0]["git"]
+        self.assertEqual(summary["status"], "unknown")
+        for field in ["is_repository", "dirty", "has_upstream", "ahead"]:
+            self.assertIsNone(summary[field])
+
+    def test_symlink_flood_does_not_hide_real_read_errors(self):
+        game = self.game()
+        for number in range(25):
+            (game / f"link-{number}").symlink_to(self.state / "missing")
+        original_stat = os.stat
+
+        def unreadable_asset(path, *arguments, **options):
+            if path == "asset" and options.get("dir_fd") is not None:
+                raise PermissionError("fixture read denied")
+            return original_stat(path, *arguments, **options)
+
+        status, _ = self.invoke_with_patch(mock.patch("os.stat", side_effect=unreadable_asset))
+        self.assertEqual(status, 1)
+        report = json.loads(self.report.read_text())
+        self.assertFalse(report["complete"])
+        self.assertEqual(report["skipped_symlinks"], 25)
+        self.assertEqual(report["errors"], [{"path": str(game / "asset"), "error": "fixture read denied"}])
+        self.assertEqual(report["omitted_errors"], 0)
 
     def test_root_symlink_is_not_followed(self):
         root = self.home / "Games"

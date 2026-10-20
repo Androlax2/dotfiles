@@ -77,7 +77,10 @@ def allocated_bytes(directory, device, seen, report, path):
             if metadata.st_dev != device:
                 raise ValueError("skipped filesystem boundary")
             if stat.S_ISLNK(metadata.st_mode):
-                raise ValueError("skipped symlink")
+                report["skipped_symlinks"] += 1
+                report["complete"] = False
+                complete = False
+                continue
             if stat.S_ISDIR(metadata.st_mode):
                 child = os.open(name, DIRECTORY_FLAGS, dir_fd=directory)
                 try:
@@ -183,7 +186,9 @@ def inspect_root(path, category, report, runtime, parallel=False):
                 try:
                     metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
                     if stat.S_ISLNK(metadata.st_mode):
-                        raise ValueError("symlink root entry not followed")
+                        report["skipped_symlinks"] += 1
+                        report["complete"] = False
+                        continue
                     if not stat.S_ISDIR(metadata.st_mode):
                         continue
                     if metadata.st_dev != device:
@@ -218,7 +223,7 @@ def inspect_root(path, category, report, runtime, parallel=False):
 
 def create_report(home, runtime):
     report = {"schema_version": 1, "advisory_only": True, "complete": True,
-              "games": [], "checkouts": [], "errors": [], "omitted_errors": 0,
+              "games": [], "checkouts": [], "errors": [], "omitted_errors": 0, "skipped_symlinks": 0,
               "measured_games": 0, "measured_checkouts": 0, "unavailable_roots": [], "warning": WARNING}
     for path, category, parallel in [
         (home / "Games", "games", False),
@@ -271,7 +276,7 @@ def main():
             report = create_report(home, runtime)
             publish_report(directory, report)
             print(json.dumps({"report": str(state / "latest.json"), "complete": report["complete"]}))
-            return 0 if report["complete"] else 1
+            return 1 if report["errors"] or report["omitted_errors"] else 0
     except (KeyError, OSError, ValueError) as error:
         print(f"disk-space-review: {error}", file=sys.stderr)
         return 1
