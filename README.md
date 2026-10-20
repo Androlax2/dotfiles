@@ -468,7 +468,7 @@ Installed and enabled on this PC on **2026-10-20**:
   `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
   Vitals announces each new report once. **No games or projects are deleted.**
 - **greyproxy.db:** greyproxy keeps every captured request forever, so
-  `greyproxy-prune.timer` (user, daily) deletes traffic history (transactions,
+  `greyproxy-prune.timer` (user, hourly: it grows several GB a day) deletes traffic history (transactions,
   request logs, middleware events, conversations) older than 14 days, then the
   oldest transactions and conversations until the data fits in 4 GB, in small
   batches next to the running proxy. Rules, pending requests, sessions and
