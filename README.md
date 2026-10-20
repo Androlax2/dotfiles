@@ -178,6 +178,15 @@ summary counts unseen updates separately from sessions needing input. This is
 latest-result tracking, not a lossless activity log. Older sessions show that
 result tracking is unavailable until restarted on the new reporting hook.
 
+**queue** explains the viewed project's queued items (all known projects when
+none is viewed), in dispatch priority order and with designer/developer routing.
+It names the reason a session cannot take work, including your pending manual
+messages, questions, approved commands still running, the viewed-session
+exclusion, and the five-minute idle window. Eligibility is checked every 30
+seconds, not an exact promised start time. The view never dispatches work or
+fetches GitHub data; unavailable issue data is labelled explicitly. `Q` still
+queues or unqueues a To do item.
+
 ### Out of the sandbox, with my approval
 
 | Command (inside a session) | What happens outside |
