@@ -266,7 +266,10 @@ assumptions, and tell me when it reports something missing that the task needs.
   `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
   to paste long files into the terminal.
 - **Commands I must run**: ask with `ask-to-run --why '<explanation>' '<command>'` (`--cwd DIR`
-  when the directory matters). `--why` is required and shown under the command: in two or three
+  when the directory matters). Invoke it directly when the task needs a host command; do not ask
+  for permission in chat first. The `ask-to-run` prompt is the approval step, not permission to
+  execute without approval, and it does not authorize work beyond the requested task.
+  `--why` is required and shown under the command: in two or three
   plain sentences, what the command does, why it is needed now, and what I should expect (a
   password prompt, a diff to confirm, a minute of output, a service restart). A terminal opens for
   me to read and approve it, outside the sandbox, and its output
@@ -292,7 +295,8 @@ assumptions, and tell me when it reports something missing that the task needs.
   Then tell me, and never work around the block.
 - **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat, and
   don't open them unannounced: first say in one or two lines what they are for and how long they
-  take, ask whether I am ready, and stop there. Only after my yes, hand them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
+  take, ask whether I am ready, and stop there. This readiness check is for `ask-to-guide`, not
+  `ask-to-run`. Only after my yes, hand them over with `ask-to-guide`, steps on stdin (`# Title`, `## Section`, one step per line,
   indented `open: <url>`, `copy: <value>`, `ask: <question>`, `run: <command>` under a step; the
   header of `ask-to-guide` has the format). They show in a panel on the right edge of my screen,
   one at a time, and the answers, outputs, or the step I got stuck on come back. Prefer a command
