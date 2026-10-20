@@ -290,16 +290,8 @@ update: ## [sudo] Upgrade pacman and AUR packages
 update-skills: ## Upgrade the agent skills installed with the skills CLI
 	npx --yes skills update --global --yes
 
-disk: ## [read-only] Show what is using disk space
-	@echo "== largest user caches =="
-	@{ du -sh ~/.cache/* 2>/dev/null || true; } | sort -rh | sed -n "1,10p"
-	@echo "== package and download caches =="
-	@du -sh /var/cache/pacman/pkg ~/.npm $(pnpm_home)/store ~/go/pkg/mod ~/.cargo/registry ~/.local/share/Trash 2>/dev/null || true
-	@echo "== journal =="
-	@journalctl --disk-usage
-	@echo "== orphaned packages: $$({ pacman -Qdtq || true; } | wc -l) =="
-	@echo "== docker =="
-	@docker system df
+disk: ## [read-only] Show what is filling the disk (agent clones, builds, caches, logs, games) and how to reclaim each
+	@tools/disk-report.sh
 
 clean: clean-packages clean-caches clean-logs ## [asks] Routine cleanup with the steps below
 
