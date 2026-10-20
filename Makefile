@@ -127,12 +127,15 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 ##@ Keep the repo in sync
 
+build_runner = python3 config/bin/.local/bin/agent-build
+
 test: ## Build the OSD classifier and run the apps/ test suite
-	cargo build --release --quiet --manifest-path apps/Cargo.toml -p desktop --bin osd
-	cargo test --release --quiet --manifest-path apps/Cargo.toml
+	python3 -m unittest discover -s tools/tests -p test_agent_build.py
+	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p desktop --bin osd
+	$(build_runner) cargo test --release --quiet --manifest-path apps/Cargo.toml
 
 cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); claude-sessions reload shows the column
-	cargo build --release --manifest-path apps/Cargo.toml
+	$(build_runner) cargo build --release --manifest-path apps/Cargo.toml
 
 dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); claude-sessions apply-dotfiles brings its commits here
 	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
