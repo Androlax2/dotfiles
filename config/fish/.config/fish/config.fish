@@ -49,8 +49,8 @@ function claude
 end
 
 # Like claude: a bare interactive `opencode` asks where to run, the session manager (Enter or m,
-# its card like a Claude session's) or this terminal (t). With arguments (run, serve, auth, a
-# project) and in the manager's own launches it runs right here, through greywall-agents/opencode.
+# its card like a Claude session's) or attaches the same managed process here (t). With arguments
+# (run, serve, auth, a project) and in the manager's own launches it runs right here, through greywall-agents/opencode.
 function opencode
     if test -z "$CLAUDE_SESSIONS_INSIDE"; and isatty stdin; and isatty stdout; and test (count $argv) -eq 0
         set -l prompt (set_color --bold blue)'opencode'(set_color normal)'  '(set_color --bold)'⏎'(set_color normal)' session manager  '(set_color --bold)'t'(set_color normal)' this terminal  '
@@ -60,7 +60,8 @@ function opencode
                 claude-sessions --agent opencode new (pwd); and claude-sessions show
                 return
             case t T
-                set -fx CLAUDE_SESSIONS_TERMINAL 1
+                claude-sessions --agent opencode terminal (pwd)
+                return
             case '*'
                 echo "opencode: cancelled"
                 return 1
