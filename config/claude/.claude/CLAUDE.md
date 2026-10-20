@@ -26,6 +26,13 @@ here, follow this file and call out the conflict so I can decide.
   300 characters; do not flag optional follow-up offers. If the command fails,
   tell me the flag could not be set. Keep using `ask-to-run` and `ask-to-guide`
   for approvals and guided steps; this command does not replace them.
+- Once you understand this session's overall task, run
+  `claude-session-label '<short action and object>'` to publish its cockpit label.
+  Use 3–6 words and at most 60 characters, in the task's language. Describe the
+  overall task, not the latest reply or current step; update only when that task
+  changes. This is session metadata, not a project edit. Generate it during normal
+  work; never start another agent or model call just to name the session. If the
+  command fails, report that the label could not be published.
 
 ## Tone and output
 
