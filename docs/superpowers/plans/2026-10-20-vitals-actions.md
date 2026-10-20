@@ -97,3 +97,25 @@ No deferred minor findings. Existing scheduled cleanup, root units, permissions 
 producer behavior remain unchanged. The only live scan was the separately approved
 refresh of the already-installed producer; new UI checks were exercised only with
 fixtures. No git writes or UI installation occurred during this implementation.
+
+## Authorized delivery verification
+
+The user subsequently approved committing, fetching/rebasing this unpushed branch,
+and opening the live application approval. The UI commit rebased cleanly onto
+`a64c3bf`, preserving the already-applied producer fix and newer dotfiles changes.
+
+That base adds a shared low-priority CPU build runner and Python preflight tests to
+the Makefile. The earlier entry-point fixture ran make in an empty temporary cwd,
+so both regressions failed (`Ran 2 tests in 0.107s` / `FAILED (failures=2)`) before
+even reaching their fake cargo. Changed only that fixture's cwd to the repository:
+the real preflight and runner now execute, while cargo remains the disposable fake.
+No build-budget settings, production recipes, or tests were bypassed. Regression
+GREEN: `Ran 2 tests in 1.163s` / `OK`.
+
+Post-rebase full verification, approved host request b3ef467acb0b:
+
+- Rust: **1,269 passed, 0 failed, 0 ignored**.
+- Python: `Ran 65 tests in 2.596s` / `OK`.
+- Vitals: 116 unit, 10 collector, 6 delivery, and 15 maintenance integration tests.
+- No dependency, root policy, permission, or producer changes were introduced by
+  this UI/fixture update. Live application still awaits its separate host approval.

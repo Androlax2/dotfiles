@@ -21,7 +21,7 @@ class TestEntrypointTests(unittest.TestCase):
             environment = dict(os.environ, PATH=str(folder) + ":" + os.environ["PATH"],
                                CARGO_TEST_LOG=str(log), CARGO_TEST_FAIL_BUILD="1" if fail_build else "0")
             result = subprocess.run(["make", "--no-print-directory", "-f", str(REPOSITORY / "Makefile"), "test"],
-                                    cwd=folder, env=environment, capture_output=True, text=True, timeout=30)
+                                    cwd=REPOSITORY, env=environment, capture_output=True, text=True, timeout=30)
             calls = [shlex.split(line) for line in log.read_text().splitlines()] if log.exists() else []
             return result, calls
 
