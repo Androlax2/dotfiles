@@ -20,6 +20,6 @@ for stream in $(pactl list short sink-inputs | awk '{print $1}'); do
 done
 
 # Signal waybar to update the icon immediately
-pkill -RTMIN+8 waybar
+pkill -x -RTMIN+8 waybar
 
 notify-send "Audio Output" "Switched to: $new_name" -t 2000

@@ -24,7 +24,8 @@ impl Machine {
             fs::create_dir_all(root.join(folder)).unwrap();
         }
         // The host's services and disks stay out of it: systemctl and df answer nothing wrong.
-        for (name, body) in [("systemctl", ""), ("df", "echo 'Use% Mounted on'; echo ' 40% /'"), ("hyprctl", "")] {
+        for (name, body) in [("systemctl", ""), ("df", "echo 'Use% Mounted on'; echo ' 40% /'"), ("hyprctl", ""),
+                             ("pkill", "printf '%s\\n' \"$*\" >> \"$HOME/waybar-signals\"")] {
             let shim = root.join("bin").join(name);
             let writer = Command::new("sh").args(["-c", "cat > \"$1\" && chmod 755 \"$1\"", "sh"]).arg(&shim)
                 .stdin(std::process::Stdio::piped()).spawn().unwrap();
@@ -100,6 +101,15 @@ fn malformed_monthly_review_fails_visibly_through_the_collector() {
     let output = machine.vitals(&["collect"]);
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("disk review"));
+}
+
+#[test]
+fn a_changed_alert_refreshes_only_the_exact_waybar_process_name() {
+    let machine = Machine::new();
+    machine.smart(4);
+    let output = machine.vitals(&["collect"]);
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(fs::read_to_string(machine.root.join("state/waybar-signals")).unwrap(), "-x -RTMIN+17 waybar\n");
 }
 
 #[test]

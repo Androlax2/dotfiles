@@ -47,7 +47,7 @@
   },
   "scripts": {
     "bar-bell": {
-      "exec": "pkill -RTMIN+12 waybar",
+      "exec": "pkill -x -RTMIN+12 waybar",
       "app-name": ".*"
     }
   }

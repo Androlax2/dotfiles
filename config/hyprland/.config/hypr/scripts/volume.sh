@@ -20,4 +20,4 @@ if [[ $state == *MUTED* ]]; then
 else
     ~/.local/bin/osd-show volume "$level"
 fi
-pkill -RTMIN+8 waybar 2>/dev/null || true
+pkill -x -RTMIN+8 waybar 2>/dev/null || true

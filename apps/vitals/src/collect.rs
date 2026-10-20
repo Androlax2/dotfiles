@@ -212,7 +212,7 @@ pub fn run() -> Result<(), String> {
     let changed = apply(&store, &found, now, cockpit::util::gaming(), &mut send).map_err(|error| format!("cannot keep the alerts: {error}"))?;
     write_status(&store, now).map_err(|error| format!("cannot write {}: {error}", status_path().display()))?;
     if changed {
-        let _ = std::process::Command::new("pkill").args([WAYBAR_SIGNAL, "waybar"]).status();
+        let _ = std::process::Command::new("pkill").args(["-x", WAYBAR_SIGNAL, "waybar"]).status();
     }
     let review = cockpit::paths::state_home().join("disk-maintenance/latest.json");
     announce_disk_review(&store, &review, now, cockpit::util::gaming(), &mut |title, detail| {

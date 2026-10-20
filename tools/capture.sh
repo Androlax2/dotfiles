@@ -97,10 +97,10 @@ if command -v wl-screenrec >/dev/null; then
     wl-screenrec -g "0,0 ${width}x${height}" -f "$tmp_recording" >/dev/null 2>&1 &
     recorder=$!
     printf '%s\t%s\n' "$(date +%s)" "$tmp_recording" > "$XDG_RUNTIME_DIR/recording"
-    pkill -RTMIN+13 waybar
+    pkill -x -RTMIN+13 waybar
     sleep 2.5
     shot "$((width - 1300)),0 1300x44" recording
     kill -INT "$recorder"; sleep 0.8
     rm -f "$XDG_RUNTIME_DIR/recording" "$tmp_recording"
-    pkill -RTMIN+13 waybar
+    pkill -x -RTMIN+13 waybar
 fi

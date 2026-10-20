@@ -32,7 +32,7 @@ next_event=$(khal list now "${HOURS_AHEAD}h" --format "{start}|{end}|{title}" 2>
 marker="${XDG_RUNTIME_DIR:-/tmp}/waybar-next-event"
 if [[ "$(cat "$marker" 2>/dev/null)" != "$next_event" ]]; then
     printf '%s' "$next_event" > "$marker"
-    pkill -RTMIN+11 waybar 2>/dev/null
+    pkill -x -RTMIN+11 waybar 2>/dev/null
 fi
 
 if [[ -z "$next_event" ]]; then
@@ -75,6 +75,6 @@ echo "{\"text\": \"${text}\", \"tooltip\": \"${tooltip}\", \"class\": \"${class}
 
 # Refresh the module when the event ends so the next one shows up without waiting for the interval.
 if (( end_epoch > now_epoch )); then
-    (sleep $((end_epoch - now_epoch + 5)) && pkill -RTMIN+9 waybar) &>/dev/null &
+    (sleep $((end_epoch - now_epoch + 5)) && pkill -x -RTMIN+9 waybar) &>/dev/null &
     disown
 fi

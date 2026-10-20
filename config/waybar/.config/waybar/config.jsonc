@@ -217,7 +217,7 @@
     "size": 14,
     "interval": 3600,
     "tooltip": false,
-    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -RTMIN+14 waybar'",
+    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -x -RTMIN+14 waybar'",
     "on-click-right": "setsid -f kitty --class floating -e sh -c 'make -C /home/theo/IdeaProjects/jobpilot last | less -R +G'"
   },
 
@@ -228,7 +228,7 @@
     "signal": 14,
     "format": "{}",
     "escape": false,
-    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -RTMIN+14 waybar'",
+    "on-click": "setsid -f kitty --class floating -e sh -c 'cd /home/theo/IdeaProjects/jobpilot && node src/cli.ts manual --tui; pkill -x -RTMIN+14 waybar'",
     "on-click-right": "setsid -f kitty --class floating -e sh -c 'make -C /home/theo/IdeaProjects/jobpilot last | less -R +G'"
   },
 
@@ -308,8 +308,8 @@
     "tooltip-format": "{node_name}",
     "on-click": "pavucontrol",
     "on-click-right": "~/.config/waybar/scripts/switch-audio.sh",
-    "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -RTMIN+8 waybar",
-    "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -RTMIN+8 waybar"
+    "on-scroll-up": "pactl set-sink-volume @DEFAULT_SINK@ +5% && pkill -x -RTMIN+8 waybar",
+    "on-scroll-down": "pactl set-sink-volume @DEFAULT_SINK@ -5% && pkill -x -RTMIN+8 waybar"
   },
 
   // ---- right: notification centre (swaync). Click toggles the panel, right-click toggles DND.
@@ -327,8 +327,8 @@
     "interval": 10,
     "signal": 12,
     "size": 14,
-    "on-click": "swaync-client -t -sw && pkill -RTMIN+12 waybar",
-    "on-click-right": "swaync-client -d -sw && pkill -RTMIN+12 waybar"
+    "on-click": "swaync-client -t -sw && pkill -x -RTMIN+12 waybar",
+    "on-click-right": "swaync-client -d -sw && pkill -x -RTMIN+12 waybar"
   },
 
   // Never renders text; it only forwards pactl sink events to the volume icon as SIGRTMIN+8.

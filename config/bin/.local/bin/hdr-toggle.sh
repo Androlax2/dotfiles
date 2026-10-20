@@ -42,7 +42,7 @@ sleep 0.3
 
 # Refresh the Waybar HDR indicator (custom/hdr module is wired to
 # SIGRTMIN+10 in config.jsonc). Ignore failure if Waybar isn't running.
-pkill -RTMIN+10 waybar 2>/dev/null || true
+pkill -x -RTMIN+10 waybar 2>/dev/null || true
 
 preset=$(hyprctl monitors 2>/dev/null | awk '/colorManagementPreset/ {print $2; exit}')
 brightness=$(hyprctl monitors 2>/dev/null | awk '/sdrBrightness/ {print $2; exit}')

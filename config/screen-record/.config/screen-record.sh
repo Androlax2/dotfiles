@@ -24,7 +24,7 @@ save_dir="$HOME/Videos/Recordings"
 state_file="${XDG_RUNTIME_DIR:-/tmp}/recording" # "<start epoch>\t<file>", read by waybar/scripts/recording.sh
 mkdir -p "$save_dir"
 
-refresh_bar() { pkill -RTMIN+13 waybar 2>/dev/null || true; }
+refresh_bar() { pkill -x -RTMIN+13 waybar 2>/dev/null || true; }
 
 # ── Stop if already recording ──────────────────────────────────────────────
 if pgrep -x wl-screenrec >/dev/null; then
