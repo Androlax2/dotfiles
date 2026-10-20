@@ -159,6 +159,15 @@ Moving around (⌘ is the physical Command key, which keyd turns into Ctrl): ⌘
 
 The model and effort pickers load the active project's available OpenCode models inside its sandbox, without starting the shared service. Press Enter again after loading; with no active project, pick one for the catalog. Effort lists only the selected model's supported variants. Changing the model clears the old effort; **OpenCode default** clears an override. On either Settings row, `d` clears it without needing a working catalog, including when the saved model is unavailable. Choices persist in `~/.local/state/claude-sessions/settings.json`, alongside the existing toggles (`claude-sessions setting default-agent claude|opencode`, `setting opencode-model <provider/model>`, `setting opencode-effort <variant>`; an empty value clears the model or effort).
 
+### Picking work back up
+
+The searchable `:` menu has **return-note** and **clear-return-note** for the
+selected session. A note stays in the session's selected/full details across
+cockpit restarts and view switches; it is never sent to the agent. Notes accept
+up to 280 characters. Empty input cancels; clearing is a separate action.
+An unreadable continuity file produces a persistent warning and is preserved,
+not silently replaced. These actions do not change existing keyboard shortcuts.
+
 ### Out of the sandbox, with my approval
 
 | Command (inside a session) | What happens outside |
