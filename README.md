@@ -393,18 +393,34 @@ Installed and enabled on this PC on **2026-10-20**:
   `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
   Vitals announces each new report once. **No games or projects are deleted.**
 
-In this revision, **Vitals → 3 Disques** also shows enabled/disabled/unknown state,
-last/next runs, and running/success/failure results for maintenance tasks. Journald
-retention is separate because it has no cleanup timer. Approved policies are
-labeled as policies, not an audit of custom unit commands. Missing completion
-history never becomes a fabricated successful run.
+In this revision, **Vitals → 3 Disques** opens with one plain-language status and
+at most three useful actions. Healthy routine maintenance does not become a to-do
+list; low space, SSD warnings, stale reports, and actual failures take priority.
+Technical policy/timestamp details stay hidden until requested.
 
-The same tab includes the monthly review: complete/partial state, measured totals,
-error/unavailable counts, and up to three largest games and projects. Partial sizes
-remain labeled. Use **↑/↓ or j/k** to scroll, **PageUp/PageDown** to page,
-**Home/End** to jump, and **r** to refresh. Long paths wrap, including on narrow
-terminals. The view is read-only: opening it does not start scanning or cleanup.
-The expanded view requires rebuilding the live Vitals binary from this revision.
+Use **↑/↓ or j/k** to select, then **Enter** to read the space review or request a
+read-only check. Only the two known user report services can be requested: a new
+space review or the Turbo dry-run report. They run asynchronously; a queued request
+is not shown as completed, an already-running check is not started again, and
+failure feedback remains visible. There are no prune/delete/admin controls.
+
+The review shows the largest games/projects and up to three diagnostic paths with
+specific, safe guidance. Expected symlink skips are separate from actual errors;
+old reports lacking that count remain explicitly unknown. Analyzed-file permissions
+are never changed automatically; game/project removal remains a separate manual decision. Partial sizes stay
+labeled; a large directory is not evidence it is unused.
+
+Use **d** for full SMART/space/maintenance details and **b** or **Backspace** to
+return to the short view. Arrows scroll in the review/details, **PageUp/PageDown**
+page, and **Home/End** jump. **r** rereads the current state; it does not launch a
+new scan. Opening Vitals also starts no scan or cleanup. Long paths wrap on narrow
+terminals, and the selected action and footer remain reachable.
+
+Details preserve enabled/disabled/unknown state, last/next runs, and real run
+results. Journald retention is separate because it has no cleanup timer. Approved
+policies are labeled as policies, not an audit of custom commands. Missing history
+never becomes fabricated success. The updated screen requires rebuilding the live
+Vitals binary from this revision.
 
 The review never follows symlinks or nested mount boundaries. Skipped paths produce
 explicit errors and partial-size labels, not zero-byte success. It runs as your

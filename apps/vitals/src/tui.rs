@@ -18,7 +18,7 @@ use crate::summary::{self, Machine};
 use crate::facts::{self, Facts};
 use crate::games::Stats;
 use crate::journal;
-use crate::maintenance::{self, Maintenance, RunState};
+use crate::maintenance::{self, Check, Maintenance, RunState};
 use crate::sensors::{self, Kind, Reading, label};
 use crate::store::{self, Alert, EndedAlert, Game, Store};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -61,6 +61,12 @@ pub fn sparkline(values: &[f64]) -> String {
     values.iter().map(|value| SPARK[(((value - low) / span) * 7.0).round() as usize]).collect()
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum DiskScreen { Summary, Review, Details }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum DiskAction { ReadReview, SpaceCheck, TurboCheck, Details }
+
 struct View {
     tab: usize,
     readings: Vec<Reading>,
@@ -90,6 +96,9 @@ struct View {
     disk_scroll: u16,
     disk_scroll_max: u16,
     disk_page: u16,
+    disk_screen: DiskScreen,
+    disk_selected: Option<DiskAction>,
+    disk_feedback: Option<Result<&'static str, String>>,
 }
 
 fn when(at: i64) -> String {
@@ -120,7 +129,8 @@ impl View {
                long: BTreeMap::new(), idle: BTreeMap::new(), facts: Facts::default(), facts_at: None, error: None, collected_at: None,
                care_done: vec![None; care::TASKS.len()], care_selected: 0, last_backup: None, events: Vec::new(), ended_alerts: Vec::new(),
                 games: Vec::new(), fill_forecast: BTreeMap::new(), maintenance: None,
-                disk_scroll: 0, disk_scroll_max: 0, disk_page: 1 }
+                 disk_scroll: 0, disk_scroll_max: 0, disk_page: 1,
+                 disk_screen: DiskScreen::Summary, disk_selected: None, disk_feedback: None }
     }
 
     fn refresh_facts_with(&mut self, read: impl FnOnce() -> (Facts, Maintenance)) {
@@ -363,9 +373,14 @@ fn maintenance_lines(snapshot: Option<&Maintenance>) -> Vec<Line<'static>> {
                 }
                 if entries.is_empty() { lines.push(Line::styled("    aucune entrée mesurée disponible", dim())); }
             }
-            lines.push(Line::styled(format!("  {} erreur(s) · {} chemin(s) indisponible(s) · {} jeux / {} projets omis du rapport",
+            let skipped = review.skipped_symlinks.map(|count| format!("{count} liens ignorés (normal)"))
+                .unwrap_or_else(|| "exclusions non détaillées (ancien bilan)".into());
+            lines.push(Line::styled(format!("  {} erreur(s) · {skipped} · {} chemin(s) indisponible(s) · {} jeux / {} projets omis du rapport",
                                           review.errors, review.unavailable, review.omitted_games, review.omitted_checkouts),
-                                   if review.complete { dim() } else { level_style("warn") }));
+                                    if review.complete { dim() } else { level_style("warn") }));
+            for issue in &review.issues {
+                lines.push(Line::styled(format!("  {} : {}", issue.error, issue.path), level_style("warn")));
+            }
         }
         Ok(None) => {
             let running = snapshot.tasks.iter().any(|task| task.timer == "disk-space-review.timer" && task.state == RunState::Running);
@@ -397,7 +412,7 @@ fn wrap_disk_lines(lines: Vec<Line<'_>>, width: u16) -> Vec<Line<'static>> {
     wrapped
 }
 
-fn disks(frame: &mut Frame, area: Rect, view: &mut View) {
+fn disk_details(frame: &mut Frame, area: Rect, view: &mut View) {
     let mut lines = Vec::new();
     if view.facts.disks.is_empty() {
         lines.push(Line::styled("Pas de données SMART : vitals-root.timer (une unité système) les écrit dans /var/lib/vitals/smart.", level_style("warn")));
@@ -422,6 +437,9 @@ fn disks(frame: &mut Frame, area: Rect, view: &mut View) {
                                    Span::styled("░".repeat(20 - filled.min(20)), dim()), Span::raw(format!(" {used:.0} %")), forecast]));
     }
     lines.extend(maintenance_lines(view.maintenance.as_ref()));
+    if let Some(Err(error)) = &view.disk_feedback {
+        lines.push(Line::styled(format!("Dernière demande non lancée : {error}"), level_style("warn")));
+    }
     let block = Block::default().borders(Borders::ALL).title(" Disques · ↑↓ faire défiler ");
     let inner = block.inner(area);
     let lines = wrap_disk_lines(lines, inner.width);
@@ -429,6 +447,228 @@ fn disks(frame: &mut Frame, area: Rect, view: &mut View) {
     view.disk_scroll = view.disk_scroll.min(view.disk_scroll_max);
     view.disk_page = inner.height.saturating_sub(1).max(1);
     frame.render_widget(Paragraph::new(lines).scroll((view.disk_scroll, 0)).block(block), area);
+}
+
+struct DiskOverview {
+    level: &'static str,
+    title: &'static str,
+    hint: String,
+    primary: DiskAction,
+    can_run_checks: bool,
+}
+
+fn review_advice(review: &maintenance::Review) -> &'static str {
+    if review.issues.iter().any(|issue| issue.error.contains("[Errno 13]") || issue.error.contains("Permission denied")) {
+        "Des dossiers sont inaccessibles. Lis les chemins concernés avant de modifier quoi que ce soit."
+    } else if review.issues.iter().any(|issue| issue.error.contains("[Errno 2]") || issue.error.contains("No such file or directory")) {
+        "Des fichiers ont changé pendant l’analyse. Laisse terminer les compilations, puis actualise le bilan."
+    } else {
+        "Lis les points signalés dans le bilan avant de choisir la suite."
+    }
+}
+
+fn review_issue_text(issue: &maintenance::ReviewIssue) -> String {
+    if issue.error.contains("[Errno 13]") || issue.error.contains("Permission denied") {
+        format!("Accès refusé : {}", issue.path)
+    } else if issue.error.contains("[Errno 2]") || issue.error.contains("No such file or directory") {
+        format!("Fichier changé pendant l’analyse : {}", issue.path)
+    } else if issue.error == "skipped non-regular entry" {
+        format!("Type de fichier non parcouru : {}", issue.path)
+    } else { format!("{} : {}", issue.error, issue.path) }
+}
+
+fn disk_overview(view: &View) -> DiskOverview {
+    let overview = |level, title, hint: String, primary, can_run_checks| DiskOverview { level, title, hint, primary, can_run_checks };
+    let health = checks::smart(&view.facts.disks, cockpit::util::now_secs());
+    if health.iter().any(|finding| finding.level == "crit") {
+        return overview("crit", "Vérifier le SSD en priorité", "Vérifie ta sauvegarde avant toute autre intervention.".into(), DiskAction::Details, false);
+    }
+    let fullest = view.facts.disk_usage.iter().filter(|(_, used)| used.is_finite() && (0.0..=100.0).contains(used))
+        .max_by(|left, right| left.1.total_cmp(&right.1));
+    let Some((mount, used)) = fullest else {
+        return overview("warn", "Mesure d’espace indisponible", "Actualise les données avec r ou consulte les détails.".into(), DiskAction::Details, true);
+    };
+    if *used >= 95.0 {
+        return overview("crit", "Espace presque plein", format!("{mount} : {used:.0} % utilisés. Examine ce qui prend de la place avant de supprimer."),
+                        if mount.starts_with("/boot") { DiskAction::Details } else { DiskAction::ReadReview }, true);
+    }
+    if view.facts.disks.is_empty() || !health.is_empty() {
+        return overview("warn", "Santé du SSD à vérifier", "Les données de santé sont absentes, anciennes ou signalent un problème. Consulte les détails.".into(), DiskAction::Details, true);
+    }
+    if *used >= 85.0 {
+        return overview("warn", "Espace à surveiller", format!("{mount} : {used:.0} % utilisés. Commence par lire le bilan des éléments volumineux."),
+                        if mount.starts_with("/boot") { DiskAction::Details } else { DiskAction::ReadReview }, true);
+    }
+    let Some(snapshot) = &view.maintenance else {
+        return overview("warn", "Maintenance non vérifiée", "Les résultats ne sont pas encore disponibles. Actualise avec r.".into(), DiskAction::Details, true);
+    };
+    if snapshot.tasks.iter().any(|task| (task.timer != "disk-space-review.timer" && task.state == RunState::Failed)
+        || (task.timer == "paccache.timer" && task.enabled != Some(true))) {
+        return overview("warn", "Maintenance à vérifier", "Une tâche a échoué ou le nettoyage n’est pas confirmé actif. Consulte les détails.".into(), DiskAction::Details, true);
+    }
+    if snapshot.tasks.iter().any(|task| task.timer == "disk-space-review.timer" && task.state == RunState::Running) {
+        return overview("info", "Bilan en cours", "Tu peux fermer Vitals : une notification arrivera à la fin de l’analyse.".into(),
+                        if matches!(snapshot.review, Ok(Some(_))) { DiskAction::ReadReview } else { DiskAction::SpaceCheck }, true);
+    }
+    match &snapshot.review {
+        Ok(Some(review)) if review.errors > 0 && review.skipped_symlinks.is_none() => {
+            return overview("info", "Bilan à actualiser", "Ancien format : actualise-le pour distinguer les liens ignorés des véritables erreurs.".into(), DiskAction::SpaceCheck, true);
+        }
+        Ok(Some(review)) if review.errors > 0 => {
+            return overview("warn", "Bilan à vérifier", format!("{} points signalés. {}", review.errors, review_advice(review)), DiskAction::ReadReview, true);
+        }
+        Ok(None) | Err(_) => {
+            if snapshot.tasks.iter().any(|task| task.timer == "disk-space-review.timer" && task.state == RunState::Failed) {
+                return overview("warn", "Bilan à vérifier", "L’analyse n’a pas abouti. Consulte le résultat avant de la relancer.".into(), DiskAction::Details, true);
+            }
+            return overview("info", "Bilan à actualiser", "Une analyse en lecture seule permettra de voir ce qui occupe le disque.".into(), DiskAction::SpaceCheck, true);
+        }
+        _ => {}
+    }
+    if snapshot.tasks.iter().any(|task| task.state == RunState::Failed) {
+        return overview("warn", "Maintenance à vérifier", "Une tâche a échoué ou le nettoyage n’est pas confirmé actif. Consulte les détails.".into(), DiskAction::Details, true);
+    }
+    if let Some(days) = view.fill_forecast.values().copied().filter(|days| *days <= 30.0).reduce(f64::min) {
+        return overview("warn", "L’espace se remplit rapidement", format!("Plein dans environ {days:.0} jours à ce rythme. Consulte le bilan."), DiskAction::ReadReview, true);
+    }
+    overview("ok", "Aucune action urgente", format!("{mount} : {used:.0} % utilisés. Le nettoyage planifié continue automatiquement."), DiskAction::ReadReview, true)
+}
+
+fn disk_actions(view: &View) -> Vec<DiskAction> {
+    let status = disk_overview(view);
+    if !status.can_run_checks { return vec![DiskAction::Details]; }
+    match status.primary {
+        DiskAction::Details => vec![DiskAction::Details, DiskAction::ReadReview, DiskAction::SpaceCheck],
+        DiskAction::SpaceCheck => vec![DiskAction::SpaceCheck, DiskAction::ReadReview, DiskAction::TurboCheck],
+        _ => vec![DiskAction::ReadReview, DiskAction::SpaceCheck, DiskAction::TurboCheck],
+    }
+}
+
+fn disk_action_text(action: DiskAction) -> (&'static str, &'static str) {
+    match action {
+        DiskAction::ReadReview => ("Lire le bilan d’espace", "Voir les jeux, projets et diagnostics. Rien n’est supprimé ici."),
+        DiskAction::SpaceCheck => ("Actualiser le bilan", "Lecture seule, jusqu’à 15 minutes. Une notification préviendra quand ce sera prêt."),
+        DiskAction::TurboCheck => ("Vérifier le cache Turbo", "Un simple rapport : aucun cache n’est effacé."),
+        DiskAction::Details => ("Comprendre l’avertissement", "Lire la santé du SSD et le résultat des tâches, sans lancer de nettoyage."),
+    }
+}
+
+fn check_is_running(view: &View, check: Check) -> bool {
+    let timer = match check { Check::SpaceReview => "disk-space-review.timer", Check::TurboReport => "cache-maintenance-report.timer" };
+    view.maintenance.as_ref().is_some_and(|snapshot| snapshot.tasks.iter().any(|task| task.timer == timer && task.state == RunState::Running))
+}
+
+fn disk_summary(frame: &mut Frame, area: Rect, view: &mut View) {
+    let block = Block::default().borders(Borders::ALL).title(" Disques · l’essentiel ");
+    let inner = block.inner(area);
+    let status = disk_overview(view);
+    let actions = disk_actions(view);
+    let selected = view.disk_selected.filter(|action| actions.contains(action)).unwrap_or(actions[0]);
+    let style = if status.level == "info" { Style::default().fg(Color::Cyan) } else { level_style(status.level) };
+    let compact = inner.height < 18;
+    let request_failed = matches!(view.disk_feedback, Some(Err(_))) && status.level != "crit";
+    let title = if request_failed { "Vérification non lancée" } else { status.title };
+    let mut lines = wrap_disk_lines(vec![Line::styled(title,
+        if request_failed { level_style("warn").add_modifier(Modifier::BOLD) } else { style.add_modifier(Modifier::BOLD) })], inner.width);
+    if status.level == "crit" || (view.disk_feedback.is_none() && !compact) {
+        lines.extend(wrap_disk_lines(vec![Line::from(status.hint)], inner.width).into_iter().take(if compact { 1 } else { 2 }));
+    } else if let Some(feedback) = &view.disk_feedback {
+        let (message, style) = match feedback {
+            Ok(message) => (message.to_string(), Style::default().fg(Color::Cyan)),
+            Err(error) => (format!("Non lancé : {error}"), level_style("warn")),
+        };
+        lines.extend(wrap_disk_lines(vec![Line::styled(message, style)], inner.width).into_iter().take(if compact { 1 } else { 2 }));
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::styled("Actions utiles", Style::default().add_modifier(Modifier::BOLD)));
+    let mut selected_range = (0, 0);
+    for action in &actions {
+        let start = lines.len();
+        let (label, hint) = disk_action_text(*action);
+        let is_selected = *action == selected;
+        let label = Line::styled(format!("{} {label}", if is_selected { ">" } else { " " }),
+            if is_selected { Style::default().add_modifier(Modifier::BOLD | Modifier::REVERSED) } else { Style::default() });
+        lines.extend(wrap_disk_lines(vec![label], inner.width));
+        if is_selected {
+            let hint = if compact {
+                match action {
+                    DiskAction::ReadReview => "Bilan, diagnostics, lecture seule.",
+                    DiskAction::SpaceCheck => "Lecture seule · jusqu’à 15 min.",
+                    DiskAction::TurboCheck => "Rapport seul, aucun cache effacé.",
+                    DiskAction::Details => "Santé SSD et tâches automatiques.",
+                }
+            } else { hint };
+            lines.extend(wrap_disk_lines(vec![Line::from(format!("   {hint}"))], inner.width));
+        }
+        if is_selected { selected_range = (start, lines.len()); }
+        if inner.height >= 18 { lines.push(Line::from("")); }
+    }
+    if let Some(next) = view.maintenance.as_ref().and_then(|snapshot| snapshot.tasks.iter().find(|task| task.timer == "paccache.timer")).and_then(|task| task.next_run) {
+        lines.extend(wrap_disk_lines(vec![Line::from(""), Line::from(format!("Prochain nettoyage automatique : {}", when(next)))], inner.width));
+    }
+    lines.extend(wrap_disk_lines(vec![Line::from(""), Line::from("Aucune suppression depuis cet écran. d : détails techniques.")], inner.width));
+    view.disk_scroll_max = lines.len().saturating_sub(usize::from(inner.height)).min(usize::from(u16::MAX)) as u16;
+    view.disk_scroll = view.disk_scroll.min(view.disk_scroll_max);
+    if selected_range.0 < usize::from(view.disk_scroll) { view.disk_scroll = selected_range.0 as u16; }
+    if selected_range.1 > usize::from(view.disk_scroll) + usize::from(inner.height) {
+        view.disk_scroll = selected_range.1.saturating_sub(usize::from(inner.height)).min(usize::from(view.disk_scroll_max)) as u16;
+    }
+    frame.render_widget(Paragraph::new(lines).scroll((view.disk_scroll, 0)).block(block), area);
+}
+
+fn disk_review(frame: &mut Frame, area: Rect, view: &mut View) {
+    let mut lines = vec![Line::styled("Ton prochain pas : choisir un élément à vérifier", Style::default().add_modifier(Modifier::BOLD)),
+                         Line::from("Un gros dossier n’est pas forcément inutile. Rien n’est supprimé ici."), Line::from("")];
+    match view.maintenance.as_ref().map(|snapshot| &snapshot.review) {
+        Some(Ok(Some(review))) => {
+            lines.push(Line::from(format!("Bilan du {} · {} jeux et {} projets mesurés", when(review.completed_at), review.measured_games, review.measured_checkouts)));
+            if review.errors > 0 {
+                lines.push(Line::from(""));
+                lines.push(Line::styled("À vérifier d’abord", level_style("warn").add_modifier(Modifier::BOLD)));
+                lines.push(Line::from(review_advice(review)));
+                for issue in &review.issues { lines.push(Line::from(format!("  {}", review_issue_text(issue)))); }
+                if review.issues.is_empty() { lines.push(Line::from("  Pas de diagnostic détaillé dans ce bilan. Actualise-le en lecture seule.")); }
+            }
+            for (title, entries) in [("Jeux à vérifier", &review.games), ("Projets à vérifier", &review.checkouts)] {
+                lines.push(Line::from(""));
+                lines.push(Line::styled(title, Style::default().add_modifier(Modifier::BOLD)));
+                for entry in entries {
+                    let path = std::path::Path::new(&entry.path);
+                    let basename = path.file_name().and_then(|name| name.to_str()).unwrap_or(&entry.path);
+                    let name = if entry.path.contains("/.parallel/") {
+                        path.parent().and_then(|parent| parent.file_name()).and_then(|name| name.to_str())
+                            .map(|project| format!("{project} / {basename}")).unwrap_or_else(|| basename.to_string())
+                    } else { basename.to_string() };
+                    lines.push(Line::from(format!("  {name} · {}{}", space_size(entry.allocated_bytes), if entry.complete { "" } else { " (estimation partielle)" })));
+                }
+                if entries.is_empty() { lines.push(Line::from("  Aucun élément mesuré disponible.")); }
+            }
+            lines.push(Line::from(""));
+            lines.push(Line::from("Jeu inutilisé ? Passe par son lanceur pour le désinstaller, après vérification."));
+            lines.push(Line::from("Projet ? Vérifie le travail non enregistré et la sauvegarde avant toute décision."));
+            if review.errors > 0 { lines.push(Line::styled(format!("{} erreur(s) à vérifier · d pour les diagnostics.", review.errors), level_style("warn"))); }
+            if let Some(skipped) = review.skipped_symlinks {
+                lines.push(Line::from(format!("{skipped} liens non suivis : exclusions normales, pas des erreurs.")));
+            } else { lines.push(Line::from("Ancien bilan : exclusions non détaillées. Actualise-le pour les distinguer.")); }
+        }
+        Some(Err(error)) => lines.push(Line::styled(format!("Bilan indisponible : {error}. Retourne aux actions pour l’actualiser."), level_style("warn"))),
+        _ => lines.push(Line::from("Aucun bilan disponible. Retourne aux actions pour lancer une analyse en lecture seule.")),
+    }
+    let block = Block::default().borders(Borders::ALL).title(" Bilan · lecture seule ");
+    let inner = block.inner(area);
+    let lines = wrap_disk_lines(lines, inner.width);
+    view.disk_scroll_max = lines.len().saturating_sub(usize::from(inner.height)).min(usize::from(u16::MAX)) as u16;
+    view.disk_scroll = view.disk_scroll.min(view.disk_scroll_max);
+    view.disk_page = inner.height.saturating_sub(1).max(1);
+    frame.render_widget(Paragraph::new(lines).scroll((view.disk_scroll, 0)).block(block), area);
+}
+
+fn disks(frame: &mut Frame, area: Rect, view: &mut View) {
+    match view.disk_screen {
+        DiskScreen::Summary => disk_summary(frame, area, view),
+        DiskScreen::Review => disk_review(frame, area, view),
+        DiskScreen::Details => disk_details(frame, area, view),
+    }
 }
 
 fn system(frame: &mut Frame, area: Rect, view: &View) {
@@ -579,13 +819,27 @@ fn draw(frame: &mut Frame, view: &mut View) {
         _ => journal_tab(frame, body, view),
     }
     let keys = if view.tab == CARE_TAB { "↑↓ choisir · d fait aujourd'hui · b une semaine plus tôt · 1-7 / Tab changer d'onglet · q quitter" }
-        else if view.tab == DISKS_TAB && footer.width < 70 { "↑↓/jk défiler · r · q quitter" }
-        else if view.tab == DISKS_TAB { "↑↓/jk défiler · Pg↑↓ · Début/Fin · r actualiser · q quitter" }
+        else if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary && footer.width < 70 { "↑↓ · Entrée · d détails · q quitter" }
+        else if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary { "↑↓ choisir · Entrée ouvrir/lancer · d détails · r état · q quitter" }
+        else if view.tab == DISKS_TAB && footer.width < 70 { "↑↓/jk défiler · b retour · q quitter" }
+        else if view.tab == DISKS_TAB { "↑↓/jk défiler · Pg↑↓ · b retour · d détails/retour · r · q quitter" }
         else { "1-7 / Tab changer d'onglet · r rafraîchir · q quitter" };
     frame.render_widget(Paragraph::new(Line::styled(keys, dim())), footer);
 }
 
 fn handle_key(view: &mut View, key: KeyCode) -> bool {
+    handle_key_with(view, key, maintenance::request_check)
+}
+
+fn move_disk_selection(view: &mut View, step: isize) {
+    let actions = disk_actions(view);
+    let selected = view.disk_selected.and_then(|selected| actions.iter().position(|action| *action == selected)).unwrap_or(0);
+    let selected = selected.saturating_add_signed(step).min(actions.len() - 1);
+    view.disk_selected = Some(actions[selected]);
+    view.disk_scroll = 0;
+}
+
+fn handle_key_with(view: &mut View, key: KeyCode, mut request: impl FnMut(Check) -> Result<(), String>) -> bool {
     match key {
         KeyCode::Char('q') | KeyCode::Esc => return false,
         KeyCode::Char(digit @ '1'..='7') => view.tab = digit as usize - '1' as usize,
@@ -593,6 +847,42 @@ fn handle_key(view: &mut View, key: KeyCode) -> bool {
         KeyCode::Down | KeyCode::Char('j') if view.tab == CARE_TAB => view.care_selected = (view.care_selected + 1).min(care::TASKS.len() - 1),
         KeyCode::Char('d') if view.tab == CARE_TAB => record_care(view, false),
         KeyCode::Char('b') if view.tab == CARE_TAB => record_care(view, true),
+        KeyCode::Char('d') if view.tab == DISKS_TAB => {
+            view.disk_screen = if view.disk_screen == DiskScreen::Details { DiskScreen::Summary } else { DiskScreen::Details };
+            view.disk_scroll = 0;
+        }
+        KeyCode::Char('b') | KeyCode::Backspace if view.tab == DISKS_TAB => {
+            view.disk_screen = DiskScreen::Summary;
+            view.disk_scroll = 0;
+        }
+        KeyCode::Enter if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary => {
+            let actions = disk_actions(view);
+            let selected = view.disk_selected.filter(|action| actions.contains(action)).unwrap_or(actions[0]);
+            match selected {
+                DiskAction::ReadReview | DiskAction::Details => {
+                    view.disk_screen = if selected == DiskAction::ReadReview { DiskScreen::Review } else { DiskScreen::Details };
+                    view.disk_scroll = 0;
+                }
+                DiskAction::SpaceCheck | DiskAction::TurboCheck => {
+                    let check = if selected == DiskAction::SpaceCheck { Check::SpaceReview } else { Check::TurboReport };
+                    if check_is_running(view, check) {
+                        view.disk_feedback = Some(Ok("Vérification déjà en cours."));
+                    } else {
+                        match request(check) {
+                            Ok(()) => {
+                                view.disk_feedback = Some(Ok("Demande envoyée · le résultat arrivera après l’analyse."));
+                                view.facts_at = None;
+                            }
+                            Err(error) => view.disk_feedback = Some(Err(error)),
+                        }
+                    }
+                }
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary => move_disk_selection(view, -1),
+        KeyCode::Down | KeyCode::Char('j') if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary => move_disk_selection(view, 1),
+        KeyCode::Home | KeyCode::PageUp if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary => move_disk_selection(view, isize::MIN),
+        KeyCode::End | KeyCode::PageDown if view.tab == DISKS_TAB && view.disk_screen == DiskScreen::Summary => move_disk_selection(view, isize::MAX),
         KeyCode::Up | KeyCode::Char('k') if view.tab == DISKS_TAB => view.disk_scroll = view.disk_scroll.saturating_sub(1),
         KeyCode::Down | KeyCode::Char('j') if view.tab == DISKS_TAB => view.disk_scroll = view.disk_scroll.saturating_add(1).min(view.disk_scroll_max),
         KeyCode::PageUp if view.tab == DISKS_TAB => view.disk_scroll = view.disk_scroll.saturating_sub(view.disk_page),
@@ -620,7 +910,7 @@ fn event_loop(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
                     continue;
                 }
                 if !handle_key(&mut view, key.code) { return Ok(()); }
-                if key.code == KeyCode::Char('r') {
+                if view.facts_at.is_none() {
                     view.refresh();
                     refreshed = Instant::now();
                 }
@@ -648,16 +938,189 @@ mod tests {
         use crate::maintenance::{Maintenance, Review, ReviewEntry, RunState, Task};
         let mut view = View::new();
         view.tab = 2;
+        view.disk_screen = DiskScreen::Details;
         view.maintenance = Some(Maintenance {
             tasks: vec![Task { timer: "paccache.timer".into(), label: "Paquets", policy: "2 versions + 30 jours",
                 enabled: Some(true), last_run: Some(1000), next_run: Some(2000), state: RunState::Succeeded, detail: None }],
             journal_retention: Ok(Some("30day".into())),
             review: Ok(Some(Review { completed_at: 1000, complete: false, measured_games: 4, measured_checkouts: 2,
-                omitted_games: 0, omitted_checkouts: 0, errors: 1, unavailable: 2,
+                omitted_games: 0, omitted_checkouts: 0, errors: 1, issues: Vec::new(), skipped_symlinks: None, unavailable: 2,
                 games: vec![ReviewEntry { path: "/games/large".into(), allocated_bytes: 1073741824, complete: false }],
                 checkouts: vec![ReviewEntry { path: "/projects/personal".into(), allocated_bytes: 2147483648, complete: true }] })),
         });
         view
+    }
+
+    fn compact_disk_view() -> View {
+        let mut view = maintenance_view();
+        view.disk_screen = DiskScreen::Summary;
+        view.facts.disk_usage = vec![("/".into(), 73.0)];
+        view.facts.disks = vec![crate::facts::Smart { device: "nvme0n1".into(), available_spare: 100,
+            spare_threshold: 10, read_at: cockpit::util::now_secs(), ..Default::default() }];
+        let report = view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap();
+        report.errors = 0;
+        report.skipped_symlinks = Some(92733);
+        view
+    }
+
+    #[test]
+    fn the_default_disk_view_has_one_status_three_actions_and_no_wall_of_details() {
+        let mut view = compact_disk_view();
+        let screen = render(&mut view, 100, 26);
+        for expected in ["Aucune action urgente", "Actions utiles", "Lire le bilan", "Actualiser le bilan", "Vérifier le cache Turbo"] {
+            assert!(screen.contains(expected), "missing {expected}: {screen}");
+        }
+        assert!(!screen.contains("politique approuvée"));
+        assert!(!screen.contains("avertissement critique"));
+        assert!(!screen.contains("92733 erreur"));
+        assert!(disk_actions(&view).len() <= 3);
+        assert_eq!(View::new().disk_screen, DiskScreen::Summary);
+    }
+
+    #[test]
+    fn expected_skips_are_not_errors_but_real_failures_remain_actionable() {
+        let mut view = compact_disk_view();
+        let screen = render(&mut view, 100, 26);
+        assert!(screen.contains("Aucune action urgente"));
+        view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap().errors = 1;
+        let screen = render(&mut view, 100, 26);
+        assert!(screen.contains("Bilan à vérifier"));
+        assert!(!screen.contains("Aucune action urgente"));
+        view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap().skipped_symlinks = None;
+        let screen = render(&mut view, 100, 26);
+        assert!(screen.contains("Bilan à actualiser"));
+    }
+
+    #[test]
+    fn space_and_hardware_warnings_take_priority_over_optional_checks() {
+        let mut view = compact_disk_view();
+        for (used, expected) in [(85.0, "Espace à surveiller"), (95.0, "Espace presque plein")] {
+            view.facts.disk_usage[0].1 = used;
+            assert!(render(&mut view, 100, 26).contains(expected));
+        }
+        view.facts.disks[0].critical_warning = 1;
+        assert!(render(&mut view, 100, 26).contains("Vérifier le SSD en priorité"));
+        assert_eq!(disk_actions(&view), [DiskAction::Details]);
+    }
+
+    #[test]
+    fn the_main_view_never_claims_health_without_space_or_ssd_information() {
+        let mut view = compact_disk_view();
+        view.facts.disk_usage.clear();
+        assert!(!render(&mut view, 100, 26).contains("Aucune action urgente"));
+        view.facts.disk_usage.push(("/".into(), 73.0));
+        view.facts.disks.clear();
+        assert!(!render(&mut view, 100, 26).contains("Aucune action urgente"));
+    }
+
+    #[test]
+    fn reading_the_review_and_toggling_details_never_start_a_check() {
+        let mut view = compact_disk_view();
+        assert!(handle_key_with(&mut view, KeyCode::Enter, |_| panic!("reading the report must not start a service")));
+        assert_eq!(view.disk_screen, DiskScreen::Review);
+        let screen = render(&mut view, 100, 26);
+        assert!(screen.contains("Jeux à vérifier"));
+        assert!(screen.contains("large"));
+        handle_key_with(&mut view, KeyCode::Char('d'), |_| panic!("details must not start a service"));
+        assert_eq!(view.disk_screen, DiskScreen::Details);
+        assert!(render(&mut view, 120, 40).contains("politique approuvée"));
+        handle_key_with(&mut view, KeyCode::Char('d'), |_| panic!("returning must not start a service"));
+        assert_eq!(view.disk_screen, DiskScreen::Summary);
+    }
+
+    #[test]
+    fn entering_a_check_requests_only_that_check_and_never_claims_it_completed() {
+        use crate::maintenance::Check;
+        let mut view = compact_disk_view();
+        view.disk_selected = Some(DiskAction::SpaceCheck);
+        let mut requested = Vec::new();
+        handle_key_with(&mut view, KeyCode::Enter, |check| { requested.push(check); Ok(()) });
+        assert_eq!(requested, [Check::SpaceReview]);
+        assert!(view.facts_at.is_none());
+        assert!(render(&mut view, 100, 26).contains("Demande envoyée"));
+        view.disk_selected = Some(DiskAction::TurboCheck);
+        handle_key_with(&mut view, KeyCode::Enter, |check| { requested.push(check); Ok(()) });
+        assert_eq!(requested, [Check::SpaceReview, Check::TurboReport]);
+    }
+
+    #[test]
+    fn a_running_check_is_not_requested_again_and_request_errors_are_visible() {
+        let mut view = compact_disk_view();
+        let snapshot = view.maintenance.as_mut().unwrap();
+        let mut task = snapshot.tasks[0].clone();
+        task.timer = "disk-space-review.timer".into();
+        task.state = RunState::Running;
+        snapshot.tasks.push(task);
+        view.disk_selected = Some(DiskAction::SpaceCheck);
+        handle_key_with(&mut view, KeyCode::Enter, |_| panic!("already running"));
+        assert!(render(&mut view, 100, 26).contains("déjà en cours"));
+        view.maintenance.as_mut().unwrap().tasks.last_mut().unwrap().state = RunState::Failed;
+        handle_key_with(&mut view, KeyCode::Enter, |_| Err("permission refusée".into()));
+        assert!(render(&mut view, 100, 26).contains("permission refusée"));
+    }
+
+    #[test]
+    fn compact_navigation_keeps_the_selected_action_visible_on_small_terminals() {
+        let mut view = compact_disk_view();
+        let first = render(&mut view, 40, 12);
+        assert!(first.contains("Aucune action urgente"), "{first}");
+        handle_key_with(&mut view, KeyCode::End, |_| panic!("navigation must not launch"));
+        let screen = render(&mut view, 40, 12);
+        assert!(screen.replace('│', "").contains("cache Turbo"), "{screen}");
+        assert!(screen.contains("q quitter"));
+        assert_eq!(view.disk_selected, Some(DiskAction::TurboCheck));
+        handle_key_with(&mut view, KeyCode::Home, |_| panic!("navigation must not launch"));
+        assert_eq!(view.disk_selected, Some(DiskAction::ReadReview));
+    }
+
+    #[test]
+    fn request_failure_feedback_stays_visible_on_a_small_terminal() {
+        let mut view = compact_disk_view();
+        view.disk_feedback = Some(Err("permission refusée".into()));
+        let screen = render(&mut view, 40, 12);
+        assert!(screen.contains("Vérification non lancée"), "{screen}");
+        assert!(screen.contains("permission refusée"), "{screen}");
+        assert!(screen.contains("q quitter"));
+    }
+
+    #[test]
+    fn enter_never_runs_an_action_which_is_hidden_behind_details() {
+        let mut view = compact_disk_view();
+        view.disk_selected = Some(DiskAction::SpaceCheck);
+        handle_key_with(&mut view, KeyCode::Char('d'), |_| panic!("toggle must not launch"));
+        handle_key_with(&mut view, KeyCode::Enter, |_| panic!("hidden action must not launch"));
+        assert_eq!(view.disk_screen, DiskScreen::Details);
+    }
+
+    #[test]
+    fn numbered_tab_shortcuts_do_not_run_disk_actions() {
+        let mut view = compact_disk_view();
+        handle_key_with(&mut view, KeyCode::Char('1'), |_| panic!("tab shortcuts must not launch checks"));
+        assert_eq!(view.tab, 0);
+    }
+
+    #[test]
+    fn access_errors_explain_a_safe_next_step_before_optional_game_review() {
+        let mut view = compact_disk_view();
+        let report = view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap();
+        report.errors = 1;
+        report.issues = vec![crate::maintenance::ReviewIssue { path: "/project/storage/testing".into(), error: "[Errno 13] Permission denied".into() }];
+        let screen = render(&mut view, 100, 26);
+        assert!(screen.contains("dossiers sont inaccessibles"), "{screen}");
+        handle_key_with(&mut view, KeyCode::Enter, |_| panic!("reading issues must not launch"));
+        let screen = render(&mut view, 120, 40);
+        assert!(screen.contains("Accès refusé : /project/storage/testing"), "{screen}");
+        assert!(screen.find("Accès refusé").unwrap() < screen.find("Jeux à vérifier").unwrap());
+    }
+
+    #[test]
+    fn readable_parallel_checkout_names_keep_the_project_context() {
+        let mut view = compact_disk_view();
+        view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap().checkouts[0].path =
+            "/home/example/IdeaProjects/.parallel/dotfiles/parallel-1924".into();
+        view.disk_screen = DiskScreen::Review;
+        let screen = render(&mut view, 120, 40);
+        assert!(screen.contains("dotfiles / parallel-1924"), "{screen}");
     }
 
     fn render(view: &mut View, width: u16, height: u16) -> String {

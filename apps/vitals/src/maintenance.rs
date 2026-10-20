@@ -18,6 +18,9 @@ const PROPERTIES: &str = "Id,LoadState,UnitFileState,ActiveState,LastTriggerUSec
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RunState { Running, Succeeded, Failed, Unknown }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Check { SpaceReview, TurboReport }
+
 #[derive(Clone, Debug)]
 pub struct Task {
     pub timer: String,
@@ -40,6 +43,12 @@ pub struct ReviewEntry {
 }
 
 #[derive(Clone, Debug)]
+pub struct ReviewIssue {
+    pub path: String,
+    pub error: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct Review {
     pub completed_at: i64,
     pub complete: bool,
@@ -48,6 +57,9 @@ pub struct Review {
     pub omitted_games: u64,
     pub omitted_checkouts: u64,
     pub errors: u64,
+    pub issues: Vec<ReviewIssue>,
+    /// None identifies older reports which did not distinguish expected link skips.
+    pub skipped_symlinks: Option<u64>,
     pub unavailable: usize,
     pub games: Vec<ReviewEntry>,
     pub checkouts: Vec<ReviewEntry>,
@@ -62,6 +74,20 @@ pub struct Maintenance {
 
 fn clean_text(text: &str) -> String {
     text.chars().filter(|character| !character.is_control()).take(4096).collect()
+}
+
+/// Request one of the two unprivileged, non-deleting report services; not a completed result.
+pub fn request_check(check: Check) -> Result<(), String> {
+    let unit = match check {
+        Check::SpaceReview => "disk-space-review.service",
+        Check::TurboReport => "cache-maintenance-report.service",
+    };
+    let output = Command::new("systemctl").args(["--user", "start", "--no-block", unit])
+        .output().map_err(|error| error.to_string())?;
+    if !output.status.success() {
+        return Err(format!("demande refusée ({}) : {}", output.status, clean_text(&String::from_utf8_lossy(&output.stderr))));
+    }
+    Ok(())
 }
 
 fn timestamp(value: Option<&String>) -> Option<i64> {
@@ -180,14 +206,24 @@ fn read_review() -> Result<Option<Review>, String> {
         return Err("format de revue inconnu".into());
     }
     let completed_at = report["completed_at"].as_i64().filter(|stamp| *stamp > 0 && *stamp <= cockpit::util::now_secs()).ok_or("date de revue invalide")?;
-    let errors = report["errors"].as_array().ok_or("liste d'erreurs absente")?.len() as u64;
+    let error_entries = report["errors"].as_array().ok_or("liste d'erreurs absente")?;
+    let mut issues = Vec::new();
+    for entry in error_entries {
+        let path = clean_text(entry["path"].as_str().ok_or("chemin d'erreur absent")?);
+        let error = clean_text(entry["error"].as_str().ok_or("message d'erreur absent")?);
+        if issues.len() < 3 { issues.push(ReviewIssue { path, error }); }
+    }
+    let errors = error_entries.len() as u64;
     let errors = errors.checked_add(count(&report, "omitted_errors")?).ok_or("compteur d'erreurs trop grand")?;
+    let skipped_symlinks = report.get("skipped_symlinks")
+        .map(|value| value.as_u64().ok_or("compteur d'exclusions invalide")).transpose()?;
     Ok(Some(Review {
         completed_at,
         complete: report["complete"].as_bool().ok_or("état de revue absent")?,
         measured_games: count(&report, "measured_games")?, measured_checkouts: count(&report, "measured_checkouts")?,
         omitted_games: count(&report, "omitted_games")?, omitted_checkouts: count(&report, "omitted_checkouts")?,
-        errors, unavailable: report["unavailable_roots"].as_array().ok_or("chemins indisponibles absents")?.len(),
+        errors, issues, skipped_symlinks,
+        unavailable: report["unavailable_roots"].as_array().ok_or("chemins indisponibles absents")?.len(),
         games: entries(&report, "games")?, checkouts: entries(&report, "checkouts")?,
     }))
 }

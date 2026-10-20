@@ -223,3 +223,65 @@ fn report_names_are_sanitized_and_summaries_bounded() {
     assert_eq!(review.games.len(), 3);
     assert!(!review.games[0].path.chars().any(char::is_control));
 }
+
+#[test]
+fn read_only_check_requests_target_only_the_two_known_user_reports() {
+    use maintenance::Check;
+    let fixture = Fixture::new();
+    maintenance::request_check(Check::SpaceReview).unwrap();
+    maintenance::request_check(Check::TurboReport).unwrap();
+    let calls = fs::read_to_string(fixture.root.join("calls")).unwrap();
+    assert_eq!(calls.lines().collect::<Vec<_>>(), [
+        "--user start --no-block disk-space-review.service",
+        "--user start --no-block cache-maintenance-report.service",
+    ]);
+}
+
+#[test]
+fn failed_check_requests_return_the_native_error_without_claiming_completion() {
+    let fixture = Fixture::new();
+    fs::write(fixture.root.join("fail"), "").unwrap();
+    let result = maintenance::request_check(maintenance::Check::SpaceReview);
+    assert!(result.unwrap_err().contains("bus unavailable"));
+}
+
+#[test]
+fn expected_symlink_skips_are_distinct_from_real_errors_and_legacy_unknowns() {
+    let fixture = Fixture::new();
+    let mut report = fixture.review();
+    fs::write(fixture.report(), report.to_string()).unwrap();
+    assert_eq!(maintenance::gather().review.unwrap().unwrap().skipped_symlinks, None);
+    for skipped in [0, 92733] {
+        report["skipped_symlinks"] = json!(skipped);
+        fs::write(fixture.report(), report.to_string()).unwrap();
+        let review = maintenance::gather().review.unwrap().unwrap();
+        assert_eq!(review.skipped_symlinks, Some(skipped));
+        assert_eq!(review.errors, 0);
+    }
+    report["errors"] = json!([{"path":"/protected","error":"permission denied"}]);
+    report["complete"] = json!(false);
+    fs::write(fixture.report(), report.to_string()).unwrap();
+    let review = maintenance::gather().review.unwrap().unwrap();
+    assert_eq!(review.errors, 1);
+    assert!(!review.complete);
+    report["skipped_symlinks"] = json!(-1);
+    fs::write(fixture.report(), report.to_string()).unwrap();
+    assert!(maintenance::gather().review.is_err());
+}
+
+#[test]
+fn review_keeps_a_bounded_sanitized_sample_of_actual_read_issues() {
+    let fixture = Fixture::new();
+    let mut report = fixture.review();
+    report["complete"] = json!(false);
+    report["errors"] = json!((0..8).map(|index| json!({
+        "path":format!("/project/protected-{index}\n\u{1b}[31m"),
+        "error":"[Errno 13] Permission denied"
+    })).collect::<Vec<_>>());
+    fs::write(fixture.report(), report.to_string()).unwrap();
+    let review = maintenance::gather().review.unwrap().unwrap();
+    assert_eq!(review.errors, 8);
+    assert_eq!(review.issues.len(), 3);
+    assert!(!review.issues[0].path.chars().any(char::is_control));
+    assert!(review.issues[0].error.contains("Permission denied"));
+}
