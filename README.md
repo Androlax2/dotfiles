@@ -168,6 +168,16 @@ up to 280 characters. Empty input cancels; clearing is a separate action.
 An unreadable continuity file produces a persistent warning and is preserved,
 not silently replaced. These actions do not change existing keyboard shortcuts.
 
+**updates** lists unseen latest-turn results and explicit questions, plus saved
+return notes (including exited sessions). Enter opens the chosen update's
+actions: mark that displayed update reviewed, or open its live session when
+there is one. **reviewed** acknowledges the selected session's displayed
+updates; viewing or focusing alone never clears them, and acknowledgement is
+not an answer or approval. A turn can have both a result and a question. The
+summary counts unseen updates separately from sessions needing input. This is
+latest-result tracking, not a lossless activity log. Older sessions show that
+result tracking is unavailable until restarted on the new reporting hook.
+
 ### Out of the sandbox, with my approval
 
 | Command (inside a session) | What happens outside |
