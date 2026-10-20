@@ -26,6 +26,20 @@ agent session. Do not wait for the user to name a skill.
   external actions. Preserve the user's permissions, safety rules, and required
   approvals; surface conflicts before proceeding.
 
+## UI Skills CLI fallback
+
+For `ui-skills-root`, check for an installed CLI with `command -v ui-skills`;
+do not use `npx` to obtain it. If the CLI is absent or its routing command fails,
+report the routing limitation and select the smallest relevant set from the
+available skill names and descriptions. Load those skills with the native tool
+or a discovered, accessible instruction file, then continue their workflows.
+Only the root skill's CLI inspection requirement is waived in this fallback.
+
+Do not retry through another npm cache, download or install a CLI, or change
+sandbox permissions to make routing work. This exception does not waive other
+skill instructions, design requirements, or approval gates. If a relevant skill
+cannot actually be loaded, stop and report the missing capability as usual.
+
 This is a shared instruction policy, not an enforcement mechanism. Each agent
 must load it through its supported global-instruction mechanism; merely having
 the file on disk does not activate it.
