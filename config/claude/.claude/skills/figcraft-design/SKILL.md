@@ -1,6 +1,6 @@
 ---
 name: figcraft-design
-description: How to design and review in FigCraft (the figcraft-app MCP tools) like a careful product designer. Use before ANY design work in FigCraft — a screen, a flow, a component, a design system, a redesign or a small change to an existing file — and when Theo asks to see, review or validate existing boards, compare alternatives, or give visual feedback, even without requesting edits. Offers conversation and FigCraft side by side for visual reviews, after consent. Asks before assuming, wireframes first, auto layout and components always, best practices checked against current sources.
+description: How to design and review in FigCraft (the figcraft-app MCP tools) like a careful product designer. Use before ANY design work in FigCraft — a screen, a flow, a component, a design system, a redesign or a small change to an existing file — and when Theo asks to see, review or validate existing boards, compare alternatives, or give visual feedback, even without requesting edits. Offers an interactive conversation-only float on FigCraft's workspace for visual reviews, after consent. Asks before assuming, wireframes first, auto layout and components always, best practices checked against current sources.
 ---
 
 # Designing in FigCraft
@@ -12,28 +12,34 @@ a guess.
 At the start, run `claude-design role designer`: Theo's cockpit shows the role on your card and
 hands you the design to-dos developers file (`✎ design`). Start with those: `claude-todo list`.
 
-## Visual reviews: offer conversation and FigCraft together
+## Visual reviews: offer a floating conversation on FigCraft's workspace
 
 When Theo asks to review or approve boards, compare design alternatives, or give visual feedback,
-offer the viewing arrangement yourself: "Je peux mettre la conversation à gauche et FigCraft à
-droite pendant la revue. Tu veux ?" He should not need to remember a shortcut or ask for a layout.
+offer the chat yourself: "Je peux ouvrir uniquement notre conversation dans une petite fenêtre
+flottante sur le workspace de FigCraft, pour lire et répondre sans changer tes fenêtres. Tu veux ?"
+He should not need to remember a shortcut or ask for a layout.
 Offer once at the start of that review, not on every board or merely because FigCraft connects.
 If he declines, continue the review normally and do not offer again during that review.
 
 Wait for his answer before asking to run anything. After consent, use `ask-to-run` for
-`claude-sessions design-review start`, with `--why` explaining that it temporarily moves/resizes
-the two existing windows, without reopening the document or changing sandbox permissions.
-Both applications must already be open; use the existing FigCraft connection procedure if needed,
-with its own consent. If several FigCraft windows are open and none is focused, ask which design
-he wants rather than choosing another project's window. A refusal or failed command is not consent
-to try a different placement method. Keep the current board; issue no canvas-selection or zoom
-commands for the arrangement, and do not promise FigCraft's own viewport will ignore resizing.
+`claude-sessions design-review start <your-session-id>`, with `--why` explaining that it opens
+another interactive terminal client of this same conversation, not another agent or the cockpit.
+Pass your actual session ID explicitly so the cockpit's selected conversation cannot substitute
+another project's chat. FigCraft and this agent must already be running; the cockpit need not be
+open. Use the existing FigCraft connection procedure if needed, with its own consent. With several
+FigCraft windows, identify the intended window from the host's `hyprctl -j clients` via `ask-to-run`
+and add `--figcraft-window <its-address>` to start. Ask Theo which design if uncertain: never pick
+another project's window. Pass the real address, not an example. Do not rely on focus surviving
+the approval terminal; ambiguity is refused. A refusal or failed command is not consent to try a different placement method. Keep the
+current board; issue no canvas-selection, zoom, main-window movement or resize commands. The two
+terminal clients share the same CLI, so its text may reflow when the last-used client changes.
 
-When the review ends, offer to restore the previous arrangement. Wait for consent, then use
-`ask-to-run` for `claude-sessions design-review stop`, explaining the restoration in `--why`.
-Do not restore automatically when the agent finishes speaking. A repeated start or stop is harmless.
-The saved arrangement lasts within the current Hyprland configuration lifetime: restore before
-reloading Hyprland or restarting it. None of these commands reconnects MCP or restarts a session.
+When the review ends, offer to close the floating chat. Wait for consent, then use `ask-to-run`
+for `claude-sessions design-review stop <your-session-id>`, explaining that only the floating
+terminal closes and the agent keeps running. Theo can also close the float normally. Do not close
+it automatically when the agent finishes speaking. Repeated start/stop is harmless. The main
+windows stay unchanged, so no layout restoration is needed. Neither command reconnects MCP or
+restarts a session.
 
 ## Rule 1: never assume, ask
 

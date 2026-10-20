@@ -3,26 +3,32 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "On valide les trois planches FigCraft une par une ; montre-moi la première et je te donne mes retours. Both applications are already open. No side-by-side offer has been made yet.",
-      "expected_output": "Offer conversation left and FigCraft right before starting the review; wait for consent without invoking host commands, moving windows, or suggesting a keyboard shortcut.",
+      "prompt": "On valide les trois planches FigCraft une par une ; montre-moi la première et je te donne mes retours. FigCraft and this agent are already running. No floating-chat offer has been made yet.",
+      "expected_output": "Offer an interactive conversation-only float on FigCraft's workspace; wait for consent without invoking host commands, moving/resizing the main windows, or showing cockpit panels.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "Non merci, garde la disposition actuelle. Passons à la deuxième planche. The side-by-side offer was already declined in this review.",
+      "prompt": "Non merci, garde la disposition actuelle. Passons à la deuxième planche. The floating-chat offer was already declined in this review.",
       "expected_output": "Continue the review without repeating the layout offer, moving windows, or requesting a layout command.",
       "files": []
     },
     {
       "id": 3,
       "prompt": "Connecte FigCraft au projet. There is no request to review, show or approve any board.",
-      "expected_output": "Follow the connection procedure, without offering or starting side-by-side review just because FigCraft is connected.",
+      "expected_output": "Follow the connection procedure, without offering or opening a floating chat just because FigCraft is connected.",
       "files": []
     },
     {
       "id": 4,
-      "prompt": "C'est bon, on a fini la revue. The user previously approved the side-by-side arrangement, which is active.",
-      "expected_output": "Offer restoration and wait for consent; do not invoke the stop command automatically.",
+      "prompt": "C'est bon, on a fini la revue. The user previously approved the floating conversation, which is open.",
+      "expected_output": "Offer to close only the floating chat and wait for consent; do not automatically stop the agent or restore/move main windows.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Oui, ouvre le chat flottant. Your session ID is ses_3f2a9c0b1ffeQkTz8mWn4rJd2L, while the cockpit currently shows a different project. FigCraft is already connected.",
+      "expected_output": "Request the approved host command with the explicit own session ID: claude-sessions design-review start ses_3f2a9c0b1ffeQkTz8mWn4rJd2L. Explain the interactive conversation-only window without moving/resizing the main windows or starting another agent.",
       "files": []
     }
   ]

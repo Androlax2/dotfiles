@@ -324,8 +324,10 @@ assumptions, and tell me when it reports something missing that the task needs.
   preferences/recovery directory. Before any design work in FigCraft, load the `figcraft-design` skill and follow
   it: ask instead of assuming, wireframes first, auto layout and components always.
   For visual reviews or validation of existing FigCraft boards, load `figcraft-design` too:
-  proactively offer conversation and FigCraft side by side, wait for my yes before `ask-to-run`,
-  and offer restoration at the end. No shortcut to remember or automatic window movement.
+  proactively offer a floating, interactive conversation-only terminal on FigCraft's workspace,
+  wait for my yes before `ask-to-run`, and pass your session ID to
+  `claude-sessions design-review start <session-id>`. Never move or resize the cockpit, original
+  CLI window or FigCraft. Offer to close only the float at the end; the agent keeps running.
   In a project with FigCraft designs (the session start lists them), load the `design-first` skill before
   implementing any interface: no design for it means asking whether to design it first.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
