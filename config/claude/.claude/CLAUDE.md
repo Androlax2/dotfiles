@@ -20,6 +20,12 @@ here, follow this file and call out the conflict so I can decide.
 - Before writing new code, look at the surrounding code. Match the existing
   conventions of the repo before inventing new ones.
 - When unsure, ask one focused question instead of guessing.
+- Before ending your turn with a question whose answer you need to proceed, run
+  `claude-needs-input '<the question>'`. This marks your cockpit card as needing
+  my answer until I send a new message. Use a single-line question of at most
+  300 characters; do not flag optional follow-up offers. If the command fails,
+  tell me the flag could not be set. Keep using `ask-to-run` and `ask-to-guide`
+  for approvals and guided steps; this command does not replace them.
 
 ## Tone and output
 
