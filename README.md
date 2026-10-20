@@ -202,6 +202,21 @@ awaiting assignment”. A result arriving at the same time as a changed assignme
 is retained as a session update, not guessed onto either task. Task trails do
 not copy full transcripts or silently restart archived conversations.
 
+**defer-20m** and **bring-back** defer or restore a selected explicit question or
+PR requiring review. A deferred item stays visible and counted; `n` and the
+**attention-filter** action skip deferred questions until their twenty-minute timer expires. A different
+question, a new PR head commit or a changed review decision invalidates the old
+timer. Deferrals survive cockpit restarts; overdue reminders return on launch.
+Approvals, permission dialogs, password/command input and unknown states cannot
+be deferred. Neither deferral nor acknowledgement answers anything, and a
+deferred question still blocks automatic queued work.
+
+Deferral affects **cockpit navigation only**: it does not change desktop banners,
+phone notifications or digests, and it promises no background notification while
+the cockpit is closed. PR deferral requires a known head revision. Existing keys
+keep their meaning: `f` remains unbound following the earlier key audit; use
+**attention-filter** in `:` instead.
+
 ### Out of the sandbox, with my approval
 
 | Command (inside a session) | What happens outside |
