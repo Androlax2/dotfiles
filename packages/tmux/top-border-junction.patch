@@ -1,0 +1,33 @@
+tmux 3.8: clip the focused top junction to its pane.
+
+Opt in per window with: set-option -w @pane-border-clip-top on
+Other windows and interior junctions retain the upstream rendering.
+Applied at draw time so switching focus does not reuse the previous corner.
+
+Upstream: https://github.com/tmux/tmux/tree/3.8
+screen-redraw.c SHA256: 7ef109c63a4a38e79d0101886ca5785db29c9602fdc48bb2d83861c91840ccfc
+
+--- a/screen-redraw.c
++++ b/screen-redraw.c
+@@ -1231,6 +1231,21 @@
+ 		cell_type = span->data.b.cell_type;
+ 	}
+ 
++	/* A cell has one colour, so clip the arm crossing into the other pane. */
++	if (wp != NULL && wp == dctx->active &&
++	    cell_type == CELL_LRD && scene->oy == 0 &&
++	    y == ((dctx->flags & REDRAW_STATUS_TOP) ? dctx->status_lines : 0) &&
++	    span->data.b.left_wp != NULL &&
++	    span->data.b.right_wp != NULL &&
++	    options_get(w->options, "@pane-border-clip-top") != NULL &&
++	    strcmp(options_get_string(w->options, "@pane-border-clip-top"),
++	    "on") == 0) {
++		if (wp == span->data.b.left_wp)
++			cell_type = CELL_LD;
++		else if (wp == span->data.b.right_wp)
++			cell_type = CELL_RD;
++	}
++
+ 	if (wp == NULL) {
+ 		redraw_get_default_border_style(dctx, &gc, &pane_lines);
+ 		if (span->data.type == REDRAW_SPAN_OUTSIDE)
