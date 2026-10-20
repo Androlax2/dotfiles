@@ -205,6 +205,20 @@ Dotfiles changes (audit of 2026-10-19, `docs/security-audit-2026-10-19.md`): no 
 - **Waybar** shows the sessions and the plan usage.
 - **Health**: `claude-sessions doctor` checks every piece, `claude-sessions logs` shows the log, and a weekly timer runs the checks.
 
+### Codex quota sign-in
+
+Codex quota uses a separate ChatGPT sign-in, not OpenCode's account or your usual Codex CLI account. After applying the dotfiles, run on the host:
+
+```bash
+bash ~/.config/waybar/scripts/codex-usage.sh --login
+```
+
+Open the sign-in URL it prints and complete the browser login. No OpenCode or session restart is needed; a successful login immediately refreshes the quota cache. If access is revoked, run the same command again.
+
+The reader needs Python 3 and the official Codex CLI at `~/.local/npm/bin/codex` with the [app-server account interface](https://developers.openai.com/codex/app-server/). It runs a short-lived stdio app-server on the host, outside the agent sandbox, without starting an agent conversation or executing model-generated commands. Codex manages token storage and refresh in a private `codex-quota` directory under `${XDG_DATA_HOME:-~/.local/share}`; treat its `auth.json` as a password and never commit or share it. The reader never opens that file itself.
+
+Polling reuses a successful runtime cache for four minutes. Missing CLI, sign-in or network access leaves the last successful cache unchanged and records an error, rather than switching accounts or presenting failed reads as fresh usage. Check the installed vendor CLI if it is missing or incompatible; `--force` retries a quota read without waiting for the cache to expire.
+
 ### Where it lives
 
 | Path | Role |
