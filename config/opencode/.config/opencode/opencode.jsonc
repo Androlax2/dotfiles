@@ -2,12 +2,19 @@
   // opencode-update (claude-update.timer) is the only updater: it holds a new major version, which
   // broke the cockpit plugin once (1.x to 2.x).
   "autoupdate": false,
+  "plugins": [
+    "@ex-machina/opencode-anthropic-auth@next"
+  ],
   "mcp": {
     // The host launcher selects and forwards only this checkout's reserved port. A missing
     // connection must fail, never fall back to another checkout's app on a default port.
     "figcraft-app": {
       "type": "local",
-      "command": ["sh", "-c", "exec figcraft-cli mcp --attach \"${FIGCRAFT_CONTROL_PORT:?FigCraft is not connected to this checkout}\""]
+      "command": [
+        "sh",
+        "-c",
+        "exec figcraft-cli mcp --attach \"${FIGCRAFT_CONTROL_PORT:?FigCraft is not connected to this checkout}\""
+      ]
     },
     "Astro docs": {
       "type": "remote",
