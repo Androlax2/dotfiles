@@ -83,6 +83,11 @@ pub fn read_hwmon(root: &Path) -> Vec<Reading> {
             if channel.starts_with("temp") && (raw == 0.0 || (firmware_has_board_temperatures && chip.starts_with("it8"))) {
                 continue;
             }
+            // The firmware's temp3 is the CPU's own temperature (it follows k10temp's Tctl to the
+            // degree): kept, it would warn at the board's 85 °C before the CPU's own 90 °C limit.
+            if chip == "gigabyte_wmi" && channel == "temp3" {
+                continue;
+            }
             if channel.starts_with("temp") {
                 let limit = |suffix: &str| read_number(&folder.join(format!("{channel}_{suffix}"))).and_then(|millis| sane_limit(millis / 1000.0));
                 let critical = limit("crit");
@@ -253,6 +258,15 @@ mod tests {
         chip(&root, 8, "it8696", &[("temp1_input", "29000"), ("fan5_input", "2860")], None);
         let keys: Vec<String> = read_hwmon(&root).into_iter().map(|reading| reading.key).collect();
         assert_eq!(keys, ["temp:gigabyte_wmi/temp1", "fan:it8696/fan5"]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_firmwares_copy_of_the_cpu_temperature_is_left_out() {
+        let root = scratch();
+        chip(&root, 3, "gigabyte_wmi", &[("temp1_input", "27000"), ("temp3_input", "88000")], None);
+        let keys: Vec<String> = read_hwmon(&root).into_iter().map(|reading| reading.key).collect();
+        assert_eq!(keys, ["temp:gigabyte_wmi/temp1"]);
         fs::remove_dir_all(root).unwrap();
     }
 
