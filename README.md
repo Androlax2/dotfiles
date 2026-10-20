@@ -347,7 +347,8 @@ make clean-trash    # empty the desktop trash for good
 
 ### Report-only cache maintenance
 
-Two daily timer pairs are prepared in this repo, **not installed or enabled**:
+Two report-only daily timer pairs were installed and enabled on this PC on
+2026-10-20:
 
 - `cache-maintenance-report.timer` (user): inventories only
   `~/IdeaProjects/hartprint/.turbo/cache`. Reports files whose access **and**
@@ -363,23 +364,23 @@ Two daily timer pairs are prepared in this repo, **not installed or enabled**:
   modified within 30 days.
 
 Both use low CPU/I/O priority, catch up after shutdown, and write to the journal.
-After a separately approved installation, reports can be read under the user
+Reports can be read under the user
 `cache-maintenance-report.service` and system `package-cache-report.service` journal
 units. The user script prevents overlapping report runs with a runtime lock.
 
-There is **no deletion mode**. Games, project checkouts, dependencies, Docker data,
+These reports have **no deletion mode**. Games, project checkouts, dependencies, Docker data,
 Rust build output, IDE indexes, other caches, and the existing manual cleanup
 commands are unchanged. Do not schedule `make clean` as a replacement.
 
-These scripts and units execute **outside the agent sandbox** if installed later;
-installation, enabling timers, and any future automatic deletion require separate
-approval. The system service runs only the vendor executable, not checkout code as
+These scripts and units execute **outside the agent sandbox**. Installation on
+another machine, activation changes, and adding deletion behavior require separate
+approval. The system report service runs only the vendor executable, not checkout code as
 root. Run fixture-only regression tests with
 `python3 -m unittest discover -s tools/tests -p 'test_cache_maintenance.py' -v`.
 
 ### Broader disk maintenance
 
-Prepared in the clone, **not installed or enabled**:
+Installed and enabled on this PC on **2026-10-20**:
 
 - **Logs:** native journald retention of 30 days, with daily file rotation.
 - **Package archives:** native `paccache.timer` runs daily, keeping two versions
@@ -390,6 +391,19 @@ Prepared in the clone, **not installed or enabled**:
   and checkouts. The largest 20 of each are written to
   `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
   Vitals announces each new report once. **No games or projects are deleted.**
+
+In this revision, **Vitals → 3 Disques** also shows enabled/disabled/unknown state,
+last/next runs, and running/success/failure results for maintenance tasks. Journald
+retention is separate because it has no cleanup timer. Approved policies are
+labeled as policies, not an audit of custom unit commands. Missing completion
+history never becomes a fabricated successful run.
+
+The same tab includes the monthly review: complete/partial state, measured totals,
+error/unavailable counts, and up to three largest games and projects. Partial sizes
+remain labeled. Use **↑/↓ or j/k** to scroll, **PageUp/PageDown** to page,
+**Home/End** to jump, and **r** to refresh. Long paths wrap, including on narrow
+terminals. The view is read-only: opening it does not start scanning or cleanup.
+The expanded view requires rebuilding the live Vitals binary from this revision.
 
 The review never follows symlinks or nested mount boundaries. Skipped paths produce
 explicit errors and partial-size labels, not zero-byte success. It runs as your
@@ -405,10 +419,11 @@ Turbo stays report-only. Existing manual cleanup commands are unchanged.
 
 Host-executed changes are the journald drop-in, vendor paccache service/timer
 drop-ins, package-report command, monthly report script/unit pair, and Vitals
-collector. They run **outside the sandbox** after a separately approved deployment.
-No dependency manifest, Makefile recipe, or enabled-service list was changed.
+collector. They run **outside the sandbox** after reviewed deployment.
+No dependency manifest changed. The Makefile test target builds the real OSD
+classifier before testing; `services.txt` records the enabled native system timers.
 
-Activation checklist (future approval required; not performed here):
+Activation checklist for another machine or a future reinstall (approval required):
 
 1. Review/apply the clone through the normal dotfiles workflow, including the Vitals
    build and updated user links; review each system-file diff before installation.
@@ -416,9 +431,10 @@ Activation checklist (future approval required; not performed here):
    overrides can affect an already-active timer, so check its state before install.
 3. Reload journald if supported; otherwise request approval for a restart. Do not
    run a one-off vacuum or broad `make clean` to "test" retention.
-4. After approval, enable the native `paccache.timer` and the user
-   `disk-space-review.timer`; keep cache-report services dry-run. Reflect the actual
-   enabled system timer in `services.txt` only as part of approved deployment.
+4. After approval, enable system `paccache.timer` and `package-cache-report.timer`,
+   and user `cache-maintenance-report.timer` and `disk-space-review.timer`.
+   Keep report services dry-run. Record enabled system timers only as part of
+   approved deployment.
 5. Verify next runs, actual completion results, report location, and Vitals delivery.
    Game/checkout removal remains a new, explicit approval every time.
 

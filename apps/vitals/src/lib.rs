@@ -9,6 +9,7 @@ pub mod facts;
 pub mod games;
 pub mod import;
 pub mod journal;
+pub mod maintenance;
 pub mod sensors;
 pub mod store;
 pub mod summary;

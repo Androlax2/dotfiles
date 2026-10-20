@@ -238,3 +238,36 @@ Final follow-up verification:
 **Current status:** maintenance implementation and test-setup fixes are verified.
 Everything remains in the clone: no installation, enabling, service reload,
 automatic live pruning, or git writes have occurred.
+
+## Approved deployment and activation (2026-10-20)
+
+The above preparation status is historical. The user subsequently approved feature
+commits, fetching/rebasing onto live dotfiles, and a reviewed host-side patch apply.
+The branch rebased cleanly onto `235458d`; verification passed 1,067 Rust tests and
+50 Python tests before application. The live checkout rebuilt/tested successfully,
+and the cockpit reloaded through an approved host command.
+
+The user then separately approved installing and enabling maintenance. A checksummed
+handoff installed only the three reviewed native policy drop-ins and two system
+report unit files, using the existing per-file diff/approval installer. It linked
+only the six known user script/unit files and refused conflicting destinations.
+Native policy installation was verified before enabling the cleaner. Journald was
+reloaded/restarted; all four maintenance timers were confirmed active and enabled.
+Existing SMART/TRIM, audit retention, games, projects, and unrelated user links were
+left unchanged. The handoff is an untracked deployment artifact, not source to stage.
+
+Post-activation verification:
+
+- Journald: `MaxRetentionSec=30day`, `MaxFileSec=1day`.
+- Native paccache command: fixed cache path, two versions, and both 30-day guards;
+  `ProtectSystem=strict`, only `/var/cache/pacman/pkg` writable.
+- Package/Turbo report services: `Result=success`, `ExecMainStatus=0`.
+- Native paccache had not run yet; its default `Result=success` with empty execution
+  timestamps is **not proof of completed cleanup**. First scheduled run was around
+  00:50 on 2026-10-21, with daily randomized scheduling afterward.
+- Monthly review completed with a published **partial** report: 28 games and
+  71 checkouts measured, `complete=false`, `omitted_errors=92713`, service exit 1.
+  Do not describe it as a successful complete scan or silently ignore skipped paths.
+- Native enabled timers are recorded in `services.txt` as part of the subsequent
+  approved Vitals visibility update. That view remains clone-only until its own
+  separately reviewed commit/application/rebuild.

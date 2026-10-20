@@ -14,6 +14,8 @@ fstrim.timer
 keyd.service
 lactd.service
 nftables.service
+paccache.timer
+package-cache-report.timer
 piavpn.service
 sddm.service
 seatd.service
