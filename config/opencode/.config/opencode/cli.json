@@ -7,9 +7,12 @@
     "wrap": "word"
   },
   "session": {
-    "sidebar": "auto",
+    "sidebar": "hide",
     "scrollbar": false,
     "thinking": "show"
+  },
+  "tabs": {
+    "mode": "off"
   },
   "animations": true,
   "keybinds": {
