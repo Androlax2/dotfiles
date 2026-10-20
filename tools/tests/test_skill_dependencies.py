@@ -42,6 +42,10 @@ class SkillDependencyTests(unittest.TestCase):
                     superpowers = [command for command in commands if "obra/superpowers" in command]
                     self.assertEqual(len(superpowers), 1, commands)
                     command = superpowers[0]
+                    requested_agents = [command[index + 1] for index, argument in enumerate(command)
+                                        if argument == "--agent"]
+                    self.assertIn("codex", requested_agents,
+                                  "shared helpers must also be installed in ~/.agents/skills")
                     requested_skills = [command[index + 1] for index, argument in enumerate(command)
                                         if argument == "--skill"]
                     self.assertIn("subagent-driven-development", requested_skills,

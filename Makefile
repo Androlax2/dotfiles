@@ -84,8 +84,8 @@ zen: ## Link the Zen userChrome and prefs into the default Zen profile
 # managed; --user keeps these out of the system site-packages.
 # Only what is listed but missing gets installed (same comparison as check-packages),
 # so a second run changes nothing.
-# Skills are grouped per source repo so each repo is cloned once, and target claude-code
-# because it is the only agent here that needs links outside ~/.agents/skills.
+# Group skills per source repo so each repo is cloned once. Target Codex to populate
+# ~/.agents/skills for sibling-script dependencies, plus Claude Code's own directory.
 missing = comm -23 <(sort packages/$(1).txt) <($(installed_$(1)) | sort)
 global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages, agent skills and Claude plugins
 	$(call missing,npm) | xargs --no-run-if-empty npm install -g
@@ -95,7 +95,7 @@ global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages, age
 	$(call missing,go) | xargs --no-run-if-empty -I{} go install {}@latest
 	$(call missing,composer) | xargs --no-run-if-empty composer global require
 	$(call missing,skills) | awk '{skills[$$1] = skills[$$1] " --skill " $$2} END {for (source in skills) print source skills[source]}' \
-	    | xargs --no-run-if-empty -L1 npx --yes skills add --global --agent claude-code --yes
+	    | xargs --no-run-if-empty -L1 npx --yes skills add --global --agent claude-code --agent codex --yes
 	@# The real binary: the fish `claude` function would run this inside greywall, where ~/.claude/plugins
 	@# is read-only. The same goes for the plugin's data folder, which Claude Code creates before running
 	@# a plugin's hooks; it is made here once, or every sandboxed session fails at start (EROFS).
