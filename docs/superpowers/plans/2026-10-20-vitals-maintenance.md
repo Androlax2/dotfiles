@@ -141,3 +141,28 @@ live maintenance settings were modified by this UI implementation.
 
 Both implementation tasks are complete in the clone. Commit, patch application,
 and live rebuild of this UI revision still require separate authorization.
+
+## Post-rebase deployment verification
+
+The user then explicitly approved committing, fetching/rebasing this unpushed branch,
+and opening the live application approval. The UI commit rebased cleanly onto
+`708e336`. Python tests and their inputs were unchanged by the rebase; their last
+approved run remains 50 passed. Targeted Vitals tests after rebase passed all 129:
+103 unit, 9 collector, 6 delivery, and 11 maintenance integration tests.
+
+The full repository suite on this newer base is **not green**:
+
+- First `make test` exited 2 in untouched `craft_open` with
+  `simultaneous_opens_of_different_checkouts_get_distinct_ports`:
+  `test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.34s`.
+  The mock listener did not appear within the fixture's 2-second limit. The exact
+  test and all 18 tests in that group subsequently passed without source changes.
+- A second unmodified full run exited 2 because `waybar_claude_scripts` was killed:
+  `process didn't exit successfully: ... --quiet (signal: 50)`.
+  The untouched registry sends `pkill -RTMIN+16 waybar` without exact-name matching;
+  an external refresh signal matching the test name is a hypothesis, not a
+  confirmed sender/root cause.
+
+Separate follow-ups were proposed. No assertions, timeouts, signal dispositions,
+or test execution settings were weakened to manufacture a green suite. These
+failures must be disclosed in the live application approval and final result.
