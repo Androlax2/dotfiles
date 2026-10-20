@@ -33,7 +33,7 @@ function claude
         read -l -n 1 -P $prompt choice; or return 130
         switch $choice
             case '' m M
-                claude-sessions new (pwd) $argv; and claude-sessions show
+                claude-sessions --agent claude new (pwd) $argv; and claude-sessions show
                 return
             case t T
                 # Run right here, below. The marker reaches the session (the retry wrapper carries the
