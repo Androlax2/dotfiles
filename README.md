@@ -468,6 +468,15 @@ Installed and enabled on this PC on **2026-10-20**:
   and checkouts. The largest 20 of each are written to
   `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
   Vitals announces each new report once. **No games or projects are deleted.**
+- **greyproxy.db:** greyproxy keeps every captured request forever, so
+  `greyproxy-prune.timer` (user, daily) deletes traffic history (transactions,
+  request logs, middleware events, conversations) older than 14 days, then the
+  oldest transactions and conversations until the data fits in 4 GB, in small
+  batches next to the running proxy. Rules, pending requests, sessions and
+  credentials are never touched. It fails (and logs a WARN) when the data still
+  exceeds 4 GB. Freed space returns to disk once the file was compacted:
+  `systemctl --user stop greyproxy; greyproxy-prune --compact; systemctl --user start greyproxy`.
+  Tests: `python3 -m unittest discover -s tools/tests -p 'test_greyproxy_prune.py' -v`.
 
 In this revision, **Vitals → 3 Disques** opens with one plain-language status and
 at most one contextual action. Healthy routine maintenance does not become a to-do
