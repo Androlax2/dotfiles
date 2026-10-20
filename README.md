@@ -396,19 +396,31 @@ Installed and enabled on this PC on **2026-10-20**:
   Vitals announces each new report once. **No games or projects are deleted.**
 
 In this revision, **Vitals → 3 Disques** opens with one plain-language status and
-at most three useful actions. Healthy routine maintenance does not become a to-do
-list; low space, SSD warnings, stale reports, and actual failures take priority.
-Technical policy/timestamp details stay hidden until requested.
+at most one contextual action. Healthy routine maintenance does not become a to-do
+list: reading a report is explicitly optional if you want to free space, including
+when an older report is available during a new scan. A first scan already running
+needs no further action: you can close Vitals and wait for its notification, with
+no redundant action or Enter instruction. Low space, SSD warnings, stale reports,
+and actual failures take priority.
+For a non-boot space warning, the action reads an existing report or prepares a
+missing/invalid one. If the first report is already running, the warning instead
+offers Details and explains that its notification is still pending; boot-volume
+warnings keep their Details action.
+Technical diagnostics, counts, paths, schedules, and manual checks stay under Details.
 
-Use **↑/↓ or j/k** to select, then **Enter** to read the space review or request a
-read-only check. Only the two known user report services can be requested: a new
+When an action is offered, use **Enter** to read the space review, prepare a first
+or updated read-only review when needed, or understand a warning. Under **d** (Details),
+**a** requests a space review and **t** requests the Turbo dry-run report.
+Only the two known user report services can be requested: a new
 space review or the Turbo dry-run report. They run asynchronously; a queued request
 is not shown as completed, an already-running check is not started again, and
-failure feedback remains visible. There are no prune/delete/admin controls.
+failure feedback remains visible, with raw errors in Details. An SSD-critical warning
+blocks both manual reports to avoid adding load. There are no prune/delete/admin controls.
 
-The review shows the largest games/projects and up to three diagnostic paths with
-specific, safe guidance. Expected symlink skips are separate from actual errors;
-old reports lacking that count remain explicitly unknown. Analyzed-file permissions
+The review shows the largest games/projects with readable names and sizes, retaining
+project context for parallel checkouts. Incomplete data gets a short warning, not a
+list of diagnostic paths or counts. Details preserve actual errors and expected
+symlink skips separately; old reports remain explicitly uncertain. Analyzed-file permissions
 are never changed automatically; game/project removal remains a separate manual decision. Partial sizes stay
 labeled; a large directory is not evidence it is unused.
 
@@ -416,7 +428,7 @@ Use **d** for full SMART/space/maintenance details and **b** or **Backspace** to
 return to the short view. Arrows scroll in the review/details, **PageUp/PageDown**
 page, and **Home/End** jump. **r** rereads the current state; it does not launch a
 new scan. Opening Vitals also starts no scan or cleanup. Long paths wrap on narrow
-terminals, and the selected action and footer remain reachable.
+terminals; the optional action or waiting reassurance and essential footer fit a 40×12 summary.
 
 Details preserve enabled/disabled/unknown state, last/next runs, and real run
 results. Journald retention is separate because it has no cleanup timer. Approved
