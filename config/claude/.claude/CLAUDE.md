@@ -271,8 +271,10 @@ assumptions, and tell me when it reports something missing that the task needs.
   are not in your tool list (FigCraft did not serve this project when this session started: only
   then does the launcher forward its port), add `--session $CLAUDE_CODE_SESSION_ID`: the cockpit
   restarts you when your turn ends, keeping the conversation, and tells you to carry on. Exit 3
-  means FigCraft is open for another folder, or a session of another project still has its port:
-  I close or restart those first. Before any design work in FigCraft, load the `figcraft-design` skill and follow
+  means this checkout's reserved port is occupied by an unverified listener, or another checkout's
+  old session still reaches it: ask me before resolving the conflict. Other projects' FigCraft
+  windows stay open; each checkout (parallel clones included) gets its own port and private
+  preferences/recovery directory. Before any design work in FigCraft, load the `figcraft-design` skill and follow
   it: ask instead of assuming, wireframes first, auto layout and components always. In a project
   with FigCraft designs (the session start lists them), load the `design-first` skill before
   implementing any interface: no design for it means asking whether to design it first.

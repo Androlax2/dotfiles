@@ -3,12 +3,11 @@
   // broke the cockpit plugin once (1.x to 2.x).
   "autoupdate": false,
   "mcp": {
-    // FigCraft's tools, as Claude Code's figcraft-app: registered for every project, it reaches
-    // FigCraft only in the project FigCraft serves (the launcher forwards port 7979 there alone;
-    // craft-open starts FigCraft and restarts the session to load it).
+    // The host launcher selects and forwards only this checkout's reserved port. A missing
+    // connection must fail, never fall back to another checkout's app on a default port.
     "figcraft-app": {
       "type": "local",
-      "command": ["figcraft-cli", "mcp", "--attach", "7979"]
+      "command": ["sh", "-c", "exec figcraft-cli mcp --attach \"${FIGCRAFT_CONTROL_PORT:?FigCraft is not connected to this checkout}\""]
     },
     "Astro docs": {
       "type": "remote",
