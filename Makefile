@@ -127,7 +127,8 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 
 ##@ Keep the repo in sync
 
-test: ## [read-only] Run the tests of apps/ (wrappers, the Claude session manager, its daemon, hook and programs)
+test: ## Build the OSD classifier and run the apps/ test suite
+	cargo build --release --quiet --manifest-path apps/Cargo.toml -p desktop --bin osd
 	cargo test --release --quiet --manifest-path apps/Cargo.toml
 
 cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); claude-sessions reload shows the column
