@@ -271,11 +271,13 @@ assumptions, and tell me when it reports something missing that the task needs.
   says why); 125: I closed it; 124: still open, `ask-to-guide --wait <id>`; 126: no daemon, list
   the steps in the chat.
 - **FigCraft**: when I ask you to connect to FigCraft (or a task needs it), ask me to run
-  `craft-open figcraft` with `ask-to-run`, `--cwd` the project root. It starts FigCraft limited to
-  this project, on the port your `figcraft-app` MCP server attaches to. If the `figcraft-app` tools
-  are not in your tool list (FigCraft did not serve this project when this session started: only
-  then does the launcher forward its port), add `--session $CLAUDE_CODE_SESSION_ID`: the cockpit
-  restarts you when your turn ends, keeping the conversation, and tells you to carry on. Exit 3
+  `craft-open figcraft --session <your-session-id>` with `ask-to-run`, `--cwd` the project root
+  (in Claude Code, use `$CLAUDE_CODE_SESSION_ID`). Always pass your session id, even when the
+  `figcraft-app` tools are already listed: they may still use an old port such as 7979. Opening
+  FigCraft alone changes neither a running sandbox's forwards nor its MCP connection. The cockpit
+  restarts you when your turn ends, keeping the conversation, and tells you to carry on; wait for
+  that restart before calling FigCraft tools. The new launcher connects only to this checkout's
+  verified reserved port. Exit 3
   means this checkout's reserved port is occupied by an unverified listener, or another checkout's
   old session still reaches it: ask me before resolving the conflict. Other projects' FigCraft
   windows stay open; each checkout (parallel clones included) gets its own port and private
