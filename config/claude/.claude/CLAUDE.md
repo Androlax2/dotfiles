@@ -12,6 +12,10 @@ here, follow this file and call out the conflict so I can decide.
 
 ---
 
+## Skill activation
+
+@~/.agents/skill-activation.md
+
 ## Operating mode
 
 - Never edit, install, migrate, or change state without an explicit
