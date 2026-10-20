@@ -187,6 +187,21 @@ seconds, not an exact promised start time. The view never dispatches work or
 fetches GitHub data; unavailable issue data is labelled explicitly. `Q` still
 queues or unqueues a To do item.
 
+**task-trail** works from Sessions, Pull requests and Todo. It connects a task
+to every recorded session, unambiguous observed results, and exact
+repository/head-branch PR matches. Enter lists navigation actions; opening a PR
+never merges it. Multiple matches remain choices rather than a guessed owner.
+When Todo retention or a closed/deleted issue removes the source, its link opens
+archived details instead of recreating work. Missing or stale GitHub data is not
+presented as proof that there is no PR or that a vanished PR was merged.
+
+New handoffs ask the agent to run `claude-todo start <id>` before working so a
+background session can identify its assignment. Until that update (or an exact
+task branch with a known repository identity), the trail says “Starting;
+awaiting assignment”. A result arriving at the same time as a changed assignment
+is retained as a session update, not guessed onto either task. Task trails do
+not copy full transcripts or silently restart archived conversations.
+
 ### Out of the sandbox, with my approval
 
 | Command (inside a session) | What happens outside |
