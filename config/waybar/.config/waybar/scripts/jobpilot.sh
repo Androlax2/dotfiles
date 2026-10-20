@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Waybar custom module: jobpilot status. Text is "applications sent automatically today" plus
-# "(N)" while N matches wait for manual intervention; the tooltip lists both and reports the last hourly run.
+# Waybar custom module: applications sent automatically today plus "(N)" recently found manual
+# offers. The tooltip keeps the not-returned/unknown backlog visible and reports the hourly run.
 # state.json is read-only here: jobpilot rewrites it whole, so any write of ours would race and lose data.
 # A read that lands mid-rewrite fails to parse; it is retried once, then shown as a neutral "–".
 # JOBPILOT_STATE overrides the path for testing against a fixture.
@@ -34,9 +34,10 @@ read -r -d '' PROGRAM <<'JQ'
 def epoch:
   if . == null then null
   else
-    (capture("^(?<base>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})(\\.[0-9]+)?(?<zone>Z|(?<sign>[+-])(?<hours>[0-9]{2}):(?<minutes>[0-9]{2}))$")
+    (capture("^(?<base>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})(?<fraction>\\.[0-9]+)?(?<zone>Z|(?<sign>[+-])(?<hours>[0-9]{2}):(?<minutes>[0-9]{2}))$")
       // error("unrecognised timestamp \(.)")) as $parts
     | ("\($parts.base)Z" | fromdateiso8601)
+      + (("0" + ($parts.fraction // "")) | tonumber)
       - (if $parts.zone == "Z" then 0
          else ($parts.hours | tonumber) * 3600 + ($parts.minutes | tonumber) * 60
               | if $parts.sign == "-" then -. else . end
@@ -47,6 +48,10 @@ def pango: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
 def platform: split(":")[0];
 def header: "<span color='#7aa2f7'><b>\(.)</b></span>";
 def job_line: "\(.title // "?" | pango) <span color='#a9b1d6'>— \(.company // "?" | pango)</span>";
+def platform_name: (.offer.platform // "unknown") | if . == "" then "unknown" else . end;
+def latest_check:
+  [.[] | .availability.checkedAt | select(. != null) | {stamp: ., epoch: epoch}]
+  | if length == 0 then "never" else max_by(.epoch).stamp end;
 # Long lists would push the run status off the bottom of the tooltip.
 def capped($limit): .[:$limit][], (if length > $limit then "    <span color='#565f89'>+\(length - $limit) more</span>" else empty end);
 
@@ -55,7 +60,10 @@ def capped($limit): .[:$limit][], (if length > $limit then "    <span color='#56
 | [$applications | to_entries[] | select(.value.sentAt | is_today) | .value + {platform: (.key | platform)}] as $auto
 | [$manual[] | select(.status == "sent" and (.resolvedAt | is_today))] as $by_hand
 | [$manual | to_entries[] | .key as $key | select(.value.status == "pending" and ($applications | has($key) | not)) | .value] as $pending
-| [$pending[] | select(.firstSeenAt | is_today)] as $new_pending
+| [$pending[] | select(.availability.status == "recently-found")] as $recent
+| [$pending[] | select(.availability.status == "not-returned")] as $missing
+| [$pending[] | select(.availability.status != "recently-found" and .availability.status != "not-returned")] as $unknown
+| [$recent[] | select(.firstSeenAt | is_today)] as $new_pending
 | ($run_state == "active" or $run_state == "activating") as $is_running
 | ([
     if $last_exit == "2" then "critical" else empty end,
@@ -64,7 +72,7 @@ def capped($limit): .[:$limit][], (if length > $limit then "    <span color='#56
     if ($pending | length) > 0 then "attention" else empty end
   ]) as $classes
 | {
-    text: ("\($auto | length)" + (if ($pending | length) > 0 then " (\($pending | length))" else "" end)),
+    text: ("\($auto | length)" + (if ($recent | length) > 0 then " (\($recent | length))" else "" end)),
     tooltip: ([
         ("Sent automatically today  \($auto | length)" | header),
         (if ($auto | length) == 0 then "    none"
@@ -74,8 +82,16 @@ def capped($limit): .[:$limit][], (if length > $limit then "    <span color='#56
         "",
         ("By hand today  \($by_hand | length)" | header),
         "",
-        ("Needs manual intervention  \($pending | length)" + (if ($new_pending | length) > 0 then " (+\($new_pending | length) new today)" else "" end) | header),
-        ($pending | sort_by(.firstSeenAt | epoch) | reverse | map("    \(.offer | job_line)") | capped(10)),
+        ("Recently found  \($recent | length)" + (if ($new_pending | length) > 0 then " (+\($new_pending | length) new today)" else "" end) | header),
+        ($recent | sort_by(.firstSeenAt | epoch) | reverse | map("    \(.offer | job_line)") | capped(10)),
+        ("Not returned  \($missing | length)" | header),
+        ("Unknown  \($unknown | length)" | header),
+        "    Search absence does not prove a job is closed.",
+        "    Full backlog: jobpilot manual --all",
+        "",
+        ("Latest checks by platform" | header),
+        (if ($pending | length) == 0 then "    no pending offers"
+         else ($pending | group_by(platform_name)[] | "    \(.[0] | platform_name | pango): \(latest_check | pango)") end),
         "",
         ("Last run" | header),
         (if $is_running then "    in progress"
@@ -83,10 +99,10 @@ def capped($limit): .[:$limit][], (if length > $limit then "    <span color='#56
          elif $last_exit == "1" then "    <span color='#ff9e64'>exit 1, a search or application failed</span>"
          elif $last_exit == "2" then "    <span color='#f7768e'>exit 2, credentials need refreshing</span>"
          elif $last_exit == "" then "    unknown (no user systemd bus)"
-         else "    exit \($last_exit)" end),
-        "    next  \(if $next_run == "" then "unknown" else $next_run end)",
+          else "    exit \($last_exit | pango)" end),
+        "    next  \((if $next_run == "" then "unknown" else $next_run end) | pango)",
         "",
-        "<span color='#565f89'>Click: triage pending · Right-click: last run log</span>"
+        "<span color='#565f89'>Click: triage recently found · Right-click: last run log</span>"
       ] | join("\n")),
     class: $classes,
     alt: ($classes[0] // "idle")
