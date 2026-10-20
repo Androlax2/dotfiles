@@ -62,6 +62,7 @@ ibelick/ui-skills ui-skills-root
 obra/superpowers brainstorming
 obra/superpowers dispatching-parallel-agents
 obra/superpowers executing-plans
+obra/superpowers subagent-driven-development
 obra/superpowers systematic-debugging
 obra/superpowers test-driven-development
 obra/superpowers writing-plans
