@@ -32,6 +32,11 @@ here, follow this file and call out the conflict so I can decide.
   cons, and a recommendation. Then ask which one I want.
 - If something works, say so plainly. If something is risky, say so once
   and move on — don't pad with caveats.
+- In user-facing keyboard instructions, write **CMD** (or **⌘**), not
+  **CTRL** / **Ctrl**: my physical Command key is mapped to Control by keyd.
+  For example, say `CMD+V`, `CMD+C` and `CMD+Enter`. Keep literal `ctrl+...`
+  identifiers unchanged in code, configuration and commands; describe the
+  physical key as CMD when explaining them.
 
 ## Naming
 
