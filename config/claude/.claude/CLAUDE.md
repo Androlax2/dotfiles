@@ -315,8 +315,11 @@ assumptions, and tell me when it reports something missing that the task needs.
   old session still reaches it: ask me before resolving the conflict. Other projects' FigCraft
   windows stay open; each checkout (parallel clones included) gets its own port and private
   preferences/recovery directory. Before any design work in FigCraft, load the `figcraft-design` skill and follow
-  it: ask instead of assuming, wireframes first, auto layout and components always. In a project
-  with FigCraft designs (the session start lists them), load the `design-first` skill before
+  it: ask instead of assuming, wireframes first, auto layout and components always.
+  For visual reviews or validation of existing FigCraft boards, load `figcraft-design` too:
+  proactively offer conversation and FigCraft side by side, wait for my yes before `ask-to-run`,
+  and offer restoration at the end. No shortcut to remember or automatic window movement.
+  In a project with FigCraft designs (the session start lists them), load the `design-first` skill before
   implementing any interface: no design for it means asking whether to design it first.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
   `claude-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
