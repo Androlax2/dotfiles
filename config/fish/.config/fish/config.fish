@@ -38,7 +38,7 @@ function claude
             case t T
                 # Run right here, below. The marker reaches the session (the retry wrapper carries the
                 # environment): its card says "terminal", and the cockpit's restart-all, restore,
-                # queue, error hand-off, ask-to-run and ask-to-guide leave it alone.
+                # queue, error hand-off and ask-to-guide leave it alone. ask-to-run still asks for approval.
                 set -fx CLAUDE_SESSIONS_TERMINAL 1
             case '*'
                 echo "claude: cancelled"
