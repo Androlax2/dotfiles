@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Report old Hartprint cache files; never delete or certify deletion safety."""
+
+import contextlib
+import fcntl
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+import time
+
+
+RETENTION_DAYS = 30
+ENTRY_SAMPLE_LIMIT = 20
+CACHE_PARTS = ("IdeaProjects", "hartprint", ".turbo", "cache")
+
+
+@contextlib.contextmanager
+def open_directory(path):
+    """Pin directory components without following symlinks, including ancestors."""
+    path = Path(path)
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"directory must be an absolute path without '..': {path}")
+    descriptor = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for component in path.parts[1:]:
+            child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                            dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        yield descriptor
+    finally:
+        os.close(descriptor)
+
+
+@contextlib.contextmanager
+def report_lock(runtime):
+    with open_directory(runtime) as directory:
+        if os.fstat(directory).st_uid != os.getuid():
+            raise ValueError("runtime directory must be owned by the current user")
+        descriptor = os.open("cache-maintenance-report.lock",
+                             os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                             0o600, dir_fd=directory)
+        try:
+            metadata = os.fstat(descriptor)
+            if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid()
+                    or metadata.st_nlink != 1):
+                raise ValueError("runtime lock must be an owned, unlinked-to regular file")
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise ValueError("cache report is already running") from error
+            yield
+        finally:
+            os.close(descriptor)
+
+
+def is_old(metadata, now):
+    cutoff = now - RETENTION_DAYS * 86400
+    return metadata.st_atime < cutoff and metadata.st_mtime < cutoff
+
+
+def inspect_cache(home, now):
+    cache = home.joinpath(*CACHE_PARTS)
+    report = {
+        "mode": "report-only",
+        "cache": str(cache),
+        "retention_days": RETENTION_DAYS,
+        "verified_safe_for_deletion": False,
+        "observed_files": 0,
+        "old_files": 0,
+        "estimated_old_allocated_bytes": 0,
+        "old_entries": [],
+        "old_entries_omitted": 0,
+        "warning": "Provisional file inventory, not complete Turbo cache entries or guaranteed reclaimable bytes. Entry format and build coordination remain unverified.",
+    }
+    with contextlib.ExitStack() as directories:
+        descriptor = directories.enter_context(open_directory(home))
+        for component in CACHE_PARTS:
+            try:
+                child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                dir_fd=descriptor)
+            except FileNotFoundError:
+                return report
+            directories.callback(os.close, child)
+            descriptor = child
+        for name in sorted(os.listdir(descriptor)):
+            metadata = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            if not stat.S_ISREG(metadata.st_mode):
+                raise ValueError(f"cache entry is not a regular file: {name!r}")
+            report["observed_files"] += 1
+            if is_old(metadata, now):
+                report["old_files"] += 1
+                report["estimated_old_allocated_bytes"] += metadata.st_blocks * 512
+                if len(report["old_entries"]) < ENTRY_SAMPLE_LIMIT:
+                    report["old_entries"].append(name)
+                else:
+                    report["old_entries_omitted"] += 1
+    return report
+
+
+def main():
+    try:
+        if len(sys.argv) != 1:
+            raise ValueError("no arguments accepted; this program is report-only")
+        home = os.environ.get("HOME")
+        runtime = os.environ.get("XDG_RUNTIME_DIR")
+        if not home or not runtime:
+            raise ValueError("HOME and XDG_RUNTIME_DIR must be set")
+        with report_lock(runtime):
+            report = inspect_cache(Path(home), time.time())
+            print(json.dumps(report, sort_keys=True))
+        return 0
+    except (OSError, ValueError) as error:
+        print(f"cache-maintenance-report: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

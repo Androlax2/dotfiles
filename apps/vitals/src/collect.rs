@@ -11,7 +11,8 @@ use crate::sensors::{self, Kind};
 use crate::store::{Alert, KEEP_SAMPLES_S, Store};
 use serde_json::json;
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
 const WAYBAR_SIGNAL: &str = "-RTMIN+17";
 const NOTICE_TITLE: &str = "PC";
@@ -152,6 +153,47 @@ pub fn care_findings(store: &Store, now: i64) -> Vec<Finding> {
                               detail: format!("{} {}", task.why, task.how) }).collect()
 }
 
+/// Announce an advisory report once, acknowledging only successful delivery.
+pub fn announce_disk_review(store: &Store, path: &Path, now: i64, is_gaming: bool,
+                            send: &mut dyn FnMut(&str, &str) -> bool) -> Result<(), String> {
+    let metadata = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error.to_string()),
+    };
+    if !metadata.is_file() {
+        return Err("report must be a regular file, not a symlink".into());
+    }
+    let mut content = Vec::new();
+    std::fs::File::open(path).map_err(|error| error.to_string())?.take(1_048_577)
+        .read_to_end(&mut content).map_err(|error| error.to_string())?;
+    if content.len() > 1_048_576 {
+        return Err("report exceeds 1 MiB".into());
+    }
+    let report: serde_json::Value = serde_json::from_slice(&content).map_err(|error| error.to_string())?;
+    if report["schema_version"].as_u64() != Some(1) || report["advisory_only"].as_bool() != Some(true)
+        || !["games", "checkouts", "errors"].iter().all(|key| report[*key].as_array().is_some_and(|items| items.len() <= 20)) {
+        return Err("invalid advisory report schema".into());
+    }
+    let completed = report["completed_at"].as_i64().filter(|stamp| *stamp > 0 && *stamp <= now)
+        .ok_or("invalid report completion time")?;
+    let complete = report["complete"].as_bool().ok_or("missing report completeness")?;
+    let previous = store.state("disk_review_notified_at").map_err(|error| error.to_string())?
+        .map(|stamp| stamp.parse::<i64>()).transpose().map_err(|error| error.to_string())?;
+    if is_gaming || previous.is_some_and(|stamp| stamp >= completed) {
+        return Ok(());
+    }
+    let detail = if complete {
+        format!("Revue mensuelle disponible : {}. Toute suppression demande ton accord.", path.display())
+    } else {
+        format!("Revue mensuelle partielle : {}. Certains chemins n'ont pas pu être mesurés. Aucune suppression automatique.", path.display())
+    };
+    if send("Espace disque : revue mensuelle", &detail) {
+        store.set_state("disk_review_notified_at", &completed.to_string()).map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 pub fn run() -> Result<(), String> {
     let store = Store::open().map_err(|error| format!("cannot open the history: {error}"))?;
     let now = cockpit::util::now_secs();
@@ -172,6 +214,11 @@ pub fn run() -> Result<(), String> {
     if changed {
         let _ = std::process::Command::new("pkill").args([WAYBAR_SIGNAL, "waybar"]).status();
     }
+    let review = cockpit::paths::state_home().join("disk-maintenance/latest.json");
+    announce_disk_review(&store, &review, now, cockpit::util::gaming(), &mut |title, detail| {
+        notify(&Alert { key: "disk-review".into(), level: "warn".into(), title: title.into(), detail: detail.into(),
+                        since: now, notified: false })
+    }).map_err(|error| format!("disk review: {error}"))?;
     Ok(())
 }
 

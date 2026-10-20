@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""Inventory explicit game/project roots for human review, never for deletion."""
+
+import contextlib
+import fcntl
+import json
+import os
+from pathlib import Path
+import resource
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+
+
+LIMIT = 20
+DIRECTORY_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+WARNING = ("Advisory only: sizes are non-additive across entries sharing hardlinks. "
+           "Git summaries do not certify backups, ignored files, worktree contents, "
+           "or active sessions. Every removal requires fresh explicit approval.")
+
+
+@contextlib.contextmanager
+def open_directory(path, create=False):
+    path = Path(path)
+    if not path.is_absolute() or ".." in path.parts:
+        raise ValueError(f"expected absolute directory without '..': {path}")
+    descriptor = os.open("/", DIRECTORY_FLAGS)
+    try:
+        for component in path.parts[1:]:
+            try:
+                child = os.open(component, DIRECTORY_FLAGS, dir_fd=descriptor)
+            except FileNotFoundError:
+                if not create:
+                    raise
+                os.mkdir(component, 0o700, dir_fd=descriptor)
+                child = os.open(component, DIRECTORY_FLAGS, dir_fd=descriptor)
+            os.close(descriptor)
+            descriptor = child
+        yield descriptor
+    finally:
+        os.close(descriptor)
+
+
+@contextlib.contextmanager
+def review_lock(runtime):
+    with open_directory(runtime) as directory:
+        if os.fstat(directory).st_uid != os.getuid():
+            raise ValueError("runtime directory must belong to the current user")
+        descriptor = os.open("disk-space-review.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK,
+                             0o600, dir_fd=directory)
+        try:
+            metadata = os.fstat(descriptor)
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid() or metadata.st_nlink != 1:
+                raise ValueError("invalid runtime lock")
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise ValueError("disk review already running") from error
+            yield
+        finally:
+            os.close(descriptor)
+
+
+def allocated_bytes(directory, device, seen, report, path):
+    metadata = os.fstat(directory)
+    identity = (metadata.st_dev, metadata.st_ino)
+    if identity in seen:
+        return 0, True
+    seen.add(identity)
+    total = metadata.st_blocks * 512
+    complete = True
+    for name in os.listdir(directory):
+        try:
+            metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            if metadata.st_dev != device:
+                raise ValueError("skipped filesystem boundary")
+            if stat.S_ISLNK(metadata.st_mode):
+                raise ValueError("skipped symlink")
+            if stat.S_ISDIR(metadata.st_mode):
+                child = os.open(name, DIRECTORY_FLAGS, dir_fd=directory)
+                try:
+                    if os.fstat(child).st_dev != device:
+                        raise ValueError("changed filesystem boundary")
+                    size, child_complete = allocated_bytes(child, device, seen, report, path / name)
+                    total += size
+                    complete = complete and child_complete
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(metadata.st_mode):
+                identity = (metadata.st_dev, metadata.st_ino)
+                if identity not in seen:
+                    total += metadata.st_blocks * 512
+                    seen.add(identity)
+            else:
+                raise ValueError("skipped non-regular entry")
+        except (OSError, ValueError, RecursionError) as error:
+            complete = False
+            record_error(report, path / name, error)
+    return total, complete
+
+
+def limit_git_output():
+    resource.setrlimit(resource.RLIMIT_FSIZE, (262144, 262144))
+
+
+def run_git(project, metadata, arguments, runtime, allowed_statuses=(0,)):
+    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    environment.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_SYSTEM="/dev/null",
+                       GIT_CONFIG_GLOBAL="/dev/null", GIT_OPTIONAL_LOCKS="0",
+                       GIT_NO_LAZY_FETCH="1", GIT_TERMINAL_PROMPT="0", GIT_PAGER="cat")
+    command = ["/usr/bin/git", "--no-optional-locks", "-c", "core.fsmonitor=false",
+               "-c", "core.hooksPath=/dev/null", "-c", "core.untrackedCache=false",
+               f"--git-dir=/proc/self/fd/{metadata}", f"--work-tree=/proc/self/fd/{project}", *arguments]
+    with tempfile.TemporaryFile(dir=runtime) as output:
+        result = subprocess.run(command, env=environment, cwd=f"/proc/self/fd/{project}",
+                                pass_fds=(project, metadata), stdout=output, stderr=subprocess.DEVNULL,
+                                timeout=10, preexec_fn=limit_git_output)
+        output.seek(0)
+        content = output.read(262145)
+    if len(content) > 262144 or result.returncode not in allowed_statuses:
+        raise ValueError("Git inspection failed or exceeded output limit")
+    return result.returncode, content
+
+
+def git_summary(project, runtime):
+    summary = {"is_repository": None, "dirty": None, "has_upstream": None, "ahead": None, "status": "unknown"}
+    try:
+        try:
+            metadata = os.open(".git", DIRECTORY_FLAGS, dir_fd=project)
+        except FileNotFoundError:
+            summary["is_repository"] = False
+            return summary
+        except NotADirectoryError:
+            summary["is_repository"] = True
+            return summary
+        summary["is_repository"] = True
+        try:
+            for name in ("commondir", "objects/info/alternates"):
+                try:
+                    os.stat(name, dir_fd=metadata, follow_symlinks=False)
+                except FileNotFoundError:
+                    continue
+                return summary
+            status, _ = run_git(project, metadata, ["rev-parse", "--verify", "HEAD"], runtime)
+            if status:
+                return summary
+            _, untracked = run_git(project, metadata, ["ls-files", "--others", "--exclude-standard", "--directory", "-z"], runtime)
+            _, tracked = run_git(project, metadata, ["ls-files", "--cached", "-z"], runtime)
+            staged, _ = run_git(project, metadata, ["diff-index", "--cached", "--quiet", "--no-ext-diff", "--ignore-submodules=all", "HEAD"], runtime, allowed_statuses=(0, 1))
+            # Worktree comparisons can execute repository-defined clean filters. Leave them unknown.
+            summary["dirty"] = True if untracked or staged else (None if tracked else False)
+            upstream, _ = run_git(project, metadata, ["rev-parse", "--verify", "--quiet", "@{upstream}"], runtime, allowed_statuses=(0, 1))
+            summary["has_upstream"] = upstream == 0
+            if not upstream:
+                _, ahead = run_git(project, metadata, ["rev-list", "--count", "@{upstream}..HEAD"], runtime)
+                summary["ahead"] = int(ahead.strip())
+            summary["status"] = "ok" if summary["dirty"] is not None else "unknown"
+        finally:
+            os.close(metadata)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return {**summary, "dirty": None, "status": "unknown"}
+    return summary
+
+
+def record_error(report, path, error):
+    report["complete"] = False
+    if len(report["errors"]) < LIMIT:
+        report["errors"].append({"path": str(path), "error": str(error)[:500]})
+    else:
+        report["omitted_errors"] += 1
+
+
+def inspect_root(path, category, report, runtime, parallel=False):
+    try:
+        with open_directory(path) as directory:
+            device = os.fstat(directory).st_dev
+            for name in os.listdir(directory):
+                if category == "checkouts" and not parallel and name == ".parallel":
+                    continue
+                entry = path / name
+                try:
+                    metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
+                    if stat.S_ISLNK(metadata.st_mode):
+                        raise ValueError("symlink root entry not followed")
+                    if not stat.S_ISDIR(metadata.st_mode):
+                        continue
+                    if metadata.st_dev != device:
+                        raise ValueError("filesystem boundary not followed")
+                    if parallel:
+                        inspect_root(entry, category, report, runtime)
+                        continue
+                    child = os.open(name, DIRECTORY_FLAGS, dir_fd=directory)
+                    try:
+                        if os.fstat(child).st_dev != device:
+                            raise ValueError("changed filesystem boundary not followed")
+                        size, complete = allocated_bytes(child, device, set(), report, entry)
+                        item = {"path": str(entry), "allocated_bytes": size, "device": device,
+                                "complete": complete, "git": None}
+                        if category == "checkouts":
+                            item["git"] = (git_summary(child, runtime) if complete else {
+                                "is_repository": None, "dirty": None, "has_upstream": None,
+                                "ahead": None, "status": "unknown"})
+                    finally:
+                        os.close(child)
+                    report["measured_" + category] += 1
+                    report[category].append(item)
+                    report[category].sort(key=lambda item: (-item["allocated_bytes"], item["path"]))
+                    del report[category][LIMIT:]
+                except (OSError, ValueError, RecursionError) as error:
+                    record_error(report, entry, error)
+    except FileNotFoundError:
+        report["unavailable_roots"].append(str(path))
+    except OSError as error:
+        record_error(report, path, error)
+
+
+def create_report(home, runtime):
+    report = {"schema_version": 1, "advisory_only": True, "complete": True,
+              "games": [], "checkouts": [], "errors": [], "omitted_errors": 0,
+              "measured_games": 0, "measured_checkouts": 0, "unavailable_roots": [], "warning": WARNING}
+    for path, category, parallel in [
+        (home / "Games", "games", False),
+        (home / ".local/share/Steam/steamapps/common", "games", False),
+        (home / "IdeaProjects", "checkouts", False),
+        (home / "IdeaProjects/.parallel", "checkouts", True),
+    ]:
+        inspect_root(path, category, report, runtime, parallel)
+    for category in ("games", "checkouts"):
+        report["omitted_" + category] = report["measured_" + category] - len(report[category])
+    report["completed_at"] = int(time.time())
+    return report
+
+
+def publish_report(directory, report):
+    try:
+        metadata = os.stat("latest.json", dir_fd=directory, follow_symlinks=False)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid() or metadata.st_nlink != 1:
+            raise ValueError("latest.json must be an owned regular report, not a link")
+    except FileNotFoundError:
+        pass
+    name = f".latest-{os.getpid()}.tmp"
+    descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+    try:
+        with os.fdopen(descriptor, "w") as output:
+            json.dump(report, output, sort_keys=True)
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(name, "latest.json", src_dir_fd=directory, dst_dir_fd=directory)
+        os.fsync(directory)
+    finally:
+        try:
+            os.unlink(name, dir_fd=directory)
+        except FileNotFoundError:
+            pass
+
+
+def main():
+    try:
+        if len(sys.argv) != 1:
+            raise ValueError("no arguments accepted; monthly review is advisory only")
+        home = Path(os.environ["HOME"])
+        runtime = os.environ["XDG_RUNTIME_DIR"]
+        state = Path(os.environ.get("XDG_STATE_HOME", str(home / ".local/state"))) / "disk-maintenance"
+        with review_lock(runtime), open_directory(state, create=True) as directory:
+            if os.fstat(directory).st_uid != os.getuid():
+                raise ValueError("report directory must belong to the current user")
+            os.fchmod(directory, 0o700)
+            report = create_report(home, runtime)
+            publish_report(directory, report)
+            print(json.dumps({"report": str(state / "latest.json"), "complete": report["complete"]}))
+            return 0 if report["complete"] else 1
+    except (KeyError, OSError, ValueError) as error:
+        print(f"disk-space-review: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

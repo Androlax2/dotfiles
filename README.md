@@ -327,6 +327,92 @@ make clean-docker   # stopped containers, unused images, and every unused volume
 make clean-trash    # empty the desktop trash for good
 ```
 
+### Report-only cache maintenance
+
+Two daily timer pairs are prepared in this repo, **not installed or enabled**:
+
+- `cache-maintenance-report.timer` (user): inventories only
+  `~/IdeaProjects/hartprint/.turbo/cache`. Reports files whose access **and**
+  modification timestamps are older than 30 days, with an allocated-byte estimate.
+  Totals cover all files; filenames are sampled (up to 20, with the omitted count)
+  to keep journal output bounded.
+  These are provisional observations, not verified safe deletion candidates or
+  guaranteed reclaimable space: Turbo's entry format and coordination with running
+  builds still need verification. Symlinks and unexpected subdirectories fail
+  visibly; a missing cache reports zero files.
+- `package-cache-report.timer` (system): runs the installed `paccache` in dry-run
+  mode, keeping at least two versions of every package and everything accessed or
+  modified within 30 days.
+
+Both use low CPU/I/O priority, catch up after shutdown, and write to the journal.
+After a separately approved installation, reports can be read under the user
+`cache-maintenance-report.service` and system `package-cache-report.service` journal
+units. The user script prevents overlapping report runs with a runtime lock.
+
+There is **no deletion mode**. Games, project checkouts, dependencies, Docker data,
+Rust build output, IDE indexes, other caches, and the existing manual cleanup
+commands are unchanged. Do not schedule `make clean` as a replacement.
+
+These scripts and units execute **outside the agent sandbox** if installed later;
+installation, enabling timers, and any future automatic deletion require separate
+approval. The system service runs only the vendor executable, not checkout code as
+root. Run fixture-only regression tests with
+`python3 -m unittest discover -s tools/tests -p 'test_cache_maintenance.py' -v`.
+
+### Broader disk maintenance
+
+Prepared in the clone, **not installed or enabled**:
+
+- **Logs:** native journald retention of 30 days, with daily file rotation.
+- **Package archives:** native `paccache.timer` runs daily, keeping two versions
+  plus anything accessed or modified within 30 days, only in `/var/cache/pacman/pkg`.
+- **Vitals:** disk warnings at 85%, critical alerts at 95%, retaining growth forecasts,
+  existing SMART checks, weekly TRIM, and gaming-aware notifications.
+- **Monthly review:** `disk-space-review.timer` inventories explicitly listed games
+  and checkouts. The largest 20 of each are written to
+  `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
+  Vitals announces each new report once. **No games or projects are deleted.**
+
+The review never follows symlinks or nested mount boundaries. Skipped paths produce
+explicit errors and partial-size labels, not zero-byte success. It runs as your
+user, has a 15-minute timeout, and never runs a launcher or project script. Git
+summaries use local refs and untracked/staged state only: tracked worktree changes,
+ignored files, unsupported Git indirection, and active sessions can remain unknown.
+Nothing in a report certifies that a checkout is safe to delete or backed up.
+
+Journald expires whole journal files, not records exactly on their 30-day birthday;
+its size/free-space limits can shorten history. Its secondary security-audit copy
+obeys these limits; the primary audit files keep their existing **90-day** policy.
+Turbo stays report-only. Existing manual cleanup commands are unchanged.
+
+Host-executed changes are the journald drop-in, vendor paccache service/timer
+drop-ins, package-report command, monthly report script/unit pair, and Vitals
+collector. They run **outside the sandbox** after a separately approved deployment.
+No dependency manifest, Makefile recipe, or enabled-service list was changed.
+
+Activation checklist (future approval required; not performed here):
+
+1. Review/apply the clone through the normal dotfiles workflow, including the Vitals
+   build and updated user links; review each system-file diff before installation.
+2. Confirm merged journald/paccache settings and the fixed cache path. Installing
+   overrides can affect an already-active timer, so check its state before install.
+3. Reload journald if supported; otherwise request approval for a restart. Do not
+   run a one-off vacuum or broad `make clean` to "test" retention.
+4. After approval, enable the native `paccache.timer` and the user
+   `disk-space-review.timer`; keep cache-report services dry-run. Reflect the actual
+   enabled system timer in `services.txt` only as part of approved deployment.
+5. Verify next runs, actual completion results, report location, and Vitals delivery.
+   Game/checkout removal remains a new, explicit approval every time.
+
+Rollback: disable future maintenance first, review removal of only these drop-ins,
+and reload the affected configurations. Preserve the review report. Disabling a
+timer or reverting configuration **cannot restore expired logs or removed package
+archives**. Do not roll back unrelated SMART, TRIM, backup, or audit settings.
+
+Fixture tests: `python3 -m unittest discover -s tools/tests -v` (native paccache
+tests prune **temporary fake archives only**). Vitals tests:
+`cargo test --offline --manifest-path apps/Cargo.toml -p vitals`.
+
 ### Keeping the repo in sync
 
 After installing something or editing a config, run `make check`, then `make dump`, and commit what `git diff` shows.

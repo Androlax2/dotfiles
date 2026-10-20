@@ -1,0 +1,19 @@
+[Unit]
+Description=Report old pacman cache packages without deleting anything
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/paccache --dryrun --verbose --cachedir /var/cache/pacman/pkg --keep 2 --min-atime "30 days ago" --min-mtime "30 days ago"
+Nice=19
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateNetwork=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+StandardOutput=journal
+StandardError=journal

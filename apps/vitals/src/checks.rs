@@ -18,7 +18,8 @@ const MIN_DAYS_PER_WINDOW: usize = 7;
 const MIN_IDLE_MINUTES_PER_DAY: usize = 30;
 const MIN_BUSY_MINUTES: usize = 20;
 const FAN_MATTERS_FROM: f64 = 60.0;
-const DISK_FULL_PERCENT: f64 = 90.0;
+const DISK_WARNING_PERCENT: f64 = 85.0;
+const DISK_CRITICAL_PERCENT: f64 = 95.0;
 const DISK_WORN_PERCENT: u64 = 80;
 const MEMORY_LOW_PERCENT: f64 = 5.0;
 const MEMORY_PRESSURE: f64 = 20.0;
@@ -195,10 +196,10 @@ pub fn days_until_full(history: &[(i64, f64)]) -> Option<f64> {
     (per_second > 0.0).then(|| (100.0 - last.1).max(0.0) / per_second / DAY as f64)
 }
 
-/// A disk that will be full within a month at its pace; the 90 % finding takes over past that.
+/// A disk that will be full within a month at its pace; the space warning takes over at 85 %.
 pub fn filling(mount: &str, history: &[(i64, f64)]) -> Option<Finding> {
     let used = history.last()?.1;
-    let days = days_until_full(history).filter(|days| *days <= FILL_WARNING_DAYS && used < DISK_FULL_PERCENT)?;
+    let days = days_until_full(history).filter(|days| *days <= FILL_WARNING_DAYS && used < DISK_WARNING_PERCENT)?;
     let key = match slug(mount).as_str() { "" => "root".to_string(), named => named.to_string() };
     Some(warn(format!("filling-{key}"), format!("{mount} sera plein dans ~{days:.0} jours"),
               format!("{mount} est plein à {used:.0} % et se remplit au rythme des deux dernières semaines : fais de la place.")))
@@ -258,7 +259,9 @@ pub fn smart(disks: &[Smart], now: i64) -> Vec<Finding> {
 pub fn system(facts: &Facts, now: i64) -> Vec<Finding> {
     let mut findings = Vec::new();
     for (mount, used) in &facts.disk_usage {
-        if *used >= DISK_FULL_PERCENT {
+        if *used >= DISK_CRITICAL_PERCENT {
+            findings.push(critical(format!("full-{}", slug(mount)), format!("{mount} est plein à {used:.0} %"), "Disque presque plein : libère de la place maintenant."));
+        } else if *used >= DISK_WARNING_PERCENT {
             findings.push(warn(format!("full-{}", slug(mount)), format!("{mount} est plein à {used:.0} %"), "Libère de la place avant qu'il soit plein."));
         }
     }
@@ -464,6 +467,24 @@ mod tests {
             minutes.insert(NOW - 2 * DAY + minute * 60, BTreeMap::from([("fan:it8696/fan5".to_string(), 2750.0), ("load:cpu".to_string(), 5.0)]));
         }
         assert_eq!(pump_trend(&minutes, NOW, "fan:it8696/fan5", "load:cpu"), None);
+    }
+
+    #[test]
+    fn disk_space_warns_at_85_and_escalates_at_95_with_the_same_key() {
+        for (used, expected) in [(84.0, None), (85.0, Some("warn")), (94.0, Some("warn")), (95.0, Some("crit")), (100.0, Some("crit"))] {
+            let facts = Facts { disk_usage: vec![("/".into(), used)], ..Default::default() };
+            let found = system(&facts, NOW);
+            let space = found.iter().find(|finding| finding.key == "full-");
+            assert_eq!(space.map(|finding| finding.level), expected, "used={used}");
+        }
+    }
+
+    #[test]
+    fn space_threshold_takes_over_from_the_growth_forecast_at_85_percent() {
+        for (used, expected) in [(84.0, true), (85.0, false), (95.0, false)] {
+            let history = [(NOW - 5 * DAY, used - 10.0), (NOW, used)];
+            assert_eq!(filling("/", &history).is_some(), expected, "used={used}");
+        }
     }
 
     #[test]

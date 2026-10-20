@@ -1,0 +1,10 @@
+[Unit]
+Description=Report old Hartprint Turbo cache files daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Report old Hartprint Turbo cache files without deleting anything
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/bin/cache-maintenance-report
+Nice=19
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%t
+PrivateTmp=true
+PrivateNetwork=true
+StandardOutput=journal
+StandardError=journal

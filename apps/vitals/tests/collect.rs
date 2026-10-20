@@ -40,6 +40,8 @@ impl Machine {
         Command::new(env!("CARGO_BIN_EXE_vitals")).args(arguments)
             .env("VITALS_SYS_ROOT", path("sys")).env("VITALS_DIR", path("state")).env("XDG_RUNTIME_DIR", path("run"))
             .env("VITALS_ROOT_DATA", path("root-data")).env("HOME", path("state"))
+            .env("XDG_STATE_HOME", path("state/.local/state"))
+            .env("CLAUDE_SESSIONS_STATE_HOME", path("state/.local/state"))
             .env("PATH", format!("{}:/usr/bin:/bin", path("bin").display()))
             .output().unwrap()
     }
@@ -74,6 +76,30 @@ fn a_healthy_machine_keeps_its_readings_and_shows_no_chip() {
     assert!(exists(&machine.root.join("state/vitals.sqlite")));
     let status = machine.status();
     assert_eq!((status["class"].as_str(), status["text"].as_str()), (Some("ok"), Some("")));
+}
+
+#[test]
+fn disk_space_thresholds_reach_the_public_status_and_recover() {
+    let machine = Machine::new();
+    machine.smart(0);
+    for (used, expected) in [(85, "warn"), (95, "crit"), (84, "ok")] {
+        fs::write(machine.root.join("bin/df"), format!("#!/bin/sh\necho 'Use% Mounted on'; echo '{used}% /'\n")).unwrap();
+        let output = machine.vitals(&["collect"]);
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        assert_eq!(machine.status()["class"], expected, "used={used}");
+    }
+}
+
+#[test]
+fn malformed_monthly_review_fails_visibly_through_the_collector() {
+    let machine = Machine::new();
+    machine.smart(0);
+    let folder = machine.root.join("state/.local/state/disk-maintenance");
+    fs::create_dir_all(&folder).unwrap();
+    fs::write(folder.join("latest.json"), "not valid JSON").unwrap();
+    let output = machine.vitals(&["collect"]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("disk review"));
 }
 
 #[test]

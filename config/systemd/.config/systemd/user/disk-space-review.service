@@ -1,0 +1,20 @@
+[Unit]
+Description=Prepare an approval-only disk-space review without deleting data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/bin/disk-space-review
+StateDirectory=disk-maintenance
+StateDirectoryMode=0700
+ReadWritePaths=%t %S/disk-maintenance
+UMask=0077
+TimeoutStartSec=15min
+Nice=19
+IOSchedulingClass=idle
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+PrivateNetwork=true
+StandardOutput=journal
+StandardError=journal
