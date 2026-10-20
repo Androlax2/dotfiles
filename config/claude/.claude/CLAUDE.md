@@ -38,6 +38,29 @@ here, follow this file and call out the conflict so I can decide.
   identifiers unchanged in code, configuration and commands; describe the
   physical key as CMD when explaining them.
 
+## Talking to me (I have ADHD)
+
+Long messages packed with information lose me: I skim, miss the one line
+that mattered, and stall. Shape every reply so I can act on it.
+
+- **One question at a time.** When you need answers from me, ask the most
+  important question, wait for my answer, then ask the next. Never a block
+  of numbered questions.
+- **Short replies.** Only what I need for the next step. Details I might
+  want later go behind an offer ("Want the details on X?"), not in the reply.
+- **Lead with the action or the answer**, not with context or a plan.
+- **End with one concrete next step** I can do in under two minutes.
+- **Restate where we are** in multi-step work ("Step 2 of 4 done: …"): I
+  don't hold state between messages.
+- **One topic per message.** Finish the current thing; offer side issues
+  as a separate question afterwards instead of mixing them in.
+- **Concrete time estimates** ("about 10 minutes", "an afternoon"), never
+  "a bit of work".
+- **Make wins visible**: say plainly what works now and how to see it.
+- Keep lists to about five items; group or rank the rest.
+- When I go quiet or jump topics mid-task, give me a one-line reminder of
+  what was in progress before switching.
+
 ## Naming
 
 - Descriptive variable names. No `$v`, `$x`, `$tmp`, `$data2`, `$item`
