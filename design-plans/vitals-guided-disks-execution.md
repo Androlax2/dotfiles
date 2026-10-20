@@ -262,3 +262,15 @@ commit directly on the default branch, push, reset, delete workspaces, or includ
 the unrelated `.handoff/` artifacts. Reverify after rebase and disclose any failures
 before a live apply. Cleanup policies, permissions and producer are not part of
 this change.
+
+## Authorized feature-branch delivery — post-rebase verification
+
+- Committed only the four approved files on `parallel-1249`: initial commit `57cc7665d797c96f9a55e5ee8a89e3c22d9c0821`.
+- Authorized `git fetch origin` updated main to `252a794c75621fcea5cd1915f28ffbc9388c7dde`. `git cherry -v origin/main parallel-1249` identified the earlier `1dd90cb` and `77b42ab` commits as already applied; only the new guided commit was unmatched.
+- Rebased exactly the new commit using `git rebase --onto origin/main 77b42abb9d14df477899976dcf32983ac0f162fb parallel-1249`. No conflicts. Rebased guided commit: `0df7416412f57de72b50844b4d885fe616660712`; `git range-diff` reports `57cc766 = 0df7416` (unchanged patch). New upstream README/workspace changes preserved.
+- Post-rebase approved request `99c4e6721c43`: `env CARGO_NET_OFFLINE=true make test` → exit 0. Initial approval wait exceeded 120 seconds; resumed the same request with `ask-to-run --wait 99c4e6721c43`. Real OSD prerequisite build succeeded; runner fixtures: `Ran 12 tests in 0.676s` / `OK`; all **1,345 Rust workspace tests passed**, zero failed/ignored. Vitals: 132 unit tests plus integration targets 10/6/15, all passing. Full output inspected, including the initially truncated head.
+- The rebased workspace adds upstream tests, explaining the increased total. Existing unsuppressed warnings now occur at `apps/desktop/src/tests.rs:1595` and `:1600` (unused Result), and `apps/cockpit/src/tests.rs:274` (unused mut). No new failures.
+- Post-rebase approved request `d9828f393ce3`: `python3 -m unittest discover -s tools/tests -v` → exit 0: `Ran 66 tests in 4.924s` / `OK` (includes the newly upstream skill-dependency fixture).
+- `git diff --check origin/main..HEAD`: exit 0, no output. All builds/tests stayed offline and used the Makefile shared low-priority runner.
+
+This evidence-only update is committed separately before export. `.outgoing/` was inspected and empty; only commits after the new `origin/main` base will be exported. `.handoff/` remains untracked and excluded. Live application is not yet claimed: host approval must produce actual “Applied” output before deployment is reported, followed by the separately approved live cockpit build/test/reload. No Vitals-window or visual validation is included.
