@@ -38,7 +38,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
+.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch greyproxy-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -129,6 +129,10 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 # cannot read greyproxy's CA key, its session key or ~/.ssh/id_*. Restart sessions afterwards.
 greywall-patch: ## Build, test and install the patched greywall into ~/.local/bin (keeps greywall.previous)
 	packages/greywall/build.sh
+
+# greyproxy from Androlax2/greyproxy, pinned to v0.4.5 until the fork's dotfiles branch carries fixes.
+greyproxy-patch: ## Build, test and install greyproxy from the fork into ~/.local/bin (keeps greyproxy.previous)
+	packages/greyproxy/build.sh
 
 ##@ Keep the repo in sync
 
