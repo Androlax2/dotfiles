@@ -53,8 +53,8 @@ from dotfiles.
    `~/.local/state/claude-sessions` was (test in Task 1.4, `greywall_launcher.rs`).
 4. **A session started inside `~/agent-cockpit` or `~/vitals`**: refused like `~/dotfiles` today
    (test in Task 2.2).
-5. **Apply of a patch series to the wrong live checkout** (a vitals clone's patches onto agent-cockpit):
-   refused, because the clone's origin decides the target (test in Task 2.1).
+5. **Apply of a patch series to the wrong running copy** (a vitals clone's patches onto agent-cockpit):
+   impossible, because the clone's folder decides the target (Phase 2 tests).
 
 ---
 
@@ -111,31 +111,26 @@ Mechanical, but 1,328 mentions in 127 files. Mapping:
 - [ ] Then, in one `ask-to-run`: `stow --restow systemd kitty waybar` from `~/dotfiles/config` (apply
   restows only `bin`); `systemctl --user daemon-reload; systemctl --user disable claude-sessions.service;
   systemctl --user enable cockpit.service`; `make -C ~/dotfiles cockpit test`; `pkill -SIGUSR2 -x waybar`;
-  close the manager window still named `claude-sessions` (`hyprctl dispatch closewindow class:^claude-sessions$`),
+  close the manager window still named `claude-sessions`
+  (`hyprctl dispatch 'hl.dsp.window.close({ window = "class:^claude-sessions$" })'`),
   then `cockpit reload` and `cockpit restart-all`.
 
-## Phase 2 — Reviewed apply for any live checkout (in dotfiles)  ·  about 2 hours
+## Phase 2 — Reviewed apply for any running copy (in dotfiles)  ·  done
 
-### Task 2.1: `cockpit apply <clone-root>`
-
-**Files:** `config/bin/.local/bin/cockpit` (today's `apply_run`, `apply_dotfiles`, `rebuild_apps`),
-`apps/cockpit/tests/cockpit_script.rs`
-
-**Interfaces — Produces:** a table of live checkouts in the script:
-`LIVE_CHECKOUTS="dotfiles:$HOME/dotfiles agent-cockpit:$HOME/agent-cockpit vitals:$HOME/vitals"`;
-each live checkout runs `make -C <live> after-apply CHANGED="<paths>"` after `git am` (dotfiles: restow
-`bin`, rebuild widgets; agent-cockpit: build, restart osd when idle; vitals: build).
-
-- [ ] Tests (parametrized over the three names): `apply_targets_the_live_checkout_named_by_the_clone_origin`,
-  `apply_refuses_a_clone_whose_origin_is_no_live_checkout`, `apply_runs_after_apply_with_the_changed_paths`.
-- [ ] Implement; keep `apply-dotfiles` as an alias for `apply`. `make test` PASS, commit.
-
-### Task 2.2: Launcher refuses every live checkout
-
-**Files:** `config/bin/.local/bin/greywall-agents/launcher-common.sh:23-33,130-139`, `greywall_launcher.rs`
-
-- [ ] Test `a_session_inside_a_live_checkout_is_refused` (parametrized over the three).
-- [ ] Implement from the same list; `make test` PASS; ship with Task 1.5's flow.
+- [x] `cockpit apply <clone>` (`apply-dotfiles` stays as its other name): `REVIEWED_REPOSITORIES=(dotfiles
+  agent-cockpit vitals)` in the script; the clone's folder (`~/IdeaProjects/<name>` or
+  `<clones>/<name>/<clone>`) decides the running copy (`~/<name>`), never the clone's git config, which
+  the sandbox writes. A missing running copy is refused. dotfiles keeps its own after-apply steps
+  (restow `bin`, rebuild `apps/`); the others run their Makefile's `after-apply BEFORE=<commit>`.
+- [x] The launcher refuses a session in any of the three running copies and gives a clone read access
+  to its own running copy only; the hook counts "↑N unapplied" against each; the cards count
+  "↑N unpushed" per running copy (`sessions::running_copy_of`, `paths::REVIEWED_REPOSITORIES`).
+- [x] Tests: `apply_takes_a_work_clones_commits_into_its_own_running_copy`,
+  `apply_takes_a_parallel_clones_commits_into_the_running_copy_of_its_repository`,
+  `apply_refuses_a_repository_whose_running_copy_is_missing`,
+  `apply_runs_the_running_copys_after_apply_target_with_the_commit_before`, `no_session_starts_in_a_running_copy`,
+  `the_clones_of_a_reviewed_repository_read_its_running_copy_and_no_other`, and the hook and card tests
+  parametrized over the three.
 
 ## Phase 3 — Cut the crate dependencies (in dotfiles)  ·  about 3 hours
 
