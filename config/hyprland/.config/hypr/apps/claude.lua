@@ -6,7 +6,7 @@ local colors = require("colors")
 local STATE_TAGS = { "claude-working", "claude-waiting", "claude-needs-you" }
 -- Workspace 6: right after Steam (5); the games moved to 7 to make room.
 -- The same number lives in waybar/scripts/on-claude-workspace.sh (what every script asks) and in
--- scratchpads.lua (CLAUDE_WORKSPACE): change all three together.
+-- scratchpads.lua (CLAUDE_WORKSPACE), and craft-open refuses it: change all four together.
 local WORKSPACE = 6
 
 hl.window_rule({ match = { tag = "claude-needs-you", focus = true }, border_color = "rgba(" .. colors.red .. "ee)" })
