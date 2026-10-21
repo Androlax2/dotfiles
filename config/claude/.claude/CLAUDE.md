@@ -304,6 +304,8 @@ assumptions, and tell me when it reports something missing that the task needs.
   `improvement`, `chore`, `research`; `task` only when none does), keep the title one short line,
   and put context (files, errors, options) in `--notes`, never in the title. Remove an item filed
   by mistake with `claude-todo delete <id>` (only items a session filed; mine stay).
+  An item always lands in the project this session started in. Work for another project: propose
+  it here and name that project at the start of `--notes`; I move it there with `m` in the Todo panel.
   When my setup keeps you from doing something the task needs (greywall hides or forbids it,
   claude-sessions or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
   report it with `claude-todo blocked '<what you could not do>' --why '<what stopped you, the
