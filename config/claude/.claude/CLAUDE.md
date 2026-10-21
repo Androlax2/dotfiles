@@ -294,7 +294,10 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **Todo list**: my cockpit keeps a todo list per project; `claude-todo list` shows this
   repository's items. A message ending in `(todo <id>: …)` came from that list: run
   `claude-todo done <id>` once the work is finished. When I ask in the chat for something that
-  matches an item, run `claude-todo start <id>` before and `claude-todo done <id>` after. Add a
+  matches an item, run `claude-todo start <id>` before and `claude-todo done <id>` after. Run
+  `claude-todo list` before filing an item (don't file one that is already open) and before you
+  finish: mark done every open item your work fixed, duplicates and items another session was
+  given included, and name them in your summary. Add a
   follow-up we agreed to leave for later with `claude-todo add '<title>' --kind <kind> [--notes
   '<details>']`.
   When you notice something worth doing beyond the task (an improvement, a bug, an idea), don't do

@@ -14,3 +14,9 @@ without asking again in chat. Export the commits with
 `claude-sessions apply-dotfiles <clone-root>`. Keep the host-side review and approval;
 never bypass it. After applying, run `make -C ~/dotfiles cockpit test` and, when
 `apps/` changed, `claude-sessions reload` through `ask-to-run`.
+
+## Todo trailers
+
+End a commit message with one `Todo: <id>` line per dotfiles todo item the commit fixes
+(8 hex characters, as `claude-todo list` shows). `apply-dotfiles` marks those items done once
+Theo approved the commits.
