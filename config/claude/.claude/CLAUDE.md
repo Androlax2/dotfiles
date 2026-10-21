@@ -319,9 +319,10 @@ assumptions, and tell me when it reports something missing that the task needs.
   exact error>'`, from any project: it lands in my dotfiles list, queued for the dotfiles session.
   Then tell me, and never work around the block.
   A path or host our `greywall.json` denies you is such a block. A security hole, bug or missing
-  improvement in greywall's own code is not: propose it with `claude-todo greywall '<title>' --why
-  '<why it matters>' --kind <kind> [--notes '<details>']`, from any project; it lands as a proposal
-  in my greywall fork's list (security issues: `--kind bug`, title starting `Security:`).
+  improvement in the sandbox stack's own code is not: propose it with `claude-todo stack <repo>
+  '<title>' --why '<why it matters>' --kind <kind> [--notes '<details>']`, from any project, where
+  `<repo>` is the repository the code is in (`greywall`, `greyproxy`); it lands as a proposal in
+  that fork's list (security issues: `--kind bug`, title starting `Security:`).
 - **Steps I do by hand** (a browser, a cloud console, an app): don't list them in the chat, and
   don't open them unannounced: first say in one or two lines what they are for and how long they
   take, ask whether I am ready, and stop there. This readiness check is for `ask-to-guide`, not
