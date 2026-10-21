@@ -48,11 +48,11 @@ harness = r'''
 #define REDRAW_ISOLATES 1
 #define REDRAW_STATUS_TOP 4
 struct options { const char *clip_top; };
-struct window_pane { int unused; };
+struct window_pane { u_int sx; int xoff, yoff; };
 struct window { struct options *options; };
 struct tty { int unused; };
 struct client { struct tty tty; };
-struct redraw_scene { struct client *c; struct window *w; u_int oy; };
+struct redraw_scene { struct client *c; struct window *w; u_int ox, oy; };
 struct redraw_draw_ctx {
     struct redraw_scene *scene;
     struct window_pane *active, *marked;
@@ -144,8 +144,48 @@ int main(void) {
             failures++;
         }
     }
+
+    /* A pane under another, its top border on row 10 and its sides on columns 30 and 71. */
+    struct window_pane lower = {.xoff = 31, .yoff = 11, .sx = 40}, upper = {0};
+    struct redraw_span corner = {.data = {.type = REDRAW_SPAN_BORDER,
+        .b = {.top_wp = &upper, .bottom_wp = &lower}}};
+    struct corner_case {
+        const char *name, *option;
+        struct window_pane *active;
+        u_int x, y, ox, oy, status_lines;
+        int flags, type, expected;
+    } corner_cases[] = {
+        {"focused top-left corner has no up arm", "on", &lower, 30, 10, 0, 0, 0, 0, CELL_URD, CELL_RD},
+        {"focused top-right corner has no up arm", "on", &lower, 71, 10, 0, 0, 0, 0, CELL_ULD, CELL_LD},
+        {"unset option preserves the corner", NULL, &lower, 30, 10, 0, 0, 0, 0, CELL_URD, CELL_URD},
+        {"disabled option preserves the corner", "off", &lower, 30, 10, 0, 0, 0, 0, CELL_URD, CELL_URD},
+        {"unfocused corner is unchanged", "on", &upper, 30, 10, 0, 0, 0, 0, CELL_URD, CELL_URD},
+        {"side junction below the top is unchanged", "on", &lower, 30, 15, 0, 0, 0, 0, CELL_URD, CELL_URD},
+        {"junction left of the corner is unchanged", "on", &lower, 29, 10, 0, 0, 0, 0, CELL_URD, CELL_URD},
+        {"right-hand junction on the left is unchanged", "on", &lower, 30, 10, 0, 0, 0, 0, CELL_ULD, CELL_ULD},
+        {"top status rows offset the corner", "on", &lower, 30, 12, 0, 0, 2, REDRAW_STATUS_TOP, CELL_URD, CELL_RD},
+        {"scrolled viewport keeps the corner", "on", &lower, 25, 7, 5, 3, 0, 0, CELL_URD, CELL_RD},
+        {"cross junction at the corner is unchanged", "on", &lower, 30, 10, 0, 0, 0, 0, CELL_LRUD, CELL_LRUD},
+    };
+    for (u_int index = 0; index < sizeof corner_cases / sizeof corner_cases[0]; index++) {
+        struct corner_case *test = &corner_cases[index];
+        options.clip_top = test->option;
+        ctx.active = test->active;
+        ctx.flags = test->flags;
+        ctx.status_lines = test->status_lines;
+        scene.ox = test->ox;
+        scene.oy = test->oy;
+        corner.data.b.cell_type = test->type;
+        writes = 0;
+        redraw_draw_border_span(&ctx, &corner, test->x, test->y, 1);
+        if (writes != 1 || drawn.cell_type != test->expected) {
+            fprintf(stderr, "FAIL: %s: got cell %d, expected %d\n",
+                test->name, drawn.cell_type, test->expected);
+            failures++;
+        }
+    }
     if (failures) return 1;
-    puts("14 border rendering cases passed");
+    puts("25 border rendering cases passed");
     return 0;
 }
 '''

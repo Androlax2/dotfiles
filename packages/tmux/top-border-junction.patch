@@ -1,6 +1,8 @@
-tmux 3.8: clip the focused top junction to its pane.
+tmux 3.8: clip the focused pane's top junctions to that pane.
 
 Opt in per window with: set-option -w @pane-border-clip-top on
+At the window top, the focused pane's corner loses the arm into its neighbour;
+lower down, its top corner loses the arm up into the pane above it.
 Other windows and interior junctions retain the upstream rendering.
 Applied at draw time so switching focus does not reuse the previous corner.
 
@@ -9,7 +11,7 @@ screen-redraw.c SHA256: 7ef109c63a4a38e79d0101886ca5785db29c9602fdc48bb2d83861c9
 
 --- a/screen-redraw.c
 +++ b/screen-redraw.c
-@@ -1231,6 +1231,21 @@
+@@ -1231,6 +1231,37 @@
  		cell_type = span->data.b.cell_type;
  	}
  
@@ -26,6 +28,22 @@ screen-redraw.c SHA256: 7ef109c63a4a38e79d0101886ca5785db29c9602fdc48bb2d83861c9
 +			cell_type = CELL_LD;
 +		else if (wp == span->data.b.right_wp)
 +			cell_type = CELL_RD;
++	}
++
++	/* Below the window top, clip the arm above the focused pane's corner. */
++	if (wp != NULL && wp == dctx->active &&
++	    (cell_type == CELL_URD || cell_type == CELL_ULD) &&
++	    (int)(y + scene->oy) + 1 == wp->yoff +
++	    (int)((dctx->flags & REDRAW_STATUS_TOP) ? dctx->status_lines : 0) &&
++	    options_get(w->options, "@pane-border-clip-top") != NULL &&
++	    strcmp(options_get_string(w->options, "@pane-border-clip-top"),
++	    "on") == 0) {
++		if (cell_type == CELL_URD &&
++		    (int)(x + scene->ox) + 1 == wp->xoff)
++			cell_type = CELL_RD;
++		else if (cell_type == CELL_ULD &&
++		    (int)(x + scene->ox) == wp->xoff + (int)wp->sx)
++			cell_type = CELL_LD;
 +	}
 +
  	if (wp == NULL) {
