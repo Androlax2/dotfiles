@@ -346,8 +346,9 @@ and reload the affected configurations. Preserve the review report. Disabling a
 timer or reverting configuration **cannot restore expired logs or removed package
 archives**. Do not roll back unrelated SMART, TRIM, backup, or audit settings.
 
-Fixture tests: `python3 -m unittest discover -s tools/tests -v` (native paccache
-tests prune **temporary fake archives only**). Vitals tests:
+Fixture tests: `python3 -m unittest discover -s tools/tests -v`, on the host (native paccache
+tests prune **temporary fake archives only**; the reports walk every path from `/`, which a greywall
+sandbox cannot open, so inside a session they fail with `Permission denied: '/'`). Vitals tests:
 `make -C ~/vitals test` (in its own repository).
 
 ### Keeping the repo in sync

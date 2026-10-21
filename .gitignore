@@ -22,3 +22,6 @@ config/OpenRGB/.config/OpenRGB/logs/
 
 # Python bytecode caches: rewritten whenever a script runs (the vendored modules of NSLGameScanner)
 __pycache__/
+
+# Claude Code's per-machine permissions for this folder (written by Claude, never shared)
+.claude/settings.local.json

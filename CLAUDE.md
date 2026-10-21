@@ -14,6 +14,9 @@ without asking again in chat. Export the commits with
 `cockpit apply <clone-root>`. Keep the host-side review and approval;
 never bypass it. After applying, run `make -C ~/dotfiles test` through `ask-to-run`.
 
+The Python tests in `tools/tests` run on the host only (`ask-to-run`): the disk and cache reports
+walk every path from `/`, which the sandbox cannot open (`Permission denied: '/'`).
+
 The Agent Cockpit and vitals are repositories of their own (`~/agent-cockpit`, `~/vitals`, worked
 on in `~/IdeaProjects/agent-cockpit` and `~/IdeaProjects/vitals`); work on them belongs to a
 session there, filed with `claude-todo propose … --project <name>`.
