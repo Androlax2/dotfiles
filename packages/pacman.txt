@@ -36,6 +36,7 @@ gamemode
 gamescope
 git
 git-delta
+git-filter-repo
 github-cli
 gnome-keyring
 go
