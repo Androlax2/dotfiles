@@ -27,6 +27,11 @@ impl IdleTest {
         fs::create_dir_all(&scripts).unwrap();
         symlink(repo().join("config/hyprland/.config/hypr/scripts/is-gaming.sh"), scripts.join("is-gaming.sh")).unwrap();
         let prompt = sandbox.home.join(".local/bin/claude-idle-prompt");
+        // The cockpit's pieces it calls (agent-cockpit): its workspace test, and cockpit with every
+        // setting on unless a test says otherwise.
+        write_executable(&sandbox.home.join(".config/waybar/scripts/on-claude-workspace.sh"),
+            "#!/usr/bin/env bash\n[[ $(hyprctl -j activeworkspace | jq -r .id) == 6 ]]\n");
+        sandbox.shim("cockpit", r#"[[ $1 == setting ]] && echo "$2: on"; exit 0"#);
         sandbox.shim("loginctl", "");
         sandbox.shim("pidof", "exit 1");
         IdleTest { sandbox, prompt }

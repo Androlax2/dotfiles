@@ -1,0 +1,14 @@
+config/bin/.local/bin/claude-sessions-agents/
+config/bin/.local/bin/claude-sessions-left
+config/bin/.local/bin/claude-sessions-sidebar
+config/kitty/.config/kitty/claude-sessions.conf
+config/systemd/.config/systemd/user/claude-sessions.service
+config/systemd/.config/systemd/user/default.target.wants/claude-sessions.service
+config/waybar/.config/waybar/scripts/claude-sessions.sh
+apps/desktop/src/registry.rs
+apps/desktop/src/teams.rs
+apps/desktop/src/tests.rs
+apps/desktop/src/fifo.rs
+apps/desktop/src/bin/osd.rs
+apps/desktop/src/bin/claude-idle-prompt.rs
+apps/desktop/Cargo.toml

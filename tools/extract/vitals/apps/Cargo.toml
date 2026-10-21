@@ -1,0 +1,13 @@
+# vitals: one crate, built with `make build` into apps/target/release.
+[workspace]
+members = ["vitals"]
+resolver = "3"
+
+[profile.release]
+strip = true
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false

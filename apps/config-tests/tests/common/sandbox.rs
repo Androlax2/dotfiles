@@ -12,6 +12,11 @@ pub fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap()
 }
 
+/// config/bin/.local/bin: the dotfiles' own commands on Theo's PATH.
+pub fn bin() -> PathBuf {
+    repo().join("config/bin/.local/bin")
+}
+
 pub fn waybar_scripts() -> PathBuf {
     repo().join("config/waybar/.config/waybar/scripts")
 }
@@ -78,6 +83,10 @@ impl Sandbox {
     pub fn calls(&self, name: &str) -> Vec<String> {
         let prefix = format!("{name} ");
         fs::read_to_string(&self.log).unwrap_or_default().lines().filter(|line| line.starts_with(&prefix)).map(str::to_string).collect()
+    }
+
+    pub fn reset_log(&self) {
+        fs::write(&self.log, "").unwrap();
     }
 
     /// `program` with the sandbox environment, plus `extra` on top.
