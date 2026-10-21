@@ -169,42 +169,32 @@ Mechanical, but 1,328 mentions in 127 files. Mapping:
   Androlax2/vitals (28), extracted into `~/agent-cockpit` and `~/vitals`, pushed, work clones in
   `~/IdeaProjects/`.
 
-## Phase 5 — Cut over  ·  5b committed in dotfiles (not applied), waiting for 5a
+## Phase 5 — Cut over  ·  done (2026-10-21)
 
-### 5a — in an agent-cockpit session (`~/IdeaProjects/agent-cockpit`), applied first
+- [x] 5a, in an agent-cockpit session: every `~/dotfiles/…` path of the cockpit became
+  `~/agent-cockpit/…` (greywall profiles, opencode plugin, osd path, wrappers, launcher), applied to
+  `~/agent-cockpit` and pushed (f1bc8b6).
+- [x] 5b, dotfiles: the moved paths deleted, `apps/` = `config-tests` + `desktop`, the Makefile without
+  the cockpit's targets, the README, CLAUDE.md and Claude's rules pointing at the new repos (59b527d).
+  It went live once too early (9471a0c, through U on the dotfiles card, which exports every commit of
+  the clone's branch) and was reverted (b8e06d5); the switch-over commit then waited on a branch U
+  does not export.
+- [x] 5c, the switch-over: the apply, then `stow --no-folding` for Waybar, Hyprland and fish, the
+  dangling links into dotfiles deleted, agent-cockpit and vitals linked, osd restarted, every session
+  restarted. Two stow refusals on the way, both all-or-nothing, so nothing was left half-linked:
+  - `~/.config/systemd` was a folded link too, and stow will not unfold a folder whose `.wants`
+    entries are absolute links (what `systemctl enable` writes). A one-off script unfolded it: relative
+    links for files, the `.wants` links copied as they are, then agent-cockpit's and vitals' units.
+  - dotfiles' `stow` keeps folding (only those four folders were unfolded): `--no-folding`
+    everywhere would have turned the `~/.claude/skills/<skill>` links into folders.
+- [x] Checks: `cockpit doctor` clean but for an expired Claude OAuth token and a stale check (below);
+  `make -C ~/dotfiles test` green; dotfiles, agent-cockpit and vitals pushed.
 
-Inert until 5c: nothing is linked from `~/agent-cockpit` yet. agent-cockpit's todo "Cutover 5a"
-lists the files; in short, every `~/dotfiles/…` path of the cockpit becomes `~/agent-cockpit/…`:
-- greywall.json and `learned/*.json`: the allowRead of the wrappers and builds, `~/dotfiles/config/claude`
-  → `~/agent-cockpit/config/claude` while keeping `~/dotfiles/config/claude/.claude/CLAUDE.md` and
-  `…/skills` (they stay in dotfiles), denyWrite `~/dotfiles/config/greywall`; drop the `.json.bak`.
-- opencode plugin `cockpit.ts`: the hook path. Every wrapper's "make -C ~/dotfiles cockpit" message.
-- `cockpit` script: `OSD_BINARY` default; doctor fixes; `after_dotfiles_apply` restows every changed
-  `config/<package>` with `--no-folding` and runs `make -C ~/dotfiles build` when `apps/` changed (no
-  osd, no `cockpit` target in dotfiles any more); `rebuild_apps` belongs to agent-cockpit's after-apply.
-- launcher-common.sh, greywall-agents/claude, agent-environment.sh (`make -C ~/agent-cockpit agent-*`),
-  claude-health-check (both repos' tests).
-- Port dotfiles' `tools/tests/test_test_entrypoint.py` (make test builds osd first) to agent-cockpit.
-- Ask Theo: error hand-offs and `claude-todo blocked` reports, to the agent-cockpit session instead of
-  dotfiles?
+## Left for later (agent-cockpit's list)
 
-### 5b — dotfiles (committed: "Move the Agent Cockpit and vitals out of dotfiles")
-
-The moved paths deleted, `apps/` = `config-tests` + `desktop`, Makefile without the cockpit's targets
-and with `stow --no-folding`, README/CLAUDE.md/Claude's rules pointing at the new repos. `make test`
-green alone (56 tests); the widgets build.
-
-### 5c — the switch-over (one `ask-to-run`, fish, `;` between steps: the old apply's rebuild fails by design)
-
-```fish
-cockpit apply <dotfiles clone>        # 5b; its "make cockpit" fails: dotfiles no longer has it
-cd ~/dotfiles/config; and stow -v --no-folding -t ~ --restow */   # unfold waybar, hypr, fish
-find ~/.local/bin ~/.local/share ~/.config ~/.claude ~/.codex -xtype l -lname '*dotfiles/config/*' -print -delete
-make -C ~/agent-cockpit install; and make -C ~/vitals install
-systemctl --user daemon-reload
-systemctl --user restart osd.service cockpit.service vitals-collect.timer
-cockpit reload; cockpit doctor
-```
-Then restart every session (CMD+R in the sidebar): their greywall profile changed.
-Checks: ALT+C opens the cockpit; `ask-to-run` and `claude-todo list` work from a session; the bar's
-vitals dot shows; `make -C ~/agent-cockpit test`, `make -C ~/vitals test`, `make -C ~/dotfiles test`.
+- The doctor still looks for the fish `claude` function in `config.fish`: it is
+  `functions/claude.fish` now (proposed).
+- agent-cockpit's and vitals' systemd packages hold absolute `.wants` links: `make install` cannot
+  stow them; make them relative before the next install.
+- Remove the `claude-sessions` forwarding script and the old state folder link; rename the remaining
+  `claude-*` commands (both proposed).
