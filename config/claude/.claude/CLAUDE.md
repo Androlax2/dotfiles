@@ -259,7 +259,11 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **GitHub**: a token limited to the project's repository comes from
   `make -C ~/dotfiles agent-github-token PROJECT=<name>`. Push feature branches only, and only
   when git writes are authorized (see Git / commit hygiene). `.git/config` is read-only: name the remote
-  and branch explicitly.
+  and branch explicitly. A pull request to a repository the project forks (its upstream) is
+  out of the token's reach by design: GitHub's fine-grained tokens cannot write to public repos
+  I am not a member of, and the classic token that could reaches all my repos. Push the branch
+  to the fork, then ask me to open the pull request with `ask-to-run` (`gh pr create -R
+  <upstream> --head <fork owner>:<branch>`); don't file it as a block.
 - **TLS**: greyproxy's CA is deliberately not trusted system-wide. Never suggest
   `greyproxy cert install`; git, curl and PHP already get a bundle from the launcher.
 - **Things I run outside the sandbox** (Composer and pnpm scripts, Makefiles, git hooks,
