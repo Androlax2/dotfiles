@@ -125,7 +125,7 @@ install: packages global-packages ## [sudo] Install packages only, without touch
 files-patch: ## [sudo] Build and install the patched Files file manager
 	packages/pantheon-files/build.sh
 
-# greywall v0.3.7 with packages/greywall/*.patch: denyRead masks applied last, so a sandbox
+# greywall from the dotfiles branch of Androlax2/greywall: denyRead masks applied last, so a sandbox
 # cannot read greyproxy's CA key, its session key or ~/.ssh/id_*. Restart sessions afterwards.
 greywall-patch: ## Build, test and install the patched greywall into ~/.local/bin (keeps greywall.previous)
 	packages/greywall/build.sh
