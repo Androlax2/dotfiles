@@ -130,7 +130,8 @@ files-patch: ## [sudo] Build and install the patched Files file manager
 greywall-patch: ## Build, test and install the patched greywall into ~/.local/bin (keeps greywall.previous)
 	packages/greywall/build.sh
 
-# greyproxy from the dotfiles branch of Androlax2/greyproxy: v0.4.5 plus the self-listener block.
+# greyproxy from the dotfiles branch of Androlax2/greyproxy: v0.4.5 plus the self-listener block,
+# an optional API token, per-client proxy secrets (both off) and a fail-closed start.
 greyproxy-patch: ## Build, test and install greyproxy from the fork into ~/.local/bin (keeps greyproxy.previous)
 	packages/greyproxy/build.sh
 
