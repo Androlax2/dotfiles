@@ -1,5 +1,0 @@
-# Built by `make build`
-apps/target/
-
-# Commits a session exports for cockpit apply (in its work clone)
-.outgoing/

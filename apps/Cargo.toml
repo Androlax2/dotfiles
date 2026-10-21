@@ -1,7 +1,7 @@
-# Every program of the Agent Cockpit and the desktop that is not a shell script: one workspace,
-# built with `make cockpit` into apps/target/release.
+# The dotfiles' own Rust programs (the desktop widgets) and the tests of their scripts and
+# configuration: one workspace, built with `make build` into apps/target/release.
 [workspace]
-members = ["cockpit", "config-tests", "desktop", "osd", "vitals"]
+members = ["config-tests", "desktop"]
 resolver = "3"
 
 [profile.release]

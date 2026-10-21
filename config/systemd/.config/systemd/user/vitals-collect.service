@@ -1,6 +1,0 @@
-[Unit]
-Description=vitals: read the sensors, keep the history, warn about the machine (apps/vitals)
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/vitals collect
