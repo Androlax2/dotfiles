@@ -4,6 +4,9 @@ SHELL := /bin/bash
 # Recipes parse pacman and systemctl output and rely on byte-order sorting for comm and diff.
 export LC_ALL := C
 
+# ~/.config/waybar, ~/.config/hypr and ~/.config/fish hold agent-cockpit's links too: they were
+# unfolded into real folders once (2026-10-21), and stow does not fold a folder back over another
+# repository's links. Everything else keeps stow's default folding (~/.claude/skills/<skill>).
 stow = cd config && stow -v -t ~
 backup_script = ~/.config/restic/backup.sh
 system_files = $(shell cd system && find . -type f -printf '%P\n' | sort)
@@ -38,7 +41,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch greyproxy-patch global-packages system locale services initramfs install handoff-install build cockpit dotfiles-work \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install build dotfiles-work \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -125,35 +128,16 @@ install: packages global-packages ## [sudo] Install packages only, without touch
 files-patch: ## [sudo] Build and install the patched Files file manager
 	packages/pantheon-files/build.sh
 
-# greywall from the dotfiles branch of Androlax2/greywall: denyRead masks applied last, so a sandbox
-# cannot read greyproxy's CA key, its session key or ~/.ssh/id_*. Restart sessions afterwards.
-greywall-patch: ## Build, test and install the patched greywall into ~/.local/bin (keeps greywall.previous)
-	packages/greywall/build.sh
-
-# greyproxy from the dotfiles branch of Androlax2/greyproxy: v0.4.5 plus the self-listener block,
-# an optional API token, per-client proxy secrets (both off) and a fail-closed start.
-greyproxy-patch: ## Build, test and install greyproxy from the fork into ~/.local/bin (keeps greyproxy.previous)
-	packages/greyproxy/build.sh
-
 ##@ Keep the repo in sync
 
-build_runner = python3 config/bin/.local/bin/agent-build
+test: ## Run the apps/ test suite (the desktop widgets, the scripts and configuration)
+	cargo test --release --quiet --manifest-path apps/Cargo.toml
 
-test: ## Build the OSD classifier and run the apps/ test suite
-	python3 -m unittest discover -s tools/tests -p test_agent_build.py
-	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p osd --bin osd
-	$(build_runner) cargo test --release --quiet --manifest-path apps/Cargo.toml
+build: ## Build the desktop widgets in apps/ (mpris-card, web-placeholder, cooler-overlay-mask)
+	cargo build --release --manifest-path apps/Cargo.toml
 
-build: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); cockpit reload shows the column
-	$(build_runner) cargo build --release --manifest-path apps/Cargo.toml
-
-cockpit: build ## The same as build (its name before the cockpit moves to agent-cockpit)
-
-dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); cockpit apply-dotfiles brings its commits here
+dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); cockpit apply brings its commits here
 	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
-
-handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)
-	@tools/handoff-install.sh
 
 check: check-packages check-skills check-services check-system check-untracked check-security check-palette test ## [read-only] Show everything that differs from the repo, then run the tests
 
@@ -223,73 +207,6 @@ dump-system: ## Copy live edits of system/ files back into the repo
 	    cp "/$$path" "system/$$path"; \
 	    echo "updated system/$$path"; \
 	done
-
-agent_docker = tools/agent-docker.sh
-
-.PHONY: agent-docker-setup agent-docker-add agent-docker-remove agent-docker-status
-
-##@ Isolate coding agents
-
-# One rootless Docker daemon per project for agents running in greywall (tools/agent-docker.sh).
-# The units and the agent_docker_egress firewall table come from system/.
-agent-docker-setup: system ## [sudo] Install the agent units and the agent-docker group (log out and back in after the first run)
-	sudo $(agent_docker) setup
-
-agent-docker-add: ## [sudo] Give a project its own isolated Docker daemon: make agent-docker-add PROJECT=runway
-	@test -n "$(PROJECT)" || { echo "usage: make agent-docker-add PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
-	sudo $(agent_docker) add "$(PROJECT)"
-
-agent-docker-remove: ## [no undo] Delete a project's agent daemon, its user, images and containers: make agent-docker-remove PROJECT=runway
-	@test -n "$(PROJECT)" || { echo "usage: make agent-docker-remove PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
-	sudo $(agent_docker) remove "$(PROJECT)"
-
-agent-docker-status: ## [read-only] List the agent Docker daemons and whether their sockets are up
-	@$(agent_docker) status
-
-.PHONY: agent-anthropic-key agent-opencode-key
-
-agent-anthropic-key: ## Store the Console API key that credits sessions (the cockpit's $) bill instead of the subscription; asks for it
-	@secret-tool store --label "Claude API key for credits sessions" service agent-anthropic
-
-agent-opencode-key: ## Store the Anthropic API key opencode sessions use, a greyproxy placeholder inside their sandbox; asks for it
-	@read -rsp "Anthropic API key for opencode (sk-ant-…, not shown): " key; echo; \
-	if [[ ! $$key =~ ^sk-ant-[a-z]+[0-9]*-[A-Za-z0-9_-]+$$ ]] || (( $${#key} < 80 )); then \
-	    echo "not stored: an Anthropic API key starts with sk-ant- and has 80 characters or more (this one: $${#key})" >&2; exit 1; \
-	fi; \
-	printf '%s' "$$key" | secret-tool store --label "Anthropic API key for opencode sessions" service agent-opencode-anthropic; \
-	echo "stored ($${#key} characters)"
-
-agent_github = tools/agent-github.sh
-
-.PHONY: agent-github-token agent-github-board-token agent-github-relogin agent-github-protect agent-github-check \
-	    agent-dashboard-tailnet agent-dashboard-tailnet-off
-
-agent-github-token: ## Create and store a GitHub token that reaches only this project's repo: make agent-github-token PROJECT=runway
-	@test -n "$(PROJECT)" || { echo "usage: make agent-github-token PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
-	@$(agent_github) token "$(PROJECT)"
-
-agent-github-board-token: ## Create and store the classic token, project scope only, that lets agents read and move Project board cards
-	@$(agent_github) project-board-token
-
-agent-github-relogin: ## Revoke your old GitHub CLI login and log in again with keyring storage
-	@$(agent_github) relogin
-
-agent-github-protect: ## Require pull requests and block force pushes on the project's default branch: make agent-github-protect PROJECT=runway
-	@test -n "$(PROJECT)" || { echo "usage: make agent-github-protect PROJECT=<folder in ~/IdeaProjects>"; exit 2; }
-	@$(agent_github) protect "$(PROJECT)"
-
-agent-github-check: ## [read-only] Check that each agent token reaches only its repo and that gh keeps no token in hosts.yml
-	@$(agent_github) check
-
-# greyproxy's dashboard listens on localhost only; `tailscale serve` publishes it to this tailnet
-# (and nowhere else) so pending network requests can be approved from the phone.
-GREYPROXY_DASHBOARD_PORT ?= 43080
-agent-dashboard-tailnet: ## Publish greyproxy's dashboard on the tailnet: make agent-dashboard-tailnet [GREYPROXY_DASHBOARD_PORT=43080] (then open /dashboard)
-	tailscale serve --bg --https=443 http://127.0.0.1:$(GREYPROXY_DASHBOARD_PORT)
-	tailscale serve status
-
-agent-dashboard-tailnet-off: ## Stop publishing greyproxy's dashboard on the tailnet
-	tailscale serve --https=443 off
 
 ##@ Maintain
 
