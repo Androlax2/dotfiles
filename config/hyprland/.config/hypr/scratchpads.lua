@@ -6,7 +6,7 @@
 --   prs       GitHub pull requests waiting for my review, 1600x1000 centred
 --   claude    Claude Code on the web (claude.ai/code), 1600x1000 centred
 --   greyproxy greyproxy's dashboard: pending requests to approve, 1400x900 centred
---   vitals    the machine monitor's TUI (apps/vitals), 1400x900 centred; also the bar's warning dot
+--   vitals    the machine monitor's TUI (vitals, its own repository), 1400x900 centred; also the bar's warning dot
 -- Each web scratchpad is a site in its own Zen profile (compact mode, its own logins),
 -- recognised by its command line and tagged with its name. A cold start takes seconds, so
 -- a spinner placeholder window opens first and is closed once the Zen window is there.

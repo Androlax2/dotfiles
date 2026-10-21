@@ -182,7 +182,7 @@
     "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
   },
 
-  // ---- vitals (apps/vitals): a chip only while something is wrong with the machine (yellow, red when
+  // ---- vitals (its own repository): a chip only while something is wrong with the machine (yellow, red when
   // critical, dim when the collector stopped). vitals collect sends RTMIN+17 when the problems change.
   // Click opens the monitor.
   "custom/vitals": {
