@@ -11,15 +11,12 @@ Pushing and opening pull requests still require an explicit request.
 Finishing requested dotfiles changes includes applying them to the live cockpit,
 without asking again in chat. Export the commits with
 `git format-patch origin/main -o .outgoing`, then use `ask-to-run` to run
-`cockpit apply <clone-root>`. Keep the host-side review and approval;
-never bypass it. After applying, run `make -C ~/dotfiles test` through `ask-to-run`.
-
-The Agent Cockpit and vitals are repositories of their own (`~/agent-cockpit`, `~/vitals`, worked
-on in `~/IdeaProjects/agent-cockpit` and `~/IdeaProjects/vitals`); work on them belongs to a
-session there, filed with `claude-todo propose … --project <name>`.
+`cockpit apply-dotfiles <clone-root>`. Keep the host-side review and approval;
+never bypass it. After applying, run `make -C ~/dotfiles cockpit test` and, when
+`apps/` changed, `cockpit reload` through `ask-to-run`.
 
 ## Todo trailers
 
 End a commit message with one `Todo: <id>` line per dotfiles todo item the commit fixes
-(8 hex characters, as `claude-todo list` shows). `cockpit apply` marks those items done once
+(8 hex characters, as `claude-todo list` shows). `apply-dotfiles` marks those items done once
 Theo approved the commits.

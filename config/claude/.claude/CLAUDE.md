@@ -246,7 +246,7 @@ assumptions, and tell me when it reports something missing that the task needs.
   enforcement or as a reason something is impossible: real limits are GitHub rulesets, token
   permissions and the rules in this file.
 - **Docker**: each project in `~/IdeaProjects` can have its own rootless daemon
-  (`make -C ~/agent-cockpit agent-docker-add PROJECT=<name>`). Never use my main Docker. The
+  (`make -C ~/dotfiles agent-docker-add PROJECT=<name>`). Never use my main Docker. The
   launcher's client config injects the container proxy (`http://<name>-docker:proxy@10.0.2.2:43051`)
   into every build step and container; don't set it by hand. HTTPS inside them still needs
   greyproxy's public CA (`~/.local/share/greyproxy/ca-cert.pem`): pass it as an optional build
@@ -257,7 +257,7 @@ assumptions, and tell me when it reports something missing that the task needs.
   to include the compose service names, or calls between services go through greyproxy. Only
   `--user 0` can write into the project.
 - **GitHub**: a token limited to the project's repository comes from
-  `make -C ~/agent-cockpit agent-github-token PROJECT=<name>`. Push feature branches only, and only
+  `make -C ~/dotfiles agent-github-token PROJECT=<name>`. Push feature branches only, and only
   when git writes are authorized (see Git / commit hygiene). `.git/config` is read-only: name the remote
   and branch explicitly. A pull request to a repository the project forks (its upstream) is
   out of the token's reach by design: GitHub's fine-grained tokens cannot write to public repos
@@ -269,14 +269,14 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **Things I run outside the sandbox** (Composer and pnpm scripts, Makefiles, git hooks,
   compose files, IDE run configurations): point out every change to them, because they run with
   my full rights.
-- **My dotfiles, the Agent Cockpit and vitals**: no session runs in `~/dotfiles`,
-  `~/agent-cockpit` or `~/vitals`, the running copies the host runs (the launcher refuses them).
-  Each project is its clone, `~/IdeaProjects/<name>`, where every file is writable. Start from
-  what is applied (`git fetch origin && git rebase origin/main`), commit, then export with
-  `git format-patch origin/main -o .outgoing` and ask me to run `cockpit apply <clone root>` with
-  `ask-to-run`: it shows me the commits and applies them after my yes (agent-cockpit and vitals
-  then run their `make after-apply`). Then `make -C ~/<name> test`. Test in the clone
-  (`cargo test` there builds its own binaries).
+- **My dotfiles**: no session runs in `~/dotfiles`, the live checkout the host runs (the launcher
+  refuses it). The dotfiles project is the clone `~/IdeaProjects/dotfiles`, where every file is
+  writable. Start from what is applied (`git fetch origin && git rebase origin/main`), commit, then
+  export with `git format-patch origin/main -o .outgoing` and ask me to run `cockpit
+  apply-dotfiles` with `ask-to-run` (from a parallel clone, `cockpit apply-dotfiles <its
+  root>`): it shows me the commits and applies them after my yes. Then
+  `make -C ~/dotfiles cockpit test` and `cockpit reload` when `apps/` changed. Test in the
+  clone (`cargo test` there builds its own binaries).
 - **Files you cannot reach** (`/etc`, `~/.local/bin`, another project): write the new version to
   `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
   to paste long files into the terminal.

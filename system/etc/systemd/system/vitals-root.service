@@ -1,0 +1,30 @@
+# vitals (apps/vitals) runs as Theo; disk health and the kernel log need root. This unit runs only
+# system tools and leaves their output, readable by all, in /var/lib/vitals: no program from the
+# dotfiles runs as root, and the file in /etc only changes through `make system` (sudo).
+[Unit]
+Description=vitals: disk health (SMART), kernel errors, crashes and memory kills for the unprivileged collector
+
+[Service]
+Type=oneshot
+StateDirectory=vitals
+StateDirectoryMode=0750
+# Readable by Theo's collector only: the kernel log bypasses dmesg_restrict for other accounts.
+Group=theo
+UMask=0022
+ProtectSystem=strict
+ReadWritePaths=/var/lib/vitals
+PrivateTmp=true
+NoNewPrivileges=true
+ExecStart=/bin/sh -c 'mkdir -p /var/lib/vitals/smart; \
+    for disk in /dev/nvme[0-9]*n[0-9]; do \
+        [ -e "$disk" ] || continue; \
+        name=$(basename "$disk"); \
+        smartctl -j -a "$disk" > "/var/lib/vitals/smart/$name.json.new"; \
+        mv "/var/lib/vitals/smart/$name.json.new" "/var/lib/vitals/smart/$name.json"; \
+    done; \
+    journalctl -k -p err --since=-24h -o short-iso --no-pager > /var/lib/vitals/kernel-errors.log.new; \
+    mv /var/lib/vitals/kernel-errors.log.new /var/lib/vitals/kernel-errors.log; \
+    coredumpctl list --since=-24h --json=short --no-pager > /var/lib/vitals/crashes.json.new 2>/dev/null; \
+    mv /var/lib/vitals/crashes.json.new /var/lib/vitals/crashes.json; \
+    journalctl -u systemd-oomd --since=-24h -o short-iso --no-pager --grep=Killed > /var/lib/vitals/oomd.log.new 2>/dev/null; \
+    mv /var/lib/vitals/oomd.log.new /var/lib/vitals/oomd.log'

@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# craft-open figcraft --workspace <n> [--session <id>]: FigCraft for the project of the current
+# folder, driven by the session's figcraft-app MCP server, on a port reserved for this checkout.
+# Run outside the sandbox, through ask-to-run, when Theo asks a session to connect to FigCraft.
+#
+# Existing windows are never closed. Each checkout has separate preferences/recovery storage,
+# and its port is never reassigned to another checkout (old sandboxes retain their forwards).
+#
+# --workspace <n>: the workspace Theo picked for a new window. Approving from the cockpit would
+# otherwise open it on the cockpit's workspace (6), which is refused. An already open window stays
+# where it is.
+#
+# --session <id>: reconnect that session even if its tools are still listed: its sandbox and MCP
+# connection may predate this checkout's port. The cockpit restarts it once its turn ends
+# (the conversation is kept) and tells it to carry on.
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/cockpit"
+WAIT_S=${CRAFT_OPEN_WAIT_S:-15}
+CLAUDE_WORKSPACE=6  # the same number as WORKSPACE in hypr/apps/claude.lua
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/greywall-agents/figcraft.sh"
+
+# hyprctl finds Hyprland through HYPRLAND_INSTANCE_SIGNATURE. The ask-to-run terminal this runs in
+# has none: take the running instance, the newest $XDG_RUNTIME_DIR/hypr/<id> with a socket.
+refresh_hyprland_instance() {
+    local base="${XDG_RUNTIME_DIR:-/tmp}/hypr" instance
+    [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} && -e $base/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock ]] && return
+    while read -r instance; do
+        if [[ -e $base/$instance/.socket.sock ]]; then
+            export HYPRLAND_INSTANCE_SIGNATURE=$instance
+            return
+        fi
+    done < <(ls -t "$base" 2>/dev/null)
+}
+
+usage() {
+    echo "usage: craft-open figcraft --workspace <number> [--session <session-id>]" >&2
+    exit 2
+}
+
+# An id one of the agents reports (agent_<name>_is_session_id, cockpit-agents/): Claude
+# Code's UUIDs, opencode's ses_…. It names files below, so nothing else passes.
+is_agent_session_id() { # id
+    local agent_file agents_dir
+    agents_dir=${COCKPIT_AGENTS_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/cockpit-agents}
+    for agent_file in "$agents_dir"/*.sh; do
+        # shellcheck source=/dev/null
+        source "$agent_file"
+        "agent_$(basename "$agent_file" .sh)_is_session_id" "$1" && return 0
+    done
+    return 1
+}
+
+[[ ${1:-} == figcraft ]] || usage
+shift
+unset workspace session
+while (( $# >= 2 )); do
+    case "$1" in
+        --workspace) [[ ! -v workspace ]] || usage; workspace=$2 ;;
+        --session) [[ ! -v session ]] || usage; session=$2 ;;
+        *) usage ;;
+    esac
+    shift 2
+done
+(( $# == 0 )) && [[ -v workspace ]] || usage
+if [[ ! $workspace =~ ^[1-9][0-9]?$ ]]; then
+    echo "craft-open: not a workspace number: $workspace" >&2
+    exit 2
+fi
+if [[ $workspace == "$CLAUDE_WORKSPACE" ]]; then
+    echo "craft-open: workspace $CLAUDE_WORKSPACE is the cockpit's; pick another one" >&2
+    exit 2
+fi
+if [[ -v session ]] && ! is_agent_session_id "$session"; then
+    echo "craft-open: not a session id: $session" >&2
+    exit 2
+fi
+session=${session-}
+
+root=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)
+root=$(realpath -e -- "$root")
+if [[ $root != "$HOME"/* ]]; then
+    echo "craft-open: $root is not a project under your home folder" >&2
+    exit 2
+fi
+if [[ $root =~ [[:cntrl:]] ]]; then
+    echo "craft-open: control characters in a project path are not supported" >&2
+    exit 2
+fi
+
+answers() {
+    (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null
+}
+
+can_bind() {
+    local status
+    # A refused connection does not rule out TIME_WAIT or a bound, non-listening socket.
+    if python3 - "$PORT" <<'PY'
+import errno
+import socket
+import sys
+
+with socket.socket() as listener:
+    try:
+        listener.bind(("127.0.0.1", int(sys.argv[1])))
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            sys.exit(10)
+        raise
+PY
+    then
+        return 0
+    else
+        status=$?
+    fi
+    [[ $status == 10 ]] && return 1
+    echo "craft-open: bind check failed for port $PORT; Python 3 is required." >&2
+    exit 1
+}
+
+# Serialise allocation and startup, including the readiness check. The child must not inherit
+# the lock, or its whole lifetime would block the next checkout's window.
+mkdir -p -m 700 "$figcraft_home/ports"
+exec 9>"$figcraft_home/lock"
+flock 9
+PORT=$(figcraft_reserved_port "$root" || true)
+if [[ -n ${CRAFT_OPEN_PORT:-} ]]; then
+    if [[ ! $CRAFT_OPEN_PORT =~ ^[1-9][0-9]{0,4}$ ]] || (( CRAFT_OPEN_PORT > 65535 )); then
+        echo "craft-open: invalid control port: $CRAFT_OPEN_PORT" >&2
+        exit 2
+    fi
+    if [[ -n $PORT && $PORT != "$CRAFT_OPEN_PORT" ]]; then
+        echo "craft-open: this checkout already owns port $PORT" >&2
+        exit 3
+    fi
+    PORT=$CRAFT_OPEN_PORT
+fi
+if [[ -z $PORT ]]; then
+    read -r ephemeral_first ephemeral_last < /proc/sys/net/ipv4/ip_local_port_range
+    for (( attempt=0; attempt < 200; attempt++ )); do
+        PORT=$(shuf -i 20000-60000 -n 1)
+        # Outgoing readiness probes must not claim a candidate between its bind check and startup.
+        if (( PORT >= ephemeral_first && PORT <= ephemeral_last )); then
+            PORT=""
+            continue
+        fi
+        [[ ! -e $figcraft_home/ports/$PORT ]] || { PORT=""; continue; }
+        if ! can_bind || [[ -n $(figcraft_foreign_holders "$PORT" "$root") ]]; then
+            PORT=""
+            continue
+        fi
+        break
+    done
+    [[ -n $PORT ]] || { echo "craft-open: no safe control port available" >&2; exit 3; }
+fi
+if [[ -e $figcraft_home/ports/$PORT && $(cat "$figcraft_home/ports/$PORT") != "$root" ]]; then
+    echo "craft-open: port $PORT is permanently reserved for another checkout" >&2
+    exit 3
+fi
+holders=$(figcraft_foreign_holders "$PORT" "$root")
+if [[ -n $holders ]]; then
+    printf 'Other checkouts still reach port %s:\n%s\nRestart those sessions before reusing this port.\n' "$PORT" "$holders" >&2
+    exit 3
+fi
+printf '%s\n' "$root" > "$figcraft_home/ports/$PORT"
+if [[ $(figcraft_port_for_root "$root") == "$PORT" ]] && answers; then
+    echo "FigCraft already serves $root on port $PORT."
+else
+    if answers; then
+        echo "craft-open: port $PORT is occupied by an unverified listener; no window started" >&2
+        exit 3
+    fi
+    if ! can_bind; then
+        echo "craft-open: port $PORT cannot be bound; no window started" >&2
+        exit 3
+    fi
+    config_home="$figcraft_home/instances/$PORT/config"
+    mkdir -p -m 700 "$config_home"
+    # A new instance starts dark; FigCraft fills the other preferences with its defaults, and a
+    # theme picked later in the window is kept.
+    preferences="$config_home/FigCraft/state.json"
+    if [[ ! -e $preferences ]]; then
+        mkdir -p -m 700 "$config_home/FigCraft"
+        (umask 077; printf '%s\n' '{"prefs":{"theme":"dark"}}' > "$preferences")
+    fi
+    refresh_hyprland_instance
+    if ! hyprctl eval "FIGCRAFT_OPEN_ON_WORKSPACE($workspace)" >/dev/null; then
+        echo "craft-open: Hyprland could not route FigCraft to workspace $workspace; no window started" >&2
+        echo "Reload Hyprland (hyprctl reload) if hypr/apps/craft.lua changed since it started." >&2
+        exit 1
+    fi
+    XDG_CONFIG_HOME="$config_home" setsid -f figcraft --control "$PORT" --automation-read-root "$root" --automation-write-root "$root" 9>&- >"$config_home/startup.log" 2>&1
+    for (( waited = 0; waited < WAIT_S * 10; waited++ )); do
+        [[ $(figcraft_port_for_root "$root") == "$PORT" ]] && answers && break
+        sleep 0.1
+    done
+    if [[ $(figcraft_port_for_root "$root") != "$PORT" ]] || ! answers; then
+        echo "FigCraft did not start listening on port $PORT within ${WAIT_S}s." >&2
+        echo "Startup output: $config_home/startup.log" >&2
+        exit 1
+    fi
+    echo "FigCraft started for $root on workspace $workspace, listening on port $PORT."
+fi
+flock -u 9
+exec 9>&-
+
+if [[ -n $session ]]; then
+    mkdir -p "$STATE_DIR/restart-when-idle" "$STATE_DIR/prompt-queue/$session"
+    : > "$STATE_DIR/restart-when-idle/$session"
+    printf '%s' "FigCraft is connected now (figcraft-app). Carry on with what you were doing." \
+        > "$STATE_DIR/prompt-queue/$session/$(date +%s%N).txt"
+    echo "The session restarts when its turn ends (its conversation is kept), then carries on."
+else
+    echo "Existing sessions were not reconnected: their sandbox forwards and MCP connections are unchanged."
+    echo "To reconnect a cockpit session, run: craft-open figcraft --workspace <number> --session <session-id>"
+fi

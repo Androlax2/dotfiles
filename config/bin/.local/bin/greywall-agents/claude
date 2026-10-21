@@ -1,0 +1,40 @@
+#!/bin/sh
+# Keep this launcher separate from the binary replaced by vendor updates.
+agent=claude
+# Sessions do not update Claude Code: they cannot write ~/.local/share/claude/versions (greywall.json),
+# and a file planted there must never be run with Theo's rights. claude-update.timer updates it
+# outside the sandbox through the installed claude.
+export DISABLE_AUTOUPDATER=1
+# Telemetry and error reports go to Datadog, which greyproxy denies: Claude waited on it before
+# showing its prompt, 2.3 s of a 3.9 s start (measured 2026-10-19; DISABLE_TELEMETRY and
+# DISABLE_ERROR_REPORTING alone did not help). This also turns off /bug inside sessions.
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+. "$(dirname "$0")/launcher-common.sh"
+greywall_options="--auto-profile --profile claude $greywall_options"
+
+# A credits session (the cockpit's $ sets COCKPIT_CREDITS=1) bills the Console's API
+# credits instead of the subscription: Claude prefers ANTHROPIC_API_KEY over its login. The key
+# stays a greyproxy placeholder inside the sandbox. Without a key in the keyring the session does
+# not start, rather than running on the subscription unnoticed (launcher-common.sh gives every other
+# session none).
+if [ "${COCKPIT_CREDITS:-}" = 1 ]; then
+    anthropic_key=$(secret-tool lookup service agent-anthropic 2>/dev/null || true)
+    if [ -z "$anthropic_key" ]; then
+        echo "claude launcher: no API key in the keyring for a credits session (make -C ~/dotfiles agent-anthropic-key), not starting." >&2
+        exit 1
+    fi
+    export ANTHROPIC_API_KEY="$anthropic_key"
+    greywall_options="$greywall_options --secret ANTHROPIC_API_KEY"
+fi
+
+figcraft_mcp_config='{"mcpServers":{"figcraft-app":{"command":"sh","args":["-c","exec figcraft-cli mcp --attach \"${FIGCRAFT_CONTROL_PORT:?FigCraft is not connected to this checkout}\""]}}}'
+
+# Linked sessions: a background hook that wakes an idle session with its next approved team message
+# (asyncRewake: exit 2 wakes Claude; it exits quietly without a team). Added to ~/.claude/settings.json's hooks.
+team_watch='[{"hooks":[{"type":"command","command":"cockpit-team watch","asyncRewake":true,"timeout":86400}]}]'
+team_settings="{\"hooks\":{\"SessionStart\":$team_watch,\"Stop\":$team_watch}}"
+
+# greywall_options is split on spaces on purpose: every path in it is under $HOME or
+# $XDG_RUNTIME_DIR, which have none.
+# shellcheck disable=SC2086
+exec "$HOME/.local/bin/greywall" $greywall_options -- "$HOME/.local/bin/claude" "$@" --mcp-config "$figcraft_mcp_config" --settings "$team_settings"

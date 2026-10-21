@@ -1,0 +1,10 @@
+[Unit]
+Description=Update Claude Code and opencode every 6 hours (sessions cannot: greywall keeps their binaries read-only)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
