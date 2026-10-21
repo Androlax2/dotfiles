@@ -144,10 +144,10 @@ test: ## Build the OSD classifier and run the apps/ test suite
 	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p desktop --bin osd
 	$(build_runner) cargo test --release --quiet --manifest-path apps/Cargo.toml
 
-cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); claude-sessions reload shows the column
+cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); cockpit reload shows the column
 	$(build_runner) cargo build --release --manifest-path apps/Cargo.toml
 
-dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); claude-sessions apply-dotfiles brings its commits here
+dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); cockpit apply-dotfiles brings its commits here
 	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
 
 handoff-install: ## Install what Claude left in .handoff/ (checksums, diff, then asks; runs with your rights)

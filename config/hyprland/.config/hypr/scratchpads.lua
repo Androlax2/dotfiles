@@ -10,7 +10,7 @@
 -- Each web scratchpad is a site in its own Zen profile (compact mode, its own logins),
 -- recognised by its command line and tagged with its name. A cold start takes seconds, so
 -- a spinner placeholder window opens first and is closed once the Zen window is there.
--- The last three belong to the Claude cockpit: their keys only act on workspace 6, and the
+-- The last three belong to the Agent Cockpit: their keys only act on workspace 6, and the
 -- session manager opens them too (OPEN_IN_SCRATCHPAD below), a pull request straight in prs.
 
 local function has_window(predicate)
@@ -140,7 +140,7 @@ local function open_in(name, page)
 end
 
 -- `hyprctl eval 'TOGGLE_SCRATCHPAD("music")'` for scripts (tools/capture.sh);
--- `hyprctl eval 'OPEN_IN_SCRATCHPAD("prs", "https://github.com/…/pull/7")'` for claude-sessions-sidebar.
+-- `hyprctl eval 'OPEN_IN_SCRATCHPAD("prs", "https://github.com/…/pull/7")'` for cockpit-sidebar.
 TOGGLE_SCRATCHPAD = toggle
 OPEN_IN_SCRATCHPAD = open_in
 
@@ -152,8 +152,8 @@ bind("CTRL + M", function() toggle("music") end, { description = "Apple Music" }
 bind("SUPER + CTRL + M", function() toggle("vitals") end, { description = "Machine monitor (vitals)" })
 -- SUPER + CTRL is physical Ctrl + Cmd, like the walker pickers in bindings.lua. These three
 -- are cockpit keys: they act on the Claude workspace only (the key is still swallowed elsewhere).
--- Pull requests: the list of the repository of the session in the cockpit's pane (claude-sessions prs).
-bind("SUPER + CTRL + P", hl.dsp.exec_cmd("claude-sessions prs"), { description = "Pull requests of the viewed session's repository" })
+-- Pull requests: the list of the repository of the session in the cockpit's pane (cockpit prs).
+bind("SUPER + CTRL + P", hl.dsp.exec_cmd("cockpit prs"), { description = "Pull requests of the viewed session's repository" })
 bind("SUPER + CTRL + A", function() toggle("claude") end, { description = "Claude on the web" })
 bind("SUPER + CTRL + G", function() toggle("greyproxy") end, { description = "greyproxy dashboard" })
 

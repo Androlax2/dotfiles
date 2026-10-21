@@ -42,7 +42,7 @@ impl Machine {
             .env("VITALS_SYS_ROOT", path("sys")).env("VITALS_DIR", path("state")).env("XDG_RUNTIME_DIR", path("run"))
             .env("VITALS_ROOT_DATA", path("root-data")).env("HOME", path("state"))
             .env("XDG_STATE_HOME", path("state/.local/state"))
-            .env("CLAUDE_SESSIONS_STATE_HOME", path("state/.local/state"))
+            .env("COCKPIT_STATE_HOME", path("state/.local/state"))
             .env("PATH", format!("{}:/usr/bin:/bin", path("bin").display()))
             .output().unwrap()
     }

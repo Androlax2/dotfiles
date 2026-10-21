@@ -28,7 +28,7 @@
     {
       "id": 5,
       "prompt": "Oui, ouvre le chat flottant. Your session ID is ses_3f2a9c0b1ffeQkTz8mWn4rJd2L, while the cockpit currently shows a different project. FigCraft is already connected.",
-      "expected_output": "Request the approved host command with the explicit own session ID: claude-sessions design-review start ses_3f2a9c0b1ffeQkTz8mWn4rJd2L. Explain the interactive conversation-only window without moving/resizing the main windows or starting another agent.",
+      "expected_output": "Request the approved host command with the explicit own session ID: cockpit design-review start ses_3f2a9c0b1ffeQkTz8mWn4rJd2L. Explain the interactive conversation-only window without moving/resizing the main windows or starting another agent.",
       "files": []
     }
   ]

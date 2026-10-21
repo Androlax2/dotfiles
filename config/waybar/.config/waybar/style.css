@@ -152,7 +152,7 @@ window#waybar {
 #hyprland-submap,
 #custom-hdr,
 #custom-hyprsunset,
-#custom-claude-sessions {
+#custom-cockpit {
     min-height: 24px;
     padding: 0 7px;
     margin: 3px 10px 3px 0;
@@ -188,11 +188,11 @@ window#waybar {
 }
 
 /* Claude sessions: the counts carry their own colours, the chip tint follows the most urgent state. */
-#custom-claude-sessions.waiting {
+#custom-cockpit.waiting {
     background: alpha(@yellow, 0.16);
 }
 
-#custom-claude-sessions.needs-you {
+#custom-cockpit.needs-you {
     background: alpha(@red, 0.16);
 }
 
@@ -235,11 +235,11 @@ window#waybar {
 }
 
 /* The sessions chip is alone in its island: no trailing gap. */
-#custom-claude-sessions {
+#custom-cockpit {
     margin-right: 0;
 }
 
-#custom-claude-sessions.idle {
+#custom-cockpit.idle {
     background: transparent;
     color: @textDim;
 }

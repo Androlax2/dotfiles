@@ -20,7 +20,7 @@ hl.on("hyprland.start", function()
     -- Hyprland existed, without its display; walker's apps then fail to open.
     hl.exec_cmd("systemctl --user import-environment " .. session_environment
         .. " && systemctl --user restart osd.service elephant.service walker.service"
-        .. " && systemctl --user start claude-sessions.service")
+        .. " && systemctl --user start cockpit.service")
     hl.exec_cmd("~/.local/bin/mpris-card") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")

@@ -22,7 +22,7 @@ Offer once at the start of that review, not on every board or merely because Fig
 If he declines, continue the review normally and do not offer again during that review.
 
 Wait for his answer before asking to run anything. After consent, use `ask-to-run` for
-`claude-sessions design-review start <your-session-id>`, with `--why` explaining that it opens
+`cockpit design-review start <your-session-id>`, with `--why` explaining that it opens
 another interactive terminal client of this same conversation, not another agent or the cockpit.
 Pass your actual session ID explicitly so the cockpit's selected conversation cannot substitute
 another project's chat. FigCraft and this agent must already be running; the cockpit need not be
@@ -35,7 +35,7 @@ current board; issue no canvas-selection, zoom, main-window movement or resize c
 terminal clients share the same CLI, so its text may reflow when the last-used client changes.
 
 When the review ends, offer to close the floating chat. Wait for consent, then use `ask-to-run`
-for `claude-sessions design-review stop <your-session-id>`, explaining that only the floating
+for `cockpit design-review stop <your-session-id>`, explaining that only the floating
 terminal closes and the agent keeps running. Theo can also close the float normally. Do not close
 it automatically when the agent finishes speaking. Repeated start/stop is harmless. The main
 windows stay unchanged, so no layout restoration is needed. Neither command reconnects MCP or

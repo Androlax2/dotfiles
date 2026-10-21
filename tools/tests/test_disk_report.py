@@ -17,7 +17,7 @@ class DiskReportTests(unittest.TestCase):
 
     def run_make_disk(self):
         environment = dict(os.environ, HOME=str(self.home))
-        environment.pop("CLAUDE_SESSIONS_CLONES", None)
+        environment.pop("COCKPIT_CLONES", None)
         return subprocess.run(["make", "--no-print-directory", "-C", str(REPOSITORY), "disk"],
                               env=environment, capture_output=True, text=True, timeout=120)
 

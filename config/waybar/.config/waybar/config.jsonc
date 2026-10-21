@@ -22,7 +22,7 @@
 
   "group/claude": {
     "orientation": "inherit",
-    "modules": ["custom/claude-sessions"]
+    "modules": ["custom/cockpit"]
   },
 
   "group/right": {
@@ -195,11 +195,11 @@
   },
 
   // ---- Claude island: sessions chip, on every workspace: ● working  ○ waiting  ! needs you; a dim
-  // robot glyph with no session so the island never shows empty. The OSD daemon (osd) rewrites $XDG_RUNTIME_DIR/claude-sessions.json and sends
+  // robot glyph with no session so the island never shows empty. The OSD daemon (osd) rewrites $XDG_RUNTIME_DIR/cockpit.json and sends
   // RTMIN+16 on every change; the interval only refreshes the ages in the tooltip. Click opens the
   // most urgent session in the manager.
-  "custom/claude-sessions": {
-    "exec": "~/.config/waybar/scripts/claude-sessions.sh",
+  "custom/cockpit": {
+    "exec": "~/.config/waybar/scripts/cockpit.sh",
     "return-type": "json",
     "interval": 60,
     "signal": 16,

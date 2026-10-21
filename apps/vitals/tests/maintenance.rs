@@ -20,7 +20,7 @@ impl Fixture {
         for name in ["bin", "state/disk-maintenance", "runtime", "home"] { fs::create_dir_all(root.join(name)).unwrap(); }
         let values = [("HOME", root.join("home").into_os_string()),
                       ("XDG_STATE_HOME", root.join("state").into_os_string()),
-                      ("CLAUDE_SESSIONS_STATE_HOME", root.join("state").into_os_string()),
+                      ("COCKPIT_STATE_HOME", root.join("state").into_os_string()),
                       ("XDG_RUNTIME_DIR", root.join("runtime").into_os_string()),
                       ("PATH", OsString::from(format!("{}:/usr/bin:/bin", root.join("bin").display()))),
                       ("VITALS_TEST_FIXTURE", root.as_os_str().to_owned())];

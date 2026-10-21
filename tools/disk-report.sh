@@ -6,7 +6,7 @@
 set -u
 
 home=${HOME:?HOME must be set}
-clones_root=${CLAUDE_SESSIONS_CLONES:-$home/IdeaProjects/.parallel}
+clones_root=${COCKPIT_CLONES:-$home/IdeaProjects/.parallel}
 projects_root=$home/IdeaProjects
 pnpm_home=${PNPM_HOME:-$home/.local/share/pnpm}
 

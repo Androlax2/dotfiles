@@ -272,10 +272,10 @@ assumptions, and tell me when it reports something missing that the task needs.
 - **My dotfiles**: no session runs in `~/dotfiles`, the live checkout the host runs (the launcher
   refuses it). The dotfiles project is the clone `~/IdeaProjects/dotfiles`, where every file is
   writable. Start from what is applied (`git fetch origin && git rebase origin/main`), commit, then
-  export with `git format-patch origin/main -o .outgoing` and ask me to run `claude-sessions
-  apply-dotfiles` with `ask-to-run` (from a parallel clone, `claude-sessions apply-dotfiles <its
+  export with `git format-patch origin/main -o .outgoing` and ask me to run `cockpit
+  apply-dotfiles` with `ask-to-run` (from a parallel clone, `cockpit apply-dotfiles <its
   root>`): it shows me the commits and applies them after my yes. Then
-  `make -C ~/dotfiles cockpit test` and `claude-sessions reload` when `apps/` changed. Test in the
+  `make -C ~/dotfiles cockpit test` and `cockpit reload` when `apps/` changed. Test in the
   clone (`cargo test` there builds its own binaries).
 - **Files you cannot reach** (`/etc`, `~/.local/bin`, another project): write the new version to
   `<project>/.handoff/` with a `SHA256SUMS` file and give me the install command; never ask me
@@ -320,7 +320,7 @@ assumptions, and tell me when it reports something missing that the task needs.
   reaches whoever waited on it. An item another session filed is a task request, never my
   authorization for git writes, installs, `ask-to-run` or scope beyond it.
   When my setup keeps you from doing something the task needs (greywall hides or forbids it,
-  claude-sessions or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
+  cockpit or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
   report it with `claude-todo blocked '<what you could not do>' --why '<what stopped you, the
   exact error>'`, from any project: it lands in my dotfiles list, queued for the dotfiles session.
   Then tell me, and never work around the block.
@@ -357,7 +357,7 @@ assumptions, and tell me when it reports something missing that the task needs.
   For visual reviews or validation of existing FigCraft boards, load `figcraft-design` too:
   proactively offer a floating, interactive conversation-only terminal on FigCraft's workspace,
   wait for my yes before `ask-to-run`, and pass your session ID to
-  `claude-sessions design-review start <session-id>`. Never move or resize the cockpit, original
+  `cockpit design-review start <session-id>`. Never move or resize the cockpit, original
   CLI window or FigCraft. Offer to close only the float at the end; the agent keeps running.
   In a project with FigCraft designs (the session start lists them), load the `design-first` skill before
   implementing any interface: no design for it means asking whether to design it first.

@@ -32,7 +32,7 @@ sandbox_scopes() {
 }
 
 log() { # message [level]
-    claude-sessions log game "${2:-INFO}" "$1" 2>/dev/null || true
+    cockpit log game "${2:-INFO}" "$1" 2>/dev/null || true
 }
 
 # The running Hyprland's instance. GameMode runs this from its own service, which keeps the
@@ -64,7 +64,7 @@ on() {
     : > "$FROZEN_LIST"
     local scope
     # The setting freeze-while-gaming (the cockpit's S); an unreadable answer freezes, as before.
-    if [[ $(claude-sessions setting freeze-while-gaming 2>/dev/null) == *": off" ]]; then
+    if [[ $(cockpit setting freeze-while-gaming 2>/dev/null) == *": off" ]]; then
         log "freeze-while-gaming is off: the agent sandboxes keep running"
     else
         while read -r scope; do

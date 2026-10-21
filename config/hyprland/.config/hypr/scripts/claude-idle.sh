@@ -17,20 +17,20 @@ PROMPT="$HOME/.local/bin/claude-idle-prompt"
 
 prompt() {
     "$ON_CLAUDE_WORKSPACE" || exit 0
-    [[ $(claude-sessions setting idle-lock 2>/dev/null) == *": off" ]] && exit 0
+    [[ $(cockpit setting idle-lock 2>/dev/null) == *": off" ]] && exit 0
     # shellcheck source=/dev/null
     source "$HOME/.config/hypr/scripts/is-gaming.sh" >/dev/null 2>&1 || true
     if is_gaming; then exit 0; fi
-    claude-sessions log idle INFO "idle on the Claude workspace: asking before the lock" 2>/dev/null
+    cockpit log idle INFO "idle on the Claude workspace: asking before the lock" 2>/dev/null
     "$PROMPT" "$GRACE_S" &
     echo $! > "$PID_FILE"
     if wait $!; then
         rm -f "$PID_FILE"
-        claude-sessions log idle INFO "answered: no lock" 2>/dev/null
+        cockpit log idle INFO "answered: no lock" 2>/dev/null
         exit 0 # answered
     fi
     rm -f "$PID_FILE"
-    claude-sessions log idle INFO "no answer in ${GRACE_S} s: locking" 2>/dev/null
+    cockpit log idle INFO "no answer in ${GRACE_S} s: locking" 2>/dev/null
     loginctl lock-session
     sleep "$SCREEN_OFF_AFTER_S"
     if pidof hyprlock >/dev/null; then

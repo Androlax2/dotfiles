@@ -1,7 +1,7 @@
 -- Claude Code sessions. The OSD daemon (osd, apps/desktop) keeps the registry (hooks run inside greywall with
 -- no Hyprland socket) and calls CLAUDE_WINDOW_STATE below with `hyprctl eval`: the terminal a
 -- session runs in carries exactly one claude-<state> tag, and the rules colour its border by state.
--- The claude-sessions manager (ALT + C) is the one window that lists and shows every session.
+-- The cockpit manager (ALT + C) is the one window that lists and shows every session.
 local colors = require("colors")
 local STATE_TAGS = { "claude-working", "claude-waiting", "claude-needs-you" }
 -- Workspace 6: right after Steam (5); the games moved to 7 to make room.
@@ -28,7 +28,7 @@ hl.workspace_rule({
     no_shadow = true,
 })
 -- Fully opaque: a wall of session output over the wallpaper was hard to read at the global 0.95/0.9.
-hl.window_rule({ match = { class = "^claude-sessions$" }, workspace = tostring(WORKSPACE), opacity = "1 1" })
+hl.window_rule({ match = { class = "^cockpit$" }, workspace = tostring(WORKSPACE), opacity = "1 1" })
 
 -- `hyprctl eval 'CLAUDE_WINDOW_STATE(4242, "waiting")'`; nil clears every state tag.
 function CLAUDE_WINDOW_STATE(pid, state)

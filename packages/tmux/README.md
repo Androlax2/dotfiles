@@ -4,7 +4,7 @@
 `@pane-border-clip-top` is `on`. The locally patched tmux 3.8-1 keeps the
 official package version, so pacman can silently replace it on an upgrade.
 
-`claude-sessions doctor` hashes the `tmux` executable on PATH and compares it
+`cockpit doctor` hashes the `tmux` executable on PATH and compares it
 with `config/tmux/.config/tmux/border-junction.sha256` (stowed under
 `~/.config/tmux/`). The baseline records the installed patched binary, whose
 `@pane-border-clip-top` marker was verified when recording it. A replacement,
