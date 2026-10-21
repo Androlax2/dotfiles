@@ -1,0 +1,9 @@
+# The tests of the dotfiles' own scripts and configuration (Hyprland, tmux, Waybar, the install
+# tools), run by `make test`; the cockpit's and vitals' tests live with them.
+[package]
+name = "config-tests"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde_json = "1.0.154"

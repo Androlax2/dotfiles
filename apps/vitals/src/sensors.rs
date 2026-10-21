@@ -213,7 +213,7 @@ mod tests {
     }
 
     fn scratch() -> PathBuf {
-        let root = std::env::temp_dir().join(format!("vitals-sensors-{}", cockpit::util::token_hex(6)));
+        let root = std::env::temp_dir().join(format!("vitals-sensors-{}", crate::host::token_hex(6)));
         fs::create_dir_all(&root).unwrap();
         root
     }

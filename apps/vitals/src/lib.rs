@@ -7,6 +7,7 @@ pub mod checks;
 pub mod collect;
 pub mod facts;
 pub mod games;
+pub mod host;
 pub mod import;
 pub mod journal;
 pub mod maintenance;

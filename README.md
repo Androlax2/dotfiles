@@ -304,13 +304,14 @@ Polling reuses a successful runtime cache for four minutes. Missing CLI, sign-in
 | --- | --- |
 | [`config/bin/.local/bin/cockpit`](config/bin/.local/bin/cockpit) | The manager: tmux layout, start, resume, restart, logs, doctor |
 | [`apps/cockpit`](apps/cockpit) | The Rust programs, built with `make cockpit`: the column (Ratatui), the approval terminal, the guide window and the sandbox commands; each name in `config/bin/.local/bin` is a two-line wrapper that runs its build |
-| [`apps/desktop`](apps/desktop) | The GTK programs: the OSD daemon (banners, the session registry, the run and guide queues), the now-playing card, the idle screen, the web placeholder |
+| [`apps/osd`](apps/osd) | The cockpit's GTK programs: the OSD daemon (volume and brightness, banners, the session registry, the run and guide queues, the teams), the idle screen |
+| [`apps/desktop`](apps/desktop) | The desktop's own GTK programs: the now-playing card, the web placeholder, the cooler's overlay mask |
 | [`config/claude/.claude/hooks`](config/claude/.claude/hooks) | `session-state.sh` reports states; `agent-environment.sh` tells a session what its sandbox has |
 | [`config/bin/.local/bin`](config/bin/.local/bin) | `ask-to-run`, `claude-run-approve`, `ask-to-guide`, `claude-guide`, `claude-todo`, `claude-design`: wrappers of the Rust builds |
 | [`config/tmux/.config/tmux/tmux.conf`](config/tmux/.config/tmux/tmux.conf) | The cockpit's keys |
 | [`config/hyprland/.config/hypr/apps/claude.lua`](config/hyprland/.config/hypr/apps/claude.lua), [`scratchpads.lua`](config/hyprland/.config/hypr/scratchpads.lua) | Workspace 6, window rules, the web windows |
 | [`config/systemd/.config/systemd/user`](config/systemd/.config/systemd/user) | `osd`, `cockpit`, the health check, the version link |
-| [`apps/cockpit/tests`](apps/cockpit/tests), [`apps/desktop/src/tests.rs`](apps/desktop/src/tests.rs) | `make test`: the scripts, hooks and programs through fake commands on PATH, and the daemon's registry |
+| [`apps/cockpit/tests`](apps/cockpit/tests), [`apps/osd/src/tests.rs`](apps/osd/src/tests.rs), [`apps/config-tests`](apps/config-tests) | `make test`: the scripts, hooks and programs through fake commands on PATH, the daemon's registry, and the dotfiles' own scripts and configuration |
 
 ## Games
 

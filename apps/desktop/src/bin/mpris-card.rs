@@ -34,11 +34,11 @@ const ICON_PAUSE: &str = "󰏤";
 const ICON_NEXT: &str = "󰒭";
 
 fn pid_file() -> PathBuf {
-    cockpit::paths::runtime_dir().join("mpris-card.pid")
+    desktop::host::runtime_dir().join("mpris-card.pid")
 }
 
 fn fifo_path() -> PathBuf {
-    cockpit::paths::runtime_dir().join("mpris-card.fifo")
+    desktop::host::runtime_dir().join("mpris-card.fifo")
 }
 
 fn player_command(arguments: &[&str]) -> Command {
@@ -248,7 +248,7 @@ impl Card {
         }
         let mut command = vec![PLAYER[0], PLAYER[1]];
         command.push("position");
-        let Some((_, stdout, _)) = desktop::registry::output_within(&command, POSITION_TIMEOUT) else { return };
+        let Some((_, stdout, _)) = desktop::host::output_within(&command, POSITION_TIMEOUT) else { return };
         let Ok(seconds) = stdout.trim().parse::<f64>() else { return };
         let microseconds = seconds * 1_000_000.0;
         self.elapsed.set_text(&format_time(microseconds));
@@ -332,7 +332,7 @@ fn listen_for_toggles(card: Rc<Card>) {
 
 fn activate(app: &Application, show_now: bool) {
     let provider = CssProvider::new();
-    provider.load_from_path(cockpit::paths::home().join(".config/mpris-card/style.css"));
+    provider.load_from_path(desktop::host::home().join(".config/mpris-card/style.css"));
     gtk4::style_context_add_provider_for_display(&gdk::Display::default().expect("a display"), &provider, gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION);
     let card = Card::new(app);
     // Held for good: the daemon has no window most of the time.

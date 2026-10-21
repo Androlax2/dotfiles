@@ -16,7 +16,7 @@ use std::path::PathBuf;
 pub const KEEP_SAMPLES_S: i64 = 35 * 86400;
 
 pub fn directory() -> PathBuf {
-    std::env::var("VITALS_DIR").map(PathBuf::from).unwrap_or_else(|_| cockpit::paths::state_home().join("vitals"))
+    std::env::var("VITALS_DIR").map(PathBuf::from).unwrap_or_else(|_| crate::host::state_home().join("vitals"))
 }
 
 pub struct Store {

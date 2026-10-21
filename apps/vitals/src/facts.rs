@@ -137,7 +137,7 @@ pub fn uptime(text: &str) -> Option<i64> {
 }
 
 fn run(program: &str, arguments: &[&str]) -> String {
-    cockpit::util::output_of(program, arguments).unwrap_or_default()
+    crate::host::output_of(program, arguments).unwrap_or_default()
 }
 
 pub fn gather(root: &Path) -> Facts {

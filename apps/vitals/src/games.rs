@@ -74,12 +74,12 @@ pub fn step(running: Option<&Game>, playing: bool, title: Option<&str>) -> Step 
 
 /// GameMode's game: game-performance's list exists from `on` to `off`.
 fn game_mode_on() -> bool {
-    cockpit::paths::runtime_dir().join("game-performance.paused").exists()
+    crate::host::runtime_dir().join("game-performance.paused").exists()
 }
 
 /// Called each minute by the collector.
 pub fn follow(store: &Store, now: i64) -> rusqlite::Result<()> {
-    let title = cockpit::util::active_game();
+    let title = crate::host::active_game();
     let playing = title.is_some() || game_mode_on();
     let running = store.running_game()?;
     match step(running.as_ref(), playing, title.as_deref()) {

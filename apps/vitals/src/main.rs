@@ -11,11 +11,11 @@ use vitals::{collect, import, journal, sensors, store::Store, tui};
 const STALE_AFTER_S: i64 = 5 * 60;
 
 fn status() -> Value {
-    let Some(state) = cockpit::util::read_json(&collect::status_path()) else {
+    let Some(state) = vitals::host::read_json(&collect::status_path()) else {
         return json!({"text": "●", "class": "stale", "tooltip": "vitals : aucune collecte pour l'instant (vitals-collect.timer)"});
     };
     let at = state["at"].as_i64().unwrap_or(0);
-    if cockpit::util::now_secs() - at > STALE_AFTER_S {
+    if vitals::host::now_secs() - at > STALE_AFTER_S {
         return json!({"text": "●", "class": "stale", "tooltip": "vitals : la collecte n'a pas tourné depuis 5 minutes (vitals-collect.timer)"});
     }
     let level = state["level"].as_str().unwrap_or("ok");
@@ -43,14 +43,14 @@ fn main() {
         ["shutdown", moment] => Store::open().map_err(|error| error.to_string())
             .and_then(|store| journal::mark(&store, &sensors::sys_root(), moment)),
         ["import", rest @ ..] if rest.len() <= 1 => {
-            let path = rest.first().map(std::path::PathBuf::from).unwrap_or_else(|| cockpit::paths::home().join(".local/share/templogs/temps.log"));
+            let path = rest.first().map(std::path::PathBuf::from).unwrap_or_else(|| vitals::host::home().join(".local/share/templogs/temps.log"));
             std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display())).and_then(|log| {
                 let store = Store::open().map_err(|error| error.to_string())?;
                 // Twice would count every sample twice in the hourly summaries.
                 if store.state("imported_temps_log").map_err(|error| error.to_string())?.is_some() {
                     return Err("the temperature log was already imported".into());
                 }
-                let count = import::import(&store, &log, cockpit::util::now_secs()).map_err(|error| error.to_string())?;
+                let count = import::import(&store, &log, vitals::host::now_secs()).map_err(|error| error.to_string())?;
                 store.set_state("imported_temps_log", &path.display().to_string()).map_err(|error| error.to_string())?;
                 println!("imported {count} samples from {}", path.display());
                 Ok(())

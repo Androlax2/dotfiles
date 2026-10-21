@@ -132,43 +132,24 @@ Mechanical, but 1,328 mentions in 127 files. Mapping:
   `the_clones_of_a_reviewed_repository_read_its_running_copy_and_no_other`, and the hook and card tests
   parametrized over the three.
 
-## Phase 3 — Cut the crate dependencies (in dotfiles)  ·  about 3 hours
+## Phase 3 — Cut the crate dependencies (in dotfiles)  ·  done
 
-### Task 3.1: Desktop widgets stop depending on the cockpit crate
-
-**Files:** `apps/desktop/Cargo.toml`, `apps/desktop/src/bin/{mpris-card,web-placeholder}.rs`,
-new `apps/desktop/src/paths.rs`, `apps/desktop/src/hyprland.rs`
-
-- [ ] Copy `home()`, `runtime_dir()` and `refresh_hyprland_instance` + `output_within` (the 4 helpers the
-  widgets use) into the new files; move `mpris.rs`, `fifo::open` with them.
-- [ ] Move `osd.rs`, `claude-idle-prompt.rs`, `registry.rs`, `teams.rs`, the rest of `fifo.rs` into a new
-  crate `apps/osd` (still in this workspace), with their tests.
-- [ ] `apps/desktop` no longer lists `cockpit` in `Cargo.toml`; `make test` PASS, commit.
-
-### Task 3.2: vitals stops depending on the cockpit crate
-
-**Files:** `apps/vitals/Cargo.toml`, new `apps/vitals/src/host.rs`, `apps/vitals/src/collect.rs:36,210`
-
-- [ ] Copy the `paths`/`util` helpers vitals uses (`now_secs`, `read_json`, `write_json`, `output_of`,
-  `gaming`, `active_game`, `token_hex`, `runtime_dir`, `state_home`, `home`) into `host.rs`.
-- [ ] Replace `approval::send_host` by `host::send_notice(line) -> bool`: non-blocking write of
-  `line\n` to `$XDG_RUNTIME_DIR/osd-host.fifo`; returns false when nobody reads (the osd protocol
-  `notice {...}` / `notice-clear vitals-<key>` is the contract between the two repos; document it in
-  both READMEs).
-- [ ] Test `a_notice_without_a_running_osd_is_dropped_silently`; `make test` PASS, commit.
-
-### Task 3.3: Tests follow the files they test
-
-**Files:** `apps/cockpit/tests/{claude_idle,hotcorner,craft_lua,figcraft_review_lua,game_mode_lua,web_launch,tmux_clipboard,fish_opencode,waybar_jobpilot,system_install}.rs`
-
-- [ ] Files that move with the cockpit (decide per file, rule: used only by the cockpit → move):
-  `hypr/scripts/claude-idle.{sh,css}`, `figcraft-review.lua`, `apps/craft.lua`, waybar
-  `claude-usage.sh`, `codex-usage.sh`, `codex-quota.py`, `cockpit.sh`, `on-claude-workspace.sh`.
-  The cockpit installs them under their current `~/.config/...` paths, so dotfiles config keeps
-  loading them unchanged.
-- [ ] Tests of files that stay (hotcorner, web_launch, tmux_clipboard, game_mode_lua, waybar_jobpilot,
-  system_install, switch-audio) move to a new crate `apps/config-tests` in dotfiles.
-- [ ] `make test` PASS, commit, ship.
+- [x] New crate `apps/osd` (lib `fifo`, `registry`, `teams` and their tests; bins `osd`,
+  `claude-idle-prompt`), moved with `git mv`. `apps/desktop` keeps `mpris-card`, `web-placeholder`,
+  `cooler-overlay-mask` with its own `host.rs` (`home`, `runtime_dir`, `output_within`) and `fifo::open`:
+  no cockpit dependency.
+- [x] `apps/vitals/src/host.rs` holds the helpers vitals used from the cockpit crate;
+  `host::send_notice` writes the osd protocol line to `$XDG_RUNTIME_DIR/osd-host.fifo` (the contract
+  between the two repos). vitals reads `XDG_STATE_HOME` only, not `COCKPIT_STATE_HOME`. No cockpit
+  dependency.
+- [x] New crate `apps/config-tests`: the tests of files that stay in dotfiles (hotcorner, web_launch,
+  game_mode_lua, waybar_jobpilot, system_install, tmux_clipboard, switch_audio), with a small sandbox
+  of its own.
+- [ ] Left for Phase 4's extraction lists: the cockpit-only config files (`hypr/scripts/claude-idle.*`,
+  `figcraft-review.lua`, `apps/craft.lua`, the Waybar `cockpit.sh`, `claude-usage.sh`, `codex-usage.sh`,
+  `codex-quota.py`, `on-claude-workspace.sh`, `waybar-visibility.sh`) and the integration files whose
+  tests sit in the cockpit crate (fish `claude` function, tmux bindings, opencode plugins, codex
+  hooks, `lock.sh`). Decide per file there, with Theo.
 
 ## Phase 4 — Extract the repos  ·  about 3 hours, mostly Theo's commands
 

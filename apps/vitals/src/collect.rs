@@ -18,7 +18,7 @@ const WAYBAR_SIGNAL: &str = "-RTMIN+17";
 const NOTICE_TITLE: &str = "PC";
 
 pub fn status_path() -> PathBuf {
-    cockpit::paths::runtime_dir().join("vitals.json")
+    crate::host::runtime_dir().join("vitals.json")
 }
 
 /// Text for a banner: the OSD refuses control characters, tmux formats and long text.
@@ -33,7 +33,7 @@ fn notice_id(key: &str) -> String {
 
 fn notify(alert: &Alert) -> bool {
     let notice = json!({"id": notice_id(&alert.key), "title": banner_text(&format!("{NOTICE_TITLE} · {}", alert.title)), "message": banner_text(&alert.detail)});
-    cockpit::approval::send_host(&format!("notice {notice}"))
+    crate::host::send_notice(&format!("notice {notice}"))
 }
 
 /// Brings the alerts in line with the findings. New problems (or ones that turned critical) get a
@@ -74,7 +74,7 @@ pub fn write_status(store: &Store, now: i64) -> std::io::Result<()> {
     let alerts = store.alerts().unwrap_or_default();
     let level = if alerts.iter().any(|alert| alert.level == "crit") { "crit" } else if alerts.is_empty() { "ok" } else { "warn" };
     let titles: Vec<&str> = alerts.iter().map(|alert| alert.title.as_str()).collect();
-    cockpit::util::write_json(&status_path(), &json!({"level": level, "alerts": titles, "at": now}))
+    crate::host::write_json(&status_path(), &json!({"level": level, "alerts": titles, "at": now}))
 }
 
 fn record_sensors(store: &Store, now: i64) -> rusqlite::Result<()> {
@@ -196,7 +196,7 @@ pub fn announce_disk_review(store: &Store, path: &Path, now: i64, is_gaming: boo
 
 pub fn run() -> Result<(), String> {
     let store = Store::open().map_err(|error| format!("cannot open the history: {error}"))?;
-    let now = cockpit::util::now_secs();
+    let now = crate::host::now_secs();
     record_sensors(&store, now).map_err(|error| format!("cannot record: {error}"))?;
     let facts = facts_with_history(&store).map_err(|error| format!("cannot read the history: {error}"))?;
     for (mount, used) in &facts.disk_usage {
@@ -207,15 +207,15 @@ pub fn run() -> Result<(), String> {
     let found = findings(&store, &facts, now).map_err(|error| format!("cannot check: {error}"))?;
     let mut send = |key: &str, alert: Option<&Alert>| match alert {
         Some(alert) => notify(alert),
-        None => cockpit::approval::send_host(&format!("notice-clear {}", notice_id(key))),
+        None => crate::host::send_notice(&format!("notice-clear {}", notice_id(key))),
     };
-    let changed = apply(&store, &found, now, cockpit::util::gaming(), &mut send).map_err(|error| format!("cannot keep the alerts: {error}"))?;
+    let changed = apply(&store, &found, now, crate::host::gaming(), &mut send).map_err(|error| format!("cannot keep the alerts: {error}"))?;
     write_status(&store, now).map_err(|error| format!("cannot write {}: {error}", status_path().display()))?;
     if changed {
         let _ = std::process::Command::new("pkill").args(["-x", WAYBAR_SIGNAL, "waybar"]).status();
     }
-    let review = cockpit::paths::state_home().join("disk-maintenance/latest.json");
-    announce_disk_review(&store, &review, now, cockpit::util::gaming(), &mut |title, detail| {
+    let review = crate::host::state_home().join("disk-maintenance/latest.json");
+    announce_disk_review(&store, &review, now, crate::host::gaming(), &mut |title, detail| {
         notify(&Alert { key: "disk-review".into(), level: "warn".into(), title: title.into(), detail: detail.into(),
                         since: now, notified: false })
     }).map_err(|error| format!("disk review: {error}"))?;

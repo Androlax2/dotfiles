@@ -141,7 +141,7 @@ build_runner = python3 config/bin/.local/bin/agent-build
 
 test: ## Build the OSD classifier and run the apps/ test suite
 	python3 -m unittest discover -s tools/tests -p test_agent_build.py
-	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p desktop --bin osd
+	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p osd --bin osd
 	$(build_runner) cargo test --release --quiet --manifest-path apps/Cargo.toml
 
 cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); cockpit reload shows the column

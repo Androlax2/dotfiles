@@ -16,7 +16,7 @@ const SIGTERM: i32 = 15;
 
 fn activate(app: &Application, title: &str) {
     let provider = CssProvider::new();
-    provider.load_from_path(cockpit::paths::home().join(".config/hypr/scripts/web-placeholder.css"));
+    provider.load_from_path(desktop::host::home().join(".config/hypr/scripts/web-placeholder.css"));
     gtk4::style_context_add_provider_for_display(&gdk::Display::default().expect("a display"), &provider, gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION);
 
     let window = Window::builder().application(app).title(title).default_width(1400).default_height(900).build();

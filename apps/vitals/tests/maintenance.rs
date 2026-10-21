@@ -16,11 +16,10 @@ struct Fixture {
 impl Fixture {
     fn new() -> Self {
         let lock = ENVIRONMENT.lock().unwrap_or_else(|error| error.into_inner());
-        let root = std::env::temp_dir().join(format!("vitals-maintenance-{}", cockpit::util::token_hex(6)));
+        let root = std::env::temp_dir().join(format!("vitals-maintenance-{}", vitals::host::token_hex(6)));
         for name in ["bin", "state/disk-maintenance", "runtime", "home"] { fs::create_dir_all(root.join(name)).unwrap(); }
         let values = [("HOME", root.join("home").into_os_string()),
                       ("XDG_STATE_HOME", root.join("state").into_os_string()),
-                      ("COCKPIT_STATE_HOME", root.join("state").into_os_string()),
                       ("XDG_RUNTIME_DIR", root.join("runtime").into_os_string()),
                       ("PATH", OsString::from(format!("{}:/usr/bin:/bin", root.join("bin").display()))),
                       ("VITALS_TEST_FIXTURE", root.as_os_str().to_owned())];
@@ -204,7 +203,7 @@ fn complete_partial_and_missing_reports_remain_distinct() {
 fn invalid_oversized_and_future_reports_are_errors_not_empty_success() {
     let fixture = Fixture::new();
     let mut future = fixture.review();
-    future["completed_at"] = json!(cockpit::util::now_secs() + 10000);
+    future["completed_at"] = json!(vitals::host::now_secs() + 10000);
     let mut negative = fixture.review();
     negative["measured_games"] = json!(-1);
     for content in ["invalid".to_string(), "{}".to_string(), "x".repeat(1048577), future.to_string(), negative.to_string()] {

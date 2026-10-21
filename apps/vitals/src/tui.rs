@@ -154,7 +154,7 @@ impl View {
 
     fn load_history(&mut self) -> rusqlite::Result<()> {
         let store = Store::open()?;
-        let now = cockpit::util::now_secs();
+        let now = crate::host::now_secs();
         self.alerts = store.alerts()?;
         self.care_done = care::TASKS.iter().map(|task| care::last_done(&store, task)).collect();
         self.last_backup = self.facts.last_backup.or_else(|| store.state("last_backup").ok().flatten().and_then(|stamp| stamp.parse().ok()));
@@ -207,7 +207,7 @@ fn header(frame: &mut Frame, area: Rect, view: &View) {
         }
     } else { match (severity, view.collected_at) {
         (_, None) => Span::styled("aucune collecte pour l'instant", level_style("warn")),
-        (None, Some(at)) => Span::styled(format!("tout va bien · collecté il y a {} s", cockpit::util::now_secs() - at), level_style("ok")),
+        (None, Some(at)) => Span::styled(format!("tout va bien · collecté il y a {} s", crate::host::now_secs() - at), level_style("ok")),
         (Some(level), Some(_)) => Span::styled(format!("{} problème(s)", view.alerts.len()), level_style(level)),
     } };
     frame.render_widget(Paragraph::new(Line::from(state)).right_aligned(), state_area);
@@ -223,7 +223,7 @@ fn alerts_lines(view: &View) -> Vec<Line<'_>> {
 
 /// What the summary needs, from what the view holds.
 fn machine(view: &View) -> Machine {
-    let now = cockpit::util::now_secs();
+    let now = crate::host::now_secs();
     let reading = |key: &str| view.readings.iter().find(|reading| reading.key == key).map(|reading| reading.value);
     let kernel_problems = view.facts.kernel_errors.keys().map(|category| match category.as_str() {
         "gpu" => "réinitialisations du GPU", "disk" => "erreurs d'entrée/sortie disque", "hardware" => "erreurs matérielles",
@@ -440,7 +440,7 @@ fn disk_details(frame: &mut Frame, area: Rect, view: &mut View) {
                                    Span::styled(if healthy { "en bonne santé" } else { "DÉFAILLANT" }, level_style(if healthy { "ok" } else { "crit" }))]));
         lines.push(Line::from(format!("  usure {} %   réserve {} % (seuil {} %)   erreurs de support {}   avertissement critique {:#04x}",
                                       disk.percentage_used, disk.available_spare, disk.spare_threshold, disk.media_errors, disk.critical_warning)));
-        lines.push(Line::styled(format!("  lu il y a {} min", (cockpit::util::now_secs() - disk.read_at) / 60), dim()));
+        lines.push(Line::styled(format!("  lu il y a {} min", (crate::host::now_secs() - disk.read_at) / 60), dim()));
     }
     lines.push(Line::from(""));
     lines.push(Line::styled("Espace", Style::default().add_modifier(Modifier::BOLD)));
@@ -475,7 +475,7 @@ const INCOMPLETE_REVIEW: &str = "Le bilan est incomplet : certains dossiers n’
 
 fn disk_overview(view: &View) -> DiskOverview {
     let overview = |level, title, hint: String, primary, can_run_checks| DiskOverview { level, title, hint, primary: Some(primary), can_run_checks };
-    let health = checks::smart(&view.facts.disks, cockpit::util::now_secs());
+    let health = checks::smart(&view.facts.disks, crate::host::now_secs());
     if health.iter().any(|finding| finding.level == "crit") {
         return overview("crit", "Vérifier le SSD en priorité", "Vérifie ta sauvegarde avant toute autre intervention.".into(), DiskAction::Details, false);
     }
@@ -668,7 +668,7 @@ fn system(frame: &mut Frame, area: Rect, view: &View) {
     lines.push(Line::from(""));
     lines.push(Line::styled("Sauvegarde", Style::default().add_modifier(Modifier::BOLD)));
     lines.push(Line::from(match facts.last_backup.or_else(|| Store::open().ok()?.state("last_backup").ok()?.and_then(|stamp| stamp.parse().ok())) {
-        Some(at) => format!("  dernière sauvegarde réussie il y a {} h{}", (cockpit::util::now_secs() - at) / 3600,
+        Some(at) => format!("  dernière sauvegarde réussie il y a {} h{}", (crate::host::now_secs() - at) / 3600,
                             facts.backup_result.as_ref().filter(|result| *result != "success").map(|result| format!(" · dernier passage : {result}")).unwrap_or_default()),
         None => "  aucune sauvegarde vue pour l'instant".into(),
     }));
@@ -680,7 +680,7 @@ fn system(frame: &mut Frame, area: Rect, view: &View) {
 }
 
 fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
-    let now = cockpit::util::now_secs();
+    let now = crate::host::now_secs();
     let [table_area, detail_area] = Layout::vertical([Constraint::Length(care::TASKS.len() as u16 + 3), Constraint::Min(4)]).areas(area);
     let rows: Vec<Row> = care::TASKS.iter().zip(&view.care_done).enumerate().map(|(index, (task, done))| {
         let (status, level) = match care::due(task, *done, now) {
@@ -705,7 +705,7 @@ fn care_tab(frame: &mut Frame, area: Rect, view: &View) {
 }
 
 fn games_tab(frame: &mut Frame, area: Rect, view: &View) {
-    let now = cockpit::util::now_secs();
+    let now = crate::host::now_secs();
     let rows: Vec<Row> = view.games.iter().map(|game| {
         let Some(end) = game.end else {
             return Row::new(vec![Cell::from(when(game.start)), Cell::from(game.name.clone()), Cell::from(duration(now - game.start)),
@@ -733,7 +733,7 @@ fn games_tab(frame: &mut Frame, area: Rect, view: &View) {
 
 /// The game running at `at`, if any.
 fn game_at(games: &[Game], at: i64) -> Option<&str> {
-    let now = cockpit::util::now_secs();
+    let now = crate::host::now_secs();
     games.iter().find(|game| game.start <= at && at <= game.end.unwrap_or(now)).map(|game| game.name.as_str())
 }
 
@@ -771,7 +771,7 @@ fn record_care(view: &mut View, earlier: bool) {
     let task = &care::TASKS[view.care_selected];
     let date = match (earlier, view.care_done[view.care_selected]) {
         (true, Some(done)) => done - WEEK,
-        _ => cockpit::util::now_secs(),
+        _ => crate::host::now_secs(),
     };
     match Store::open().and_then(|store| care::mark_done(&store, task, date)) {
         Ok(()) => view.care_done[view.care_selected] = Some(date),
@@ -945,7 +945,7 @@ mod tests {
         view.disk_screen = DiskScreen::Summary;
         view.facts.disk_usage = vec![("/".into(), 73.0)];
         view.facts.disks = vec![crate::facts::Smart { device: "nvme0n1".into(), available_spare: 100,
-            spare_threshold: 10, read_at: cockpit::util::now_secs(), ..Default::default() }];
+            spare_threshold: 10, read_at: crate::host::now_secs(), ..Default::default() }];
         let report = view.maintenance.as_mut().unwrap().review.as_mut().unwrap().as_mut().unwrap();
         report.errors = 0;
         report.skipped_symlinks = Some(92733);
@@ -1186,7 +1186,7 @@ mod tests {
     fn summary_header_keeps_critical_machine_alerts_without_technical_totals() {
         let mut view = compact_disk_view();
         view.alerts.push(Alert { level: "crit".into(), title: "CPU trop chaud".into(), detail: "test".into(), since: 1000, key: "cpu".into(), notified: false });
-        for collected_at in [None, Some(cockpit::util::now_secs())] {
+        for collected_at in [None, Some(crate::host::now_secs())] {
             view.collected_at = collected_at;
             let screen = render(&mut view, 100, 26);
             assert!(screen.contains("PC : alerte importante"), "{screen}");
@@ -1497,7 +1497,7 @@ mod tests {
         ] {
             let mut view = compact_disk_view();
             view.disk_screen = DiskScreen::Review;
-            view.collected_at = collected.then(|| cockpit::util::now_secs() - 123);
+            view.collected_at = collected.then(|| crate::host::now_secs() - 123);
             view.error = history_failed.then(|| "history failure /raw/database".into());
             if let Some(level) = severity {
                 let alert = Alert { level: level.into(), title: "Machine warning".into(), detail: "raw diagnostic".into(), since: 1000, key: "cpu".into(), notified: false };
@@ -1521,7 +1521,7 @@ mod tests {
     #[test]
     fn technical_header_remains_unchanged_in_details_and_other_tabs() {
         let mut view = compact_disk_view();
-        view.collected_at = Some(cockpit::util::now_secs());
+        view.collected_at = Some(crate::host::now_secs());
         for (tab, screen) in [(DISKS_TAB, DiskScreen::Details), (0, DiskScreen::Review), (CARE_TAB, DiskScreen::Review)] {
             view.tab = tab;
             view.disk_screen = screen;

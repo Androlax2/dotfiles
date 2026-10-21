@@ -13,7 +13,7 @@ struct Review {
 
 impl Review {
     fn new() -> Self {
-        let folder = std::env::temp_dir().join(format!("disk-review-{}", cockpit::util::token_hex(6)));
+        let folder = std::env::temp_dir().join(format!("disk-review-{}", vitals::host::token_hex(6)));
         fs::create_dir(&folder).unwrap();
         Self { path: folder.join("latest.json"), folder, store: Store::in_memory().unwrap() }
     }

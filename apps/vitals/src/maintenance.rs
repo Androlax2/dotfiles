@@ -190,7 +190,7 @@ fn entries(report: &Value, key: &str) -> Result<Vec<ReviewEntry>, String> {
 }
 
 fn read_review() -> Result<Option<Review>, String> {
-    let path = cockpit::paths::state_home().join("disk-maintenance/latest.json");
+    let path = crate::host::state_home().join("disk-maintenance/latest.json");
     match fs::symlink_metadata(&path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => return Err(error.to_string()),
@@ -205,7 +205,7 @@ fn read_review() -> Result<Option<Review>, String> {
     if report["schema_version"].as_u64() != Some(1) || report["advisory_only"].as_bool() != Some(true) {
         return Err("format de revue inconnu".into());
     }
-    let completed_at = report["completed_at"].as_i64().filter(|stamp| *stamp > 0 && *stamp <= cockpit::util::now_secs()).ok_or("date de revue invalide")?;
+    let completed_at = report["completed_at"].as_i64().filter(|stamp| *stamp > 0 && *stamp <= crate::host::now_secs()).ok_or("date de revue invalide")?;
     let error_entries = report["errors"].as_array().ok_or("liste d'erreurs absente")?;
     let mut issues = Vec::new();
     for entry in error_entries {

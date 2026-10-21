@@ -11,7 +11,7 @@ struct Machine {
 
 impl Machine {
     fn new() -> Machine {
-        let root = std::env::temp_dir().join(format!("vitals-e2e-{}", cockpit::util::token_hex(6)));
+        let root = std::env::temp_dir().join(format!("vitals-e2e-{}", vitals::host::token_hex(6)));
         let cpu = root.join("sys/sys/class/hwmon/hwmon2");
         fs::create_dir_all(&cpu).unwrap();
         fs::write(cpu.join("name"), "k10temp\n").unwrap();
@@ -42,7 +42,6 @@ impl Machine {
             .env("VITALS_SYS_ROOT", path("sys")).env("VITALS_DIR", path("state")).env("XDG_RUNTIME_DIR", path("run"))
             .env("VITALS_ROOT_DATA", path("root-data")).env("HOME", path("state"))
             .env("XDG_STATE_HOME", path("state/.local/state"))
-            .env("COCKPIT_STATE_HOME", path("state/.local/state"))
             .env("PATH", format!("{}:/usr/bin:/bin", path("bin").display()))
             .output().unwrap()
     }
