@@ -38,7 +38,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
+.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -124,6 +124,11 @@ install: packages global-packages ## [sudo] Install packages only, without touch
 # pacman replaces it on the next pantheon-files update, so run this again afterwards.
 files-patch: ## [sudo] Build and install the patched Files file manager
 	packages/pantheon-files/build.sh
+
+# greywall v0.3.7 with packages/greywall/*.patch: denyRead masks applied last, so a sandbox
+# cannot read greyproxy's CA key, its session key or ~/.ssh/id_*. Restart sessions afterwards.
+greywall-patch: ## Build, test and install the patched greywall into ~/.local/bin (keeps greywall.previous)
+	packages/greywall/build.sh
 
 ##@ Keep the repo in sync
 
