@@ -302,7 +302,8 @@ assumptions, and tell me when it reports something missing that the task needs.
   [--notes '<details>']`. I approve or decline it in the Todo panel; a declined idea is not filed again.
   Fill an item the way my Todo form does: always pick the `--kind` that fits (`feature`, `bug`,
   `improvement`, `chore`, `research`; `task` only when none does), keep the title one short line,
-  and put context (files, errors, options) in `--notes`, never in the title.
+  and put context (files, errors, options) in `--notes`, never in the title. Remove an item filed
+  by mistake with `claude-todo delete <id>` (only items a session filed; mine stay).
   When my setup keeps you from doing something the task needs (greywall hides or forbids it,
   claude-sessions or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
   report it with `claude-todo blocked '<what you could not do>' --why '<what stopped you, the
