@@ -38,7 +38,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch greyproxy-patch global-packages system locale services initramfs install handoff-install cockpit dotfiles-work \
+.PHONY: help setup packages dotfiles zen palette files-patch greywall-patch greyproxy-patch global-packages system locale services initramfs install handoff-install build cockpit dotfiles-work \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -144,8 +144,10 @@ test: ## Build the OSD classifier and run the apps/ test suite
 	$(build_runner) cargo build --release --quiet --manifest-path apps/Cargo.toml -p osd --bin osd
 	$(build_runner) cargo test --release --quiet --manifest-path apps/Cargo.toml
 
-cockpit: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); cockpit reload shows the column
+build: ## Build the Rust programs in apps/ (the cockpit's column, approval terminal, guide, sandbox commands); cockpit reload shows the column
 	$(build_runner) cargo build --release --manifest-path apps/Cargo.toml
+
+cockpit: build ## The same as build (its name before the cockpit moves to agent-cockpit)
 
 dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); cockpit apply-dotfiles brings its commits here
 	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
