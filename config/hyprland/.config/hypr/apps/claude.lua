@@ -57,9 +57,11 @@ hl.window_rule({ match = { class = "^figcraft-chat\\..+$" }, float = true, opaci
 
 -- Steps Claude hands over to do by hand (claude-guide): a narrow floating window at the right edge,
 -- next to the browser; an ordinary window otherwise, moved to any workspace like the rest.
+-- Fully opaque: it floats over the session that sent it, whose text showed through at 0.95/0.9.
 hl.window_rule({
     match = { class = "^claude-guide$" },
     float = true,
+    opacity = "1 1",
     size = "560 (monitor_h*0.85)",
     move = "(monitor_w-window_w-24) (monitor_h*0.08)",
 })
