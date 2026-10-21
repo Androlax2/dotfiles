@@ -1,0 +1,225 @@
+# Agent Cockpit split and rename — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** `~/dotfiles` holds only the configuration of Theo's machine. The agent cockpit moves to its own
+repo `agent-cockpit` (command `cockpit`, UI "Agent Cockpit"), the machine monitor to its own repo `vitals`.
+
+**Architecture:** Five phases, each shipped and applied on its own through the reviewed apply flow, so the
+machine works after every phase: (1) rename `claude-sessions` to `cockpit` inside dotfiles, (2) make the
+reviewed apply work for any live checkout, (3) cut the crate dependencies that cross the future repo
+boundary, (4) extract the two repos with their history, (5) cut the host over and delete the moved files
+from dotfiles.
+
+**Tech Stack:** Rust workspace (`apps/`), POSIX/bash scripts, systemd user units, GNU stow, greywall.
+
+**Todos:** f4f67e5a (move), bc95a4d0 (rename).
+
+## Decisions (taken with Theo, 2026-10-21)
+
+| Question | Decision |
+|---|---|
+| What leaves dotfiles | Every program that is not machine configuration: the cockpit and vitals |
+| Desktop widgets (`mpris-card`, `web-placeholder`, `cooler-overlay-mask`) | Stay in dotfiles |
+| `osd`, `claude-idle-prompt` | Move with the cockpit (osd is the cockpit's daemon) |
+| Repo names | `agent-cockpit`, `vitals` (GitHub, Androlax2) |
+| Live checkouts (run by the host, never by a session) | `~/agent-cockpit`, `~/vitals` |
+| Work clones (sessions work there) | `~/IdeaProjects/agent-cockpit`, `~/IdeaProjects/vitals` |
+| Command | `cockpit`; repo and UI say "agent-cockpit" / "Agent Cockpit" |
+| History | Kept: per-file history of every moved path |
+
+## Global Constraints
+
+- The security model does not weaken: a live checkout changes only through `cockpit apply <clone-root>`
+  after Theo read the diff; the launcher refuses a session inside any live checkout; no sandbox gains
+  read or write access it did not have.
+- Compatibility kept: `claude-sessions` stays as a forwarding script (`exec cockpit "$@"`, one stderr line
+  "claude-sessions is now cockpit") until the follow-up todo removes it; the old state folder is moved
+  once, never copied.
+- Out of scope for the rename: `claude-todo`, `claude-remote`, `claude-audit`, `claude-design`,
+  `claude-guide`, `claude-fade`, `claude-run-approve`, `claude-update`, `claude-health-check`,
+  `claude-needs-input`, `claude-session-label`, `ask-to-run`, `ask-to-guide`, and the audit folder
+  `~/.local/state/claude-audit` (greywall denies it by that name). A follow-up todo is proposed for them.
+- Every phase ends with `make test` green in the work clone, then `make -C ~/dotfiles cockpit test` green
+  on the live checkout after apply (phase 5: the equivalent targets of each repo).
+
+## Review Focus
+
+1. **A running session at apply time**: it keeps its old `CLAUDE_SESSIONS_*` environment until it
+   restarts (a Codex session reports as Claude meanwhile). Phase 1 ends with `cockpit restart-all`.
+2. **State folder already migrated, or both folders exist**: never merge, never overwrite. If both exist,
+   `cockpit prepare` logs one error naming both and keeps using the new one (test in Task 1.2).
+3. **Sandbox visibility of renamed paths**: `~/.local/state/cockpit` must be exactly as hidden as
+   `~/.local/state/claude-sessions` was (test in Task 1.4, `greywall_launcher.rs`).
+4. **A session started inside `~/agent-cockpit` or `~/vitals`**: refused like `~/dotfiles` today
+   (test in Task 2.2).
+5. **Apply of a patch series to the wrong live checkout** (a vitals clone's patches onto agent-cockpit):
+   refused, because the clone's origin decides the target (test in Task 2.1).
+
+---
+
+## Phase 1 — Rename `claude-sessions` to `cockpit` (in dotfiles)  ·  about half a day
+
+Mechanical, but 1,328 mentions in 127 files. Mapping:
+
+| Old | New |
+|---|---|
+| `claude-sessions` (command, kitty class, tmux name, systemd unit `claude-sessions.service`) | `cockpit` (`cockpit.service`) |
+| `claude-sessions-sidebar`, `claude-sessions-left`, `claude-sessions-agents/` | `cockpit-sidebar`, `cockpit-left`, `cockpit-agents/` |
+| `~/.local/state/claude-sessions/` | `~/.local/state/cockpit/` |
+| `$XDG_RUNTIME_DIR/claude-sessions.*`, `claude-sessions-*` runtime files | `cockpit.*`, `cockpit-*` |
+| `CLAUDE_SESSIONS_*` (24 variables) | `COCKPIT_*` |
+| `kitty/claude-sessions.conf`, `waybar/scripts/claude-sessions.sh`, waybar module `custom/claude-sessions` | `cockpit.conf`, `cockpit.sh`, `custom/cockpit` |
+| UI and docs: "claude-sessions", "Claude cockpit" | "Agent Cockpit" (prose), `cockpit` (commands) |
+
+### Task 1.1: Rename files and identifiers
+
+**Files:** every file listed by `grep -rIl 'claude-sessions\|claude_sessions\|CLAUDE_SESSIONS' .` except
+`docs/superpowers/**` and `design-plans/**` (historical records stay as written).
+
+- [ ] `git mv` the files of the mapping table; rename the bin `claude-sessions-sidebar.rs` to
+  `cockpit-sidebar.rs` and test files `claude_sessions_script.rs` → `cockpit_script.rs`.
+- [ ] Replace identifiers per the table (paths, env vars, unit, class, help text, README, both `CLAUDE.md`).
+- [ ] Add `config/bin/.local/bin/claude-sessions`: `#!/bin/sh`, one stderr line, `exec cockpit "$@"`.
+- [ ] Run `make test`; expected: PASS.
+- [ ] Commit `Rename claude-sessions to cockpit` with `Todo: bc95a4d0`.
+
+### Task 1.2: Move the state folder once (done)
+
+**Files:** `config/bin/.local/bin/cockpit` (`move_old_state_folder`, run first on every call),
+`apps/cockpit/tests/cockpit_script.rs`
+
+- [x] Tests: `the_first_run_after_the_rename_moves_the_old_state_folder_and_links_its_name`,
+  `two_state_folders_are_both_kept_and_the_start_reports_them`, `the_old_claude_sessions_name_runs_cockpit`.
+- [x] The old folder name stays as a link to `cockpit`, so the programs started before the rename (old
+  sidebar, old osd) keep writing into the moved folder until `cockpit reload` restarts them. This
+  replaces the planned Task 1.3 (old runtime names read by osd): osd and sidebar restart together on
+  reload, and the hooks are live files, so no reader of old runtime names is left after it.
+
+### Task 1.4: Sandbox visibility unchanged
+
+**Files:** `config/greywall/.config/greywall/greywall.json`, `apps/cockpit/tests/greywall_launcher.rs`
+
+- [ ] Test `a_session_cannot_read_the_cockpit_state_folder` (parametrized over the new folder and
+  `claude-audit`).
+- [ ] Update every renamed path in `greywall.json` and `learned/*.json`; `make test` PASS, commit.
+
+### Task 1.5: Ship
+
+- [ ] `git format-patch origin/main -o .outgoing`; `ask-to-run` `claude-sessions apply-dotfiles <clone>`
+  (the live name until the apply lands).
+- [ ] Then, in one `ask-to-run`: `stow --restow systemd kitty waybar` from `~/dotfiles/config` (apply
+  restows only `bin`); `systemctl --user daemon-reload; systemctl --user disable claude-sessions.service;
+  systemctl --user enable cockpit.service`; `make -C ~/dotfiles cockpit test`; `pkill -SIGUSR2 -x waybar`;
+  close the manager window still named `claude-sessions` (`hyprctl dispatch closewindow class:^claude-sessions$`),
+  then `cockpit reload` and `cockpit restart-all`.
+
+## Phase 2 — Reviewed apply for any live checkout (in dotfiles)  ·  about 2 hours
+
+### Task 2.1: `cockpit apply <clone-root>`
+
+**Files:** `config/bin/.local/bin/cockpit` (today's `apply_run`, `apply_dotfiles`, `rebuild_apps`),
+`apps/cockpit/tests/cockpit_script.rs`
+
+**Interfaces — Produces:** a table of live checkouts in the script:
+`LIVE_CHECKOUTS="dotfiles:$HOME/dotfiles agent-cockpit:$HOME/agent-cockpit vitals:$HOME/vitals"`;
+each live checkout runs `make -C <live> after-apply CHANGED="<paths>"` after `git am` (dotfiles: restow
+`bin`, rebuild widgets; agent-cockpit: build, restart osd when idle; vitals: build).
+
+- [ ] Tests (parametrized over the three names): `apply_targets_the_live_checkout_named_by_the_clone_origin`,
+  `apply_refuses_a_clone_whose_origin_is_no_live_checkout`, `apply_runs_after_apply_with_the_changed_paths`.
+- [ ] Implement; keep `apply-dotfiles` as an alias for `apply`. `make test` PASS, commit.
+
+### Task 2.2: Launcher refuses every live checkout
+
+**Files:** `config/bin/.local/bin/greywall-agents/launcher-common.sh:23-33,130-139`, `greywall_launcher.rs`
+
+- [ ] Test `a_session_inside_a_live_checkout_is_refused` (parametrized over the three).
+- [ ] Implement from the same list; `make test` PASS; ship with Task 1.5's flow.
+
+## Phase 3 — Cut the crate dependencies (in dotfiles)  ·  about 3 hours
+
+### Task 3.1: Desktop widgets stop depending on the cockpit crate
+
+**Files:** `apps/desktop/Cargo.toml`, `apps/desktop/src/bin/{mpris-card,web-placeholder}.rs`,
+new `apps/desktop/src/paths.rs`, `apps/desktop/src/hyprland.rs`
+
+- [ ] Copy `home()`, `runtime_dir()` and `refresh_hyprland_instance` + `output_within` (the 4 helpers the
+  widgets use) into the new files; move `mpris.rs`, `fifo::open` with them.
+- [ ] Move `osd.rs`, `claude-idle-prompt.rs`, `registry.rs`, `teams.rs`, the rest of `fifo.rs` into a new
+  crate `apps/osd` (still in this workspace), with their tests.
+- [ ] `apps/desktop` no longer lists `cockpit` in `Cargo.toml`; `make test` PASS, commit.
+
+### Task 3.2: vitals stops depending on the cockpit crate
+
+**Files:** `apps/vitals/Cargo.toml`, new `apps/vitals/src/host.rs`, `apps/vitals/src/collect.rs:36,210`
+
+- [ ] Copy the `paths`/`util` helpers vitals uses (`now_secs`, `read_json`, `write_json`, `output_of`,
+  `gaming`, `active_game`, `token_hex`, `runtime_dir`, `state_home`, `home`) into `host.rs`.
+- [ ] Replace `approval::send_host` by `host::send_notice(line) -> bool`: non-blocking write of
+  `line\n` to `$XDG_RUNTIME_DIR/osd-host.fifo`; returns false when nobody reads (the osd protocol
+  `notice {...}` / `notice-clear vitals-<key>` is the contract between the two repos; document it in
+  both READMEs).
+- [ ] Test `a_notice_without_a_running_osd_is_dropped_silently`; `make test` PASS, commit.
+
+### Task 3.3: Tests follow the files they test
+
+**Files:** `apps/cockpit/tests/{claude_idle,hotcorner,craft_lua,figcraft_review_lua,game_mode_lua,web_launch,tmux_clipboard,fish_opencode,waybar_jobpilot,system_install}.rs`
+
+- [ ] Files that move with the cockpit (decide per file, rule: used only by the cockpit → move):
+  `hypr/scripts/claude-idle.{sh,css}`, `figcraft-review.lua`, `apps/craft.lua`, waybar
+  `claude-usage.sh`, `codex-usage.sh`, `codex-quota.py`, `cockpit.sh`, `on-claude-workspace.sh`.
+  The cockpit installs them under their current `~/.config/...` paths, so dotfiles config keeps
+  loading them unchanged.
+- [ ] Tests of files that stay (hotcorner, web_launch, tmux_clipboard, game_mode_lua, waybar_jobpilot,
+  system_install, switch-audio) move to a new crate `apps/config-tests` in dotfiles.
+- [ ] `make test` PASS, commit, ship.
+
+## Phase 4 — Extract the repos  ·  about 3 hours, mostly Theo's commands
+
+### Task 4.1: Extraction script
+
+**Files:** create `tools/extract-repo.sh` (dotfiles, deleted again in Phase 5)
+
+- [ ] Needs `git-filter-repo` (one pacman package; ask Theo before adding it to `packages/pacman.txt`).
+- [ ] `tools/extract-repo.sh agent-cockpit <dest>` and `... vitals <dest>`: fresh `--no-local` clone,
+  `git filter-repo --paths-from-file <list> --path-rename <old>:<new>`, then a commit adding
+  `README.md`, `Makefile` (`build`, `test`, `install`, `after-apply`), `CLAUDE.md` with the Git
+  authorization and Applying sections of this repo.
+- [ ] Layout of `agent-cockpit`: `Cargo.toml` (workspace `crates/cockpit`, `crates/osd`), `bin/` (scripts,
+  installed as links into `~/.local/bin`), `greywall-agents/`, `hooks/`, `config/` (files installed under
+  `~/.config`), `systemd/`, `docs/`, `assets/`. `make install` links like stow does today.
+- [ ] Layout of `vitals`: `Cargo.toml`, `src/`, `tests/`, `systemd/` (user + system units), `docs/`.
+- [ ] Test: run on a scratch clone, `make -C <dest> test` PASS in each.
+
+### Task 4.2: Create the repos (Theo, guided)
+
+- [ ] `ask-to-guide`: create `Androlax2/agent-cockpit` and `Androlax2/vitals` (empty, private).
+- [ ] `ask-to-run`: run the script into `~/agent-cockpit` and `~/vitals`, push `main`, clone the work
+  copies into `~/IdeaProjects/`, `make agent-github-token PROJECT=<name>` for each.
+
+## Phase 5 — Cut over and clean dotfiles  ·  about 2 hours
+
+### Task 5.1: dotfiles points at the new repos
+
+**Files:** `Makefile` (`cockpit` → `make -C ~/agent-cockpit install`, new `vitals` target,
+`test` stops building `osd`), `config/greywall/.config/greywall/greywall.json` (`~/dotfiles/apps/target/...`
+→ `~/agent-cockpit/target/...`), `learned/codex.json`, `config/claude/.claude/CLAUDE.md`
+(`make -C ~/dotfiles agent-*`, apply flow), `README.md` (sections → one paragraph linking each repo),
+`CLAUDE.md`, `services.txt`.
+
+- [ ] Delete every moved path (the extraction lists from Task 4.1) with `git rm`.
+- [ ] `make test` PASS (dotfiles: widgets + config-tests only), commit with `Todo: f4f67e5a`.
+
+### Task 5.2: Host cutover (one `ask-to-run`)
+
+- [ ] `cockpit apply` the dotfiles clone; `make -C ~/agent-cockpit install; make -C ~/vitals install`;
+  `stow --restow` dotfiles packages; `systemctl --user daemon-reload`; restart `osd`, `cockpit`,
+  `vitals-collect.timer`; `cockpit restart-all`.
+- [ ] Check: `cockpit doctor` clean, ALT+C opens the cockpit, Waybar vitals dot shows, `ask-to-run` from a
+  session works, `claude-todo list` works.
+
+### Task 5.3: Follow-ups
+
+- [ ] Propose: rename the remaining `claude-*` commands; remove the `claude-sessions` shim and the legacy
+  runtime names after a week.
