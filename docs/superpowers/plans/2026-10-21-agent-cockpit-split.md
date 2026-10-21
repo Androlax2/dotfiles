@@ -151,30 +151,31 @@ Mechanical, but 1,328 mentions in 127 files. Mapping:
   tests sit in the cockpit crate (fish `claude` function, tmux bindings, opencode plugins, codex
   hooks, `lock.sh`). Decide per file there, with Theo.
 
-## Phase 4 — Extract the repos  ·  about 3 hours, mostly Theo's commands
+## Phase 4 — Extract the repos  ·  in progress
 
-### Task 4.1: Extraction script
-
-**Files:** create `tools/extract-repo.sh` (dotfiles, deleted again in Phase 5)
-
-- [ ] Needs `git-filter-repo` (one pacman package; ask Theo before adding it to `packages/pacman.txt`).
-- [ ] `tools/extract-repo.sh agent-cockpit <dest>` and `... vitals <dest>`: fresh `--no-local` clone,
-  `git filter-repo --paths-from-file <list> --path-rename <old>:<new>`, then a commit adding
-  `README.md`, `Makefile` (`build`, `test`, `install`, `after-apply`), `CLAUDE.md` with the Git
-  authorization and Applying sections of this repo.
-- [ ] Layout of `agent-cockpit`: `Cargo.toml` (workspace `crates/cockpit`, `crates/osd`), `bin/` (scripts,
-  installed as links into `~/.local/bin`), `greywall-agents/`, `hooks/`, `config/` (files installed under
-  `~/.config`), `systemd/`, `docs/`, `assets/`. `make install` links like stow does today.
-- [ ] Layout of `vitals`: `Cargo.toml`, `src/`, `tests/`, `systemd/` (user + system units), `docs/`.
-- [ ] Test: run on a scratch clone, `make -C <dest> test` PASS in each.
-
-### Task 4.2: Create the repos (Theo, guided)
-
-- [ ] `ask-to-guide`: create `Androlax2/agent-cockpit` and `Androlax2/vitals` (empty, private).
-- [ ] `ask-to-run`: run the script into `~/agent-cockpit` and `~/vitals`, push `main`, clone the work
-  copies into `~/IdeaProjects/`, `make agent-github-token PROJECT=<name>` for each.
+- [x] Rule (Theo, 2026-10-21): files that exist only to plug the cockpit in move with it (hooks,
+  opencode and Codex plugins, greywall launchers and profiles, Waybar cockpit scripts and bar
+  visibility, figcraft-review.lua, craft.lua, the fish `claude`/`opencode` functions); configuration
+  that only calls cockpit commands stays (fish, tmux, Hyprland bindings, lock.sh, claude-idle.sh,
+  the Waybar layout, CLAUDE.md, skills, opencode's own settings).
+- [x] `tools/extract/<name>.paths` (+ `.history-paths`, the names before the renames),
+  `tools/extract/<name>/` (Makefile with build, test, install, system, after-apply; README;
+  CLAUDE.md; `.gitignore`; `apps/Cargo.toml`), `tools/extract-repo.sh <name> <dest>`.
+- [x] Same layout as in dotfiles (`apps/`, `config/<package>/…`, `tools/`), so every relative path,
+  wrapper and test keeps working; install is `stow --no-folding` from each repo's `config/`.
+- [x] Trial run on scratch copies: agent-cockpit 388 commits, `make test` green (1601 Rust tests +
+  the Python tools); vitals 28 commits, `make test` green (165).
+- [ ] Theo: `git-filter-repo` (pacman), the two GitHub repos, the extraction into `~/agent-cockpit`
+  and `~/vitals`, the push, the work clones in `~/IdeaProjects/`.
 
 ## Phase 5 — Cut over and clean dotfiles  ·  about 2 hours
+
+### Task 5.0: Unfold the shared folders first
+
+`~/.config/waybar`, `~/.config/hypr` and `~/.config/fish` are folded stow links into dotfiles: the
+cutover restows those dotfiles packages with `--no-folding` before agent-cockpit links its files
+into them, and dotfiles' `stow` and `after_dotfiles_apply` restow every changed package with
+`--no-folding` from then on.
 
 ### Task 5.1: dotfiles points at the new repos
 
