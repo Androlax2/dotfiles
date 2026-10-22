@@ -10,7 +10,7 @@ change_wallpaper() {
     local wallpapers=()
     while IFS= read -r -d $'\0' file; do
         wallpapers+=("$file")
-    done < <(find "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) -print0)
+    done < <(find -L "$WALLPAPER_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) -print0)
 
     # Exit if no wallpapers found
     if [ ${#wallpapers[@]} -eq 0 ]; then
