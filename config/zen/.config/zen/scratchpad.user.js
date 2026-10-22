@@ -1,5 +1,5 @@
 // Prefs of every web scratchpad profile (music, prs, claude, greyproxy): a compact-mode window
-// on one site, one tab. ~/.config/hypr/scripts/web-launch.sh copies this to ~/.zen/<profile>/user.js
+// on one site, one tab, the fewest content processes. ~/.config/hypr/scripts/web-launch.sh copies this to ~/.zen/<profile>/user.js
 // on every start (so a change here reaches existing profiles) and adds the site as
 // browser.startup.homepage.
 user_pref("browser.startup.page", 1);
@@ -18,3 +18,8 @@ user_pref("media.hardwaremediakeys.enabled", true);
 // instead of piling up tabs, and links asking for a new tab or window stay in this one.
 user_pref("browser.link.open_newwindow.override.external", 1);
 user_pref("browser.link.open_newwindow", 1);
+// One site per profile, so the desktop defaults (3 prelaunched content processes, up to 4 per
+// site) only cost RAM here: each scratchpad keeps one process for its site.
+user_pref("dom.ipc.processPrelaunch.enabled", false);
+user_pref("dom.ipc.processCount", 1);
+user_pref("dom.ipc.processCount.webIsolated", 1);

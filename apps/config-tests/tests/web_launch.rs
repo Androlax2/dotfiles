@@ -27,3 +27,19 @@ fn a_profile_keeps_its_home_page_and_gets_the_one_tab_prefs() {
     assert!(again.contains(r#"user_pref("browser.link.open_newwindow.override.external", 1);"#));
     assert_eq!(sandbox.calls("zen-browser").last().unwrap(), "zen-browser -P prs https://github.com/o/r/pull/7");
 }
+
+#[test]
+fn a_profile_runs_with_the_fewest_content_processes() {
+    let sandbox = Sandbox::new();
+    fs::create_dir_all(sandbox.home.join(".config/zen")).unwrap();
+    symlink(repo().join("config/zen/.config/zen/scratchpad.user.js"), sandbox.home.join(".config/zen/scratchpad.user.js")).unwrap();
+    sandbox.shim("zen-browser", r#"[[ $1 == -CreateProfile ]] && mkdir -p "${2#* }"; exit 0"#);
+    let prefs = launch(&sandbox, "https://github.com/pulls");
+    for pref in [
+        r#"user_pref("dom.ipc.processPrelaunch.enabled", false);"#,
+        r#"user_pref("dom.ipc.processCount", 1);"#,
+        r#"user_pref("dom.ipc.processCount.webIsolated", 1);"#,
+    ] {
+        assert!(prefs.contains(pref), "missing {pref}");
+    }
+}
