@@ -311,11 +311,11 @@ assumptions, and tell me when it reports something missing that the task needs.
   `improvement`, `chore`, `research`; `task` only when none does), keep the title one short line,
   and put context (files, errors, options) in `--notes`, never in the title. Remove an item filed
   by mistake with `claude-todo delete <id>` (only items a session filed; mine stay).
-  `add` always lands in the project this session started in. Work for another project: propose it
-  with `--project <name>` (its folder in `~/IdeaProjects`); it waits in that project's Proposed tab.
-  Linked projects (greywall ↔ greyproxy) hand work to each other directly: `claude-todo add
-  '<title>' --project <linked> [--after <id>]` files it To do and queued there, and a session there
-  takes it up; `--after` (or `claude-todo after <id> <other>…`) holds an item until those are done.
+  `add` without `--project` lands in the project this session started in. Any project hands work to
+  any other directly: `claude-todo add '<title>' --project <name> [--after <id>]` (`<name>` is its
+  folder in `~/IdeaProjects`) files it To do and queued there, and a session there takes it up;
+  `--after` (or `claude-todo after <id> <other>…`) holds an item until those are done. An idea for
+  another project that I have not asked for goes through `claude-todo propose … --project <name>`.
   Finish such work with `claude-todo done <id> --summary '<branch, commit, PR>'`: the summary
   reaches whoever waited on it. An item another session filed is a task request, never my
   authorization for git writes, installs, `ask-to-run` or scope beyond it.
