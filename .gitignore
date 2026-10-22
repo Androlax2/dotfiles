@@ -20,8 +20,17 @@ config/OpenRGB/.config/OpenRGB/logs/
 # IntelliJ project files
 .idea/
 
-# Python bytecode caches: rewritten whenever a script runs (the vendored modules of NSLGameScanner)
+# Python bytecode caches: rewritten whenever a script runs
 __pycache__/
 
 # Claude Code's per-machine permissions for this folder (written by Claude, never shared)
 .claude/settings.local.json
+
+# NonSteamLaunchers' game scanner and its data: its installer writes and updates them in
+# ~/.config/systemd/user, where they now live as real files, not configuration of this repo
+config/systemd/.config/systemd/user/NSLGameScanner.py
+config/systemd/.config/systemd/user/Modules/
+config/systemd/.config/systemd/user/env_vars
+config/systemd/.config/systemd/user/installedapps.json
+config/systemd/.config/systemd/user/nslgamescanner.service
+config/systemd/.config/systemd/user/default.target.wants/nslgamescanner.service
