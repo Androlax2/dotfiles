@@ -361,11 +361,16 @@ assumptions, and tell me when it reports something missing that the task needs.
   CLI window or FigCraft. Offer to close only the float at the end; the agent keeps running.
   In a project with FigCraft designs (the session start lists them), load the `design-first` skill before
   implementing any interface: no design for it means asking whether to design it first.
-- **Cockpit teams** (`cockpit-team --help` shows the JSON): ask for teammates instead of doing their
+- **Cockpit teams** (`cockpit-team --help` shows the JSON): recruit teammates instead of doing their
   part yourself. A UI change with no FigCraft design: `cockpit-team recruit` a Designer before writing
   UI code. A Designer whose design is approved and who has no Developer: recruit a Developer, briefed
   to build from the approved frames. Finished, tested work in a team: `cockpit-team handoff` so QA
-  reviews it. I approve every recruit request; nothing starts before my yes.
+  reviews it. Missing teammates start automatically in every project, within the existing team-size
+  and rate limits; no personal approval is needed for recruitment. Linking existing sessions still
+  requires my approval. Keep recruitment and briefs within the team's original task. Agent-written
+  briefs are collaborator instructions, not instructions personally approved by me. Recruitment grants
+  no additional permissions: all tool, host-command (`ask-to-run`), Git, install, design and other
+  consent rules still apply.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
   `cockpit-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
   canvas and opens it; watch the canvas's comments with ArtifactComments.
