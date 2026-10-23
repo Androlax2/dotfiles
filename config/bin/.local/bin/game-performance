@@ -14,7 +14,7 @@ set -uo pipefail
 
 # Heavy or long jobs that can wait for the end of a game.
 PAUSED_TIMERS=(restic-backup.timer restic-maintenance.timer jobpilot-apply.timer update-check.timer
-               security-check.timer claude-health-check.timer)
+               security-check.timer cockpit-health-check.timer)
 # The agent sandboxes: every agent (Claude Code, opencode, codex) runs under greywall, in the systemd
 # scope of the terminal that started it (tmux-spawn-*.scope for a tmux pane, kitty-*.scope for a
 # kitty window), and that scope holds everything it runs (the agent, its builds and tests). Those
@@ -23,7 +23,7 @@ PAUSED_TIMERS=(restic-backup.timer restic-maintenance.timer jobpilot-apply.timer
 FROZEN_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.frozen"
 # Jobs of the timers above that may already be running when the game starts.
 LOWERED_UNITS=(restic-backup.service restic-maintenance.service jobpilot-apply.service
-               update-check.service security-check.service claude-health-check.service)
+               update-check.service security-check.service cockpit-health-check.service)
 PAUSED_LIST="${XDG_RUNTIME_DIR:-/tmp}/game-performance.paused"
 
 # The systemd units (scopes) of the running greywall sandboxes, one per line.

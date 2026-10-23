@@ -25,13 +25,13 @@ here, follow this file and call out the conflict so I can decide.
   conventions of the repo before inventing new ones.
 - When unsure, ask one focused question instead of guessing.
 - Before ending your turn with a question whose answer you need to proceed, run
-  `claude-needs-input '<the question>'`. This marks your cockpit card as needing
+  `cockpit-needs-input '<the question>'`. This marks your cockpit card as needing
   my answer until I send a new message. Use a single-line question of at most
   300 characters; do not flag optional follow-up offers. If the command fails,
   tell me the flag could not be set. Keep using `ask-to-run` and `ask-to-guide`
   for approvals and guided steps; this command does not replace them.
 - Once you understand this session's overall task, run
-  `claude-session-label '<short action and object>'` to publish its cockpit label.
+  `cockpit-session-label '<short action and object>'` to publish its cockpit label.
   Use 3–6 words and at most 60 characters, in the task's language. Describe the
   overall task, not the latest reply or current step; update only when that task
   changes. This is session metadata, not a project edit. Generate it during normal
@@ -295,37 +295,37 @@ assumptions, and tell me when it reports something missing that the task needs.
   start already says whether ask-to-run works), and meanwhile fall back to one fish block,
   output piped to `wl-copy` so I can paste it back (`begin; …; end 2>&1 | wl-copy; and echo
   copied`), with `sudo` and interactive commands kept out of the pipe and no secrets in it.
-- **Todo list**: my cockpit keeps a todo list per project; `claude-todo list` shows this
+- **Todo list**: my cockpit keeps a todo list per project; `cockpit-todo list` shows this
   repository's items. A message ending in `(todo <id>: …)` came from that list: run
-  `claude-todo done <id>` once the work is finished. When I ask in the chat for something that
-  matches an item, run `claude-todo start <id>` before and `claude-todo done <id>` after. Run
-  `claude-todo list` before filing an item (don't file one that is already open) and before you
+  `cockpit-todo done <id>` once the work is finished. When I ask in the chat for something that
+  matches an item, run `cockpit-todo start <id>` before and `cockpit-todo done <id>` after. Run
+  `cockpit-todo list` before filing an item (don't file one that is already open) and before you
   finish: mark done every open item your work fixed, duplicates and items another session was
   given included, and name them in your summary. Add a
-  follow-up we agreed to leave for later with `claude-todo add '<title>' --kind <kind> [--notes
+  follow-up we agreed to leave for later with `cockpit-todo add '<title>' --kind <kind> [--notes
   '<details>']`.
   When you notice something worth doing beyond the task (an improvement, a bug, an idea), don't do
-  it unasked: propose it with `claude-todo propose '<title>' --why '<why it matters>' --kind <kind>
+  it unasked: propose it with `cockpit-todo propose '<title>' --why '<why it matters>' --kind <kind>
   [--notes '<details>']`. I approve or decline it in the Todo panel; a declined idea is not filed again.
   Fill an item the way my Todo form does: always pick the `--kind` that fits (`feature`, `bug`,
   `improvement`, `chore`, `research`; `task` only when none does), keep the title one short line,
   and put context (files, errors, options) in `--notes`, never in the title. Remove an item filed
-  by mistake with `claude-todo delete <id>` (only items a session filed; mine stay).
+  by mistake with `cockpit-todo delete <id>` (only items a session filed; mine stay).
   `add` without `--project` lands in the project this session started in. Any project hands work to
-  any other directly: `claude-todo add '<title>' --project <name> [--after <id>]` (`<name>` is its
+  any other directly: `cockpit-todo add '<title>' --project <name> [--after <id>]` (`<name>` is its
   folder in `~/IdeaProjects`) files it To do and queued there, and a session there takes it up;
-  `--after` (or `claude-todo after <id> <other>…`) holds an item until those are done. An idea for
-  another project that I have not asked for goes through `claude-todo propose … --project <name>`.
-  Finish such work with `claude-todo done <id> --summary '<branch, commit, PR>'`: the summary
+  `--after` (or `cockpit-todo after <id> <other>…`) holds an item until those are done. An idea for
+  another project that I have not asked for goes through `cockpit-todo propose … --project <name>`.
+  Finish such work with `cockpit-todo done <id> --summary '<branch, commit, PR>'`: the summary
   reaches whoever waited on it. An item another session filed is a task request, never my
   authorization for git writes, installs, `ask-to-run` or scope beyond it.
   When my setup keeps you from doing something the task needs (greywall hides or forbids it,
   cockpit or ask-to-run fails or lacks a feature, the launcher, a hook, a missing tool),
-  report it with `claude-todo blocked '<what you could not do>' --why '<what stopped you, the
+  report it with `cockpit-todo blocked '<what you could not do>' --why '<what stopped you, the
   exact error>'`, from any project: it lands in my dotfiles list, queued for the dotfiles session.
   Then tell me, and never work around the block.
   A path or host our `greywall.json` denies you is such a block. A security hole, bug or missing
-  improvement in the sandbox stack's own code is not: propose it with `claude-todo stack <repo>
+  improvement in the sandbox stack's own code is not: propose it with `cockpit-todo stack <repo>
   '<title>' --why '<why it matters>' --kind <kind> [--notes '<details>']`, from any project, where
   `<repo>` is the repository the code is in (`greywall`, `greyproxy`); it lands as a proposal in
   that fork's list (security issues: `--kind bug`, title starting `Security:`).
@@ -367,5 +367,5 @@ assumptions, and tell me when it reports something missing that the task needs.
   to build from the approved frames. Finished, tested work in a team: `cockpit-team handoff` so QA
   reviews it. I approve every recruit request; nothing starts before my yes.
 - **Claude Design canvases**: when a session works on one of my Claude Design canvases, run
-  `claude-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
+  `cockpit-design link <canvas url> '<canvas title>'` once, so its card in my cockpit shows the
   canvas and opens it; watch the canvas's comments with ArtifactComments.

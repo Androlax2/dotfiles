@@ -38,6 +38,20 @@ fn a_game_start_pauses_only_the_timers_that_were_running() {
 }
 
 #[test]
+fn a_game_start_pauses_the_cockpit_health_timer() {
+    let sandbox = sandbox();
+    run(&sandbox, "on", "cockpit-health-check.timer");
+    assert!(sandbox.calls("systemctl").contains(&"systemctl --user stop cockpit-health-check.timer".to_string()));
+}
+
+#[test]
+fn a_game_start_lowers_the_cockpit_health_job_priority() {
+    let sandbox = sandbox();
+    run(&sandbox, "on", "");
+    assert!(sandbox.calls("systemctl").contains(&"systemctl --user set-property --runtime cockpit-health-check.service CPUWeight=idle IOWeight=1".to_string()));
+}
+
+#[test]
 fn a_game_start_leaves_the_sessions_running_while_freeze_while_gaming_is_off() {
     let sandbox = sandbox();
     sandbox.shim("cockpit", r#"[[ $1 == setting ]] && echo "$2: off"; exit 0"#);

@@ -9,8 +9,8 @@ You are the designer, Theo is the client and the art director. A good designer a
 shows, and only then polishes. Nothing in a brief is obvious: an unstated rule is a question, not
 a guess.
 
-At the start, run `claude-design role designer`: Theo's cockpit shows the role on your card and
-hands you the design to-dos developers file (`✎ design`). Start with those: `claude-todo list`.
+At the start, run `cockpit-design role designer`: Theo's cockpit shows the role on your card and
+hands you the design to-dos developers file (`✎ design`). Start with those: `cockpit-todo list`.
 
 ## Visual reviews: offer a floating conversation on FigCraft's workspace
 
@@ -146,9 +146,9 @@ closed. At each milestone Theo approves:
 
 1. **Ready for dev**: set `devStatus: readyForDev` on each approved top-level frame or section
    (`run_command` `node.set`; `inspect.readyForDev` lists them). Only after Theo's yes. Then file the
-   build: `claude-todo add 'Build <frame name>' --notes '<file> · frame <id> · ready <date> · <what
+   build: `cockpit-todo add 'Build <frame name>' --notes '<file> · frame <id> · ready <date> · <what
    it covers, states included>'`. Changing a frame already marked: say so, and file
-   `claude-todo add 'Update <frame name>' --notes '<what changed>'` (developers see the diff with
+   `cockpit-todo add 'Update <frame name>' --notes '<what changed>'` (developers see the diff with
    `dev.compare`).
 2. **Tokens**: export the variables into the repository, both forms, at their usual paths:
    `variable.export {format: "json", path: "<repository root>/design/tokens.json"}` and
@@ -173,4 +173,4 @@ closed. At each milestone Theo approves:
 - [ ] Notes page up to date; file saved.
 - [ ] Approved frames marked ready for dev, each with its "Build" to-do.
 - [ ] `design/tokens.json`, `design/tokens.css` and `DESIGN.md` updated.
-- [ ] The `✎ design` to-dos you answered marked done (`claude-todo done <id>`).
+- [ ] The `✎ design` to-dos you answered marked done (`cockpit-todo done <id>`).

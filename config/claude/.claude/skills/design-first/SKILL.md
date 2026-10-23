@@ -9,7 +9,7 @@ This project designs its interface in FigCraft before building it. You are the d
 what was designed, and you are the first to notice what the design forgot. An interface nobody
 thought through, neither as UI/UX nor as code, is not something to improvise in a pull request.
 
-At the start, run `claude-design role developer`: Theo's cockpit shows the role on your card and
+At the start, run `cockpit-design role developer`: Theo's cockpit shows the role on your card and
 keeps the design to-dos for the designer session.
 
 ## 1. Find the design before writing UI code
@@ -37,7 +37,7 @@ it), stop before coding and ask with AskUserQuestion, recommendation first:
 - **Design it first** (recommended for anything a user sees beyond a trivial tweak): a FigCraft
   session wireframes it with Theo, then you build it.
 - **Build a minimal version from the existing system**: only existing components and tokens, no
-  new visual language, and the gap filed for the designer (`claude-todo add '<what to design>'
+  new visual language, and the gap filed for the designer (`cockpit-todo add '<what to design>'
   --design`).
 - **Build without a design**: Theo decides it is fine; say what you will assume.
 
@@ -63,7 +63,7 @@ Theo instead of patching it silently:
   unclear primary action.
 
 Report them grouped, most blocking first, each with what you suggest. Ask before deciding the
-blocking ones; file the rest for the designer with `claude-todo propose '<title>' --why '<why>'
+blocking ones; file the rest for the designer with `cockpit-todo propose '<title>' --why '<why>'
 --design`: once Theo approves them, the cockpit hands them to the project's designer session.
 
 ## 4. Think the code through too
@@ -111,7 +111,7 @@ isolation, then pages assembled from them. Nothing visual is built directly in a
   a gap for the designer (`--design`), not a value to inline.
 - **The tokens are checked**: the project needs a check in its own test suite that fails when the
   code's tokens differ from `design/tokens.json` (a generated theme out of date, a token missing on
-  one side). If the project has none, propose it once (`claude-todo propose`), and point out to
+  one side). If the project has none, propose it once (`cockpit-todo propose`), and point out to
   Theo that test scripts run outside the sandbox.
 - Use the project's components matching the design's components and variants.
 - Implement every designed state and breakpoint, not only the default.

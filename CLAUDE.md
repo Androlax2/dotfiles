@@ -19,10 +19,10 @@ walk every path from `/`, which the sandbox cannot open (`Permission denied: '/'
 
 The Agent Cockpit and vitals are repositories of their own (`~/agent-cockpit`, `~/vitals`, worked
 on in `~/IdeaProjects/agent-cockpit` and `~/IdeaProjects/vitals`); work on them belongs to a
-session there, filed with `claude-todo propose … --project <name>`.
+session there, filed with `cockpit-todo propose … --project <name>`.
 
 ## Todo trailers
 
 End a commit message with one `Todo: <id>` line per dotfiles todo item the commit fixes
-(8 hex characters, as `claude-todo list` shows). `cockpit apply` marks those items done once
+(8 hex characters, as `cockpit-todo list` shows). `cockpit apply` marks those items done once
 Theo approved the commits.

@@ -48,18 +48,18 @@ end
 -- a blurred desktop; it is translucent itself, so what is behind it stays readable.
 hl.layer_rule({ match = { namespace = "^claude-idle$" }, blur = true, ignore_alpha = 0.3 })
 
--- The approval window for a command Claude asks to run outside the sandbox (claude-run-approve),
+-- The approval window for a command an agent asks to run outside the sandbox (cockpit-run-approve),
 -- when the cockpit is not on screen: floating, centred, above the work.
 hl.window_rule({ match = { class = "^claude-run$" }, float = true, center = true, size = "1100 640" })
 
 -- A second client of the existing agent, not another cockpit or agent process.
 hl.window_rule({ match = { class = "^figcraft-chat\\..+$" }, float = true, opacity = "1 1" })
 
--- Steps Claude hands over to do by hand (claude-guide): a narrow floating window at the right edge,
+-- Steps an agent hands over to do by hand (cockpit-guide): a narrow floating window at the right edge,
 -- next to the browser; an ordinary window otherwise, moved to any workspace like the rest.
 -- Fully opaque: it floats over the session that sent it, whose text showed through at 0.95/0.9.
 hl.window_rule({
-    match = { class = "^claude-guide$" },
+    match = { class = "^cockpit-guide$" },
     float = true,
     opacity = "1 1",
     size = "560 (monitor_h*0.85)",

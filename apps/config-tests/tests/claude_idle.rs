@@ -26,7 +26,7 @@ impl IdleTest {
         let scripts = sandbox.home.join(".config/hypr/scripts");
         fs::create_dir_all(&scripts).unwrap();
         symlink(repo().join("config/hyprland/.config/hypr/scripts/is-gaming.sh"), scripts.join("is-gaming.sh")).unwrap();
-        let prompt = sandbox.home.join(".local/bin/claude-idle-prompt");
+        let prompt = sandbox.home.join(".local/bin/cockpit-idle-prompt");
         // The cockpit's pieces it calls (agent-cockpit): its workspace test, and cockpit with every
         // setting on unless a test says otherwise.
         write_executable(&sandbox.home.join(".config/waybar/scripts/on-claude-workspace.sh"),
