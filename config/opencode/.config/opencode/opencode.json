@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "compaction": {
+    "keep": { "tokens": 30000 }
+  },
+  "providers": {
+    "anthropic": {
+      "models": {
+        "claude-opus-5-5": { "limit": { "context": 300000 } },
+        "claude-opus-5-5-fast": { "limit": { "context": 300000 } },
+        "claude-sonnet-5-5": { "limit": { "context": 300000 } },
+        "claude-fable-5-1": { "limit": { "context": 300000 } },
+        "claude-haiku-5-5": { "limit": { "context": 300000 } }
+      }
+    }
+  }
+}
