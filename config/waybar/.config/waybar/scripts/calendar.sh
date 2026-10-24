@@ -40,9 +40,8 @@ if [[ -z "$next_event" ]]; then
     exit 0
 fi
 
-IFS='|' read -r start end title <<< "$next_event"
+IFS='|' read -r start _end title <<< "$next_event"
 start_epoch=$(to_epoch "$start")
-end_epoch=$(to_epoch "$end")
 now_epoch=$(date +%s)
 # Rounded up so "10 min" is shown until the tenth minute is over, as a countdown reads.
 minutes_left=$(( (start_epoch - now_epoch + 59) / 60 ))
@@ -72,9 +71,3 @@ while IFS= read -r line; do
 done < <(khal list now 7d 2>/dev/null | grep -v "^error" | head -20)
 
 echo "{\"text\": \"${text}\", \"tooltip\": \"${tooltip}\", \"class\": \"${class}\"}"
-
-# Refresh the module when the event ends so the next one shows up without waiting for the interval.
-if (( end_epoch > now_epoch )); then
-    (sleep $((end_epoch - now_epoch + 5)) && pkill -x -RTMIN+9 waybar) &>/dev/null &
-    disown
-fi
