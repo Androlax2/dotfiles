@@ -1,3 +1,4 @@
+DietrichGebert/ponytail ponytail
 Leonxlnx/taste-skill design-taste-frontend
 anthropics/skills frontend-design
 anthropics/skills skill-creator
