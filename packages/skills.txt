@@ -4,9 +4,6 @@ anthropics/skills frontend-design
 anthropics/skills skill-creator
 anthropics/skills web-artifacts-builder
 anthropics/skills webapp-testing
-cloudflare/skills cloudflare
-cloudflare/skills web-perf
-cloudflare/skills wrangler
 github/gh-stack gh-stack
 ibelick/ui-skills baseline-ui
 ibelick/ui-skills create-design-md
@@ -26,14 +23,11 @@ obra/superpowers test-driven-development
 obra/superpowers using-git-worktrees
 obra/superpowers verification-before-completion
 obra/superpowers writing-plans
-openai/skills cloudflare-deploy
 openai/skills security-best-practices
 openai/skills security-threat-model
 resend/resend-skills resend
 sanjay3290/postgres-skill postgres
 shadcn-ui/ui shadcn
-vercel-labs/agent-skills deploy-to-vercel
-vercel-labs/agent-skills vercel-cli-with-tokens
 vercel-labs/agent-skills vercel-composition-patterns
 vercel-labs/agent-skills vercel-react-best-practices
 vercel-labs/agent-skills vercel-react-view-transitions
