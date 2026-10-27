@@ -171,7 +171,7 @@
     "interval": 60,
     "size": 14,
     "tooltip": false,
-    "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
+    "on-click": "kitty --class floating -e sh -c 'systemd-run --user --scope --quiet -p CPUWeight=20 -p MemoryHigh=12G yay -Syu; ~/.config/update-timer-task.sh'"
   },
 
   "custom/updates": {
@@ -179,7 +179,7 @@
     "return-type": "json",
     "interval": 60,
     "format": "{}",
-    "on-click": "kitty --class floating -e sh -c 'yay -Syu; ~/.config/update-timer-task.sh'"
+    "on-click": "kitty --class floating -e sh -c 'systemd-run --user --scope --quiet -p CPUWeight=20 -p MemoryHigh=12G yay -Syu; ~/.config/update-timer-task.sh'"
   },
 
   // ---- vitals (its own repository): a chip only while something is wrong with the machine (yellow, red when

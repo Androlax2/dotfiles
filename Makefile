@@ -16,6 +16,11 @@ pnpm_home = $${PNPM_HOME:-$$HOME/.local/share/pnpm}
 # pnpm 11 refuses every global command while its bin directory is missing from PATH.
 pnpm_global = env PATH="$(pnpm_home)/bin:$$PATH" pnpm
 
+# AUR builds yield the CPU to interactive work and reclaim memory past 12G instead of pushing
+# the whole system into swap (an unbounded cargo build starved the desktop on 2026-10-27).
+# Keep in sync with config/fish/.config/fish/functions/yay.fish and the waybar update button.
+yay_capped = systemd-run --user --scope --quiet -p CPUWeight=20 -p MemoryHigh=12G yay
+
 # One command per package manager, each printing its globally installed packages one per line.
 # packages/<manager>.txt is the versioned copy of that output.
 package_managers = pacman aur npm pnpm pip cargo go composer skills plugins
@@ -60,7 +65,7 @@ setup: packages dotfiles global-packages system locale services initramfs ## [su
 
 packages: ## [sudo] Install pacman and AUR packages
 	sudo pacman -S --needed - < packages/pacman.txt
-	yay -S --needed - < packages/aur.txt
+	$(yay_capped) -S --needed - < packages/aur.txt
 
 dotfiles: palette zen ## Link every config/ package into your home
 	$(stow) --restow */
@@ -212,7 +217,7 @@ dump-system: ## Copy live edits of system/ files back into the repo
 
 update: ## [sudo] Upgrade pacman and AUR packages
 	sudo pacman -Syu
-	yay -Syu
+	$(yay_capped) -Syu
 
 # Kept out of `update`: skills are instructions agents act on, pulled unpinned from many
 # repositories, so upgrading them is a deliberate step.
