@@ -2,6 +2,10 @@
 Description=Walker launcher kept resident so it opens instantly (restarted whenever it stops, except by systemctl stop)
 After=graphical-session.target elephant.service
 Wants=elephant.service
+# graphical-session.target is never reached here, so a boot can start walker before Hyprland
+# exports WAYLAND_DISPLAY ("Failed to open display"). No start limit: keep retrying every
+# RestartSec until the display exists, instead of ending failed after start-limit-hit.
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
