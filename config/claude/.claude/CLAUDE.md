@@ -37,6 +37,12 @@ here, follow this file and call out the conflict so I can decide.
   changes. This is session metadata, not a project edit. Generate it during normal
   work; never start another agent or model call just to name the session. If the
   command fails, report that the label could not be published.
+- At the start of each distinct step (tests, a build, drafting, waiting on review),
+  run `cockpit-session-doing '<what you are doing now>'`. Use 2–12 words and at most
+  80 characters, in the task's language. This is session metadata, not a project
+  edit. Update it when the step changes; after 10 minutes without an update, the
+  cockpit card falls back to the last tool. If the command fails, report that the
+  doing-now status could not be published.
 
 ## Tone and output
 
