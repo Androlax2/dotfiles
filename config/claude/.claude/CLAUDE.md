@@ -345,9 +345,9 @@ assumptions, and tell me when it reports something missing that the task needs.
   through `ask-to-run` over clicking whenever a CLI can do the step. Exit 3: I am stuck (my note
   says why); 125: I closed it; 124: still open, `ask-to-guide --wait <id>`; 126: no daemon, list
   the steps in the chat.
-- **FigCraft**: when I ask you to connect to FigCraft (or a task needs it), first ask me in the
-  chat which workspace to open it on (any number but 6, the cockpit's), then ask me to run
-  `craft-open figcraft --workspace <number> --session <your-session-id>` with `ask-to-run`,
+- **FigCraft**: when I ask you to connect to FigCraft (or a task needs it), use workspace 7,
+  shared with games; do not ask which workspace to use or change game placement. Ask me to run
+  `craft-open figcraft --workspace 7 --session <your-session-id>` with `ask-to-run`,
   `--cwd` the project root (in Claude Code, use `$CLAUDE_CODE_SESSION_ID`). An already open
   FigCraft stays where it is. Always pass your session id, even when the
   `figcraft-app` tools are already listed: they may still use an old port such as 7979. Opening

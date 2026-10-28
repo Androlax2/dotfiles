@@ -78,11 +78,12 @@
       "4": "󰉖",
       "5": "󰮃",
       "6": "󰚩",
-      "7": "󱓟",
+      // Shared FigCraft / games destination: keep both identities regardless of open windows.
+      "7": "󰏘󱓟",
       "8": "󰋋",
       "default": "󰅩"
     },
-    "persistent-workspaces": { "*": [1, 2, 3, 4, 5, 6] },
+    "persistent-workspaces": { "*": [1, 2, 3, 4, 5, 6, 7] },
     "sort-by-number": true,
     // No on-click "activate": Waybar sends the classic "dispatch workspace N", which Hyprland rejects under the Lua config.
     "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
