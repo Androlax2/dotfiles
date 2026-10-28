@@ -296,7 +296,11 @@ assumptions, and tell me when it reports something missing that the task needs.
   me to read and approve it, outside the sandbox, and its output
   comes back as the tool result (exit 125: I declined; 124: no answer yet, then
   `ask-to-run --wait <id>`). Steps that belong together go in one request, joined with `; and`.
-  `sudo` and prompts work there. Exit 126: it cannot reach me, and its message says why and what
+  `sudo` and prompts work there. The approval terminal runs fish, not Bash: a simple command must
+  be valid fish (no heredocs, `[[ … ]]`, `if …; then … fi` or `for …; do … done`). Anything longer goes in
+  a script file in the project or `.handoff/`, run with its interpreter named in the command
+  (`bash script.sh`, `python3 script.py`), never piped or embedded inline, so the reviewed command
+  is the one that runs. Exit 126: it cannot reach me, and its message says why and what
   fixes it (restart this session, or a `systemctl` command): tell me that fix at once (the session
   start already says whether ask-to-run works), and meanwhile fall back to one fish block,
   output piped to `wl-copy` so I can paste it back (`begin; …; end 2>&1 | wl-copy; and echo
