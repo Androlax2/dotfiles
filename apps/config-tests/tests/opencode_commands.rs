@@ -9,7 +9,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Stdio};
 use std::time::{Duration, Instant};
 
-const COMMANDS: [(&str, bool); 2] = [("code-review", true), ("simplify", false)];
+const COMMANDS: [(&str, bool); 3] = [("code-review", true), ("simplify", false), ("impeccable", false)];
+const IMPECCABLE_FILES: [&str; 10] = [
+    "SKILL.md", "UPSTREAM.md", "LICENSE", "NOTICE.md", "reference/review.md",
+    "reference/operate.md", "reference/polish.md", "reference/layout.md",
+    "reference/typeset.md", "reference/clarify.md",
+];
 
 fn command_source(name: &str) -> String {
     fs::read_to_string(repo().join(format!("config/opencode/.config/opencode/commands/{name}.md")))
@@ -39,19 +44,22 @@ impl Drop for OpenCode {
     }
 }
 
-fn commands(sandbox: &Sandbox, binary: &Path, url: &str) -> Vec<Value> {
+fn api(sandbox: &Sandbox, binary: &Path, url: &str, path: &str) -> Value {
     let output = sandbox.command(binary, &[])
         .env_clear().envs(&sandbox.env).current_dir(&sandbox.root)
-        .args(["api", "--server", url, "get", "/api/command"]).output().unwrap();
+        .args(["api", "--server", url, "get", path]).output().unwrap();
     assert!(output.status.success(), "OpenCode command discovery: {}", stderr(&output));
-    let response: Value = serde_json::from_slice(&output.stdout).unwrap_or_else(|error| panic!("OpenCode command discovery: {error}: {}", stdout(&output)));
-    response["data"].as_array().unwrap().clone()
+    let response: Value = serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        let preview = String::from_utf8_lossy(&output.stdout[..output.stdout.len().min(512)]);
+        panic!("OpenCode {path} discovery: {error}: {preview}")
+    });
+    response
 }
 
 fn wait_for_commands(sandbox: &Sandbox, binary: &Path, url: &str, names: &[&str]) -> Vec<Value> {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
-        let entries = commands(sandbox, binary, url);
+        let entries = api(sandbox, binary, url, "/api/command")["data"].as_array().unwrap().clone();
         if names.iter().all(|name| entries.iter().any(|entry| entry["name"] == *name)) {
             return entries;
         }
@@ -61,7 +69,7 @@ fn wait_for_commands(sandbox: &Sandbox, binary: &Path, url: &str, names: &[&str]
 }
 
 #[test]
-fn native_discovery_loads_both_global_commands_without_collisions() {
+fn native_discovery_loads_global_commands_and_the_impeccable_skill_without_collisions() {
     let binary = std::env::var_os("OPENCODE_BINARY").map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap()).join(".opencode/bin/opencode"));
     assert!(binary.is_file(), "this discovery test requires OpenCode V2 at {} (or OPENCODE_BINARY)", binary.display());
@@ -71,6 +79,8 @@ fn native_discovery_loads_both_global_commands_without_collisions() {
     }
     sandbox.env.insert("OPENCODE_DB".into(), sandbox.root.join("opencode.db").display().to_string());
     sandbox.env.insert("OPENCODE_CONFIG_CONTENT".into(), "{}".into());
+    // Scratch tests live below this checkout: do not discover skills from real ancestor projects.
+    sandbox.env.insert("OPENCODE_CONFIG_PROJECT_DISABLE".into(), "1".into());
     sandbox.env.insert("OPENCODE_DISABLE_AUTOUPDATE".into(), "1".into());
     sandbox.env.insert("OPENCODE_SERVER_PASSWORD".into(), "scratch-command-discovery-only".into());
     let mut server = OpenCode(sandbox.command(&binary, &[])
@@ -110,12 +120,62 @@ fn native_discovery_loads_both_global_commands_without_collisions() {
         assert!(!source.join(format!("command/{name}.md")).exists(), "legacy command shadows /{name}");
         fs::write(global.join(format!("commands/{name}.md")), command_source(name)).unwrap();
     }
-    let discovered = wait_for_commands(&sandbox, &binary, url, &["code-review", "simplify"]);
+    let skill_source = source.join("skills/impeccable");
+    for filename in IMPECCABLE_FILES {
+        let destination = global.join("skills/impeccable").join(filename);
+        fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        fs::copy(skill_source.join(filename), destination).unwrap();
+    }
+    let discovered = wait_for_commands(&sandbox, &binary, url, &["code-review", "simplify", "impeccable"]);
     for (name, _) in COMMANDS {
         let entries: Vec<_> = discovered.iter().filter(|entry| entry["name"] == name).collect();
         assert_eq!(entries.len(), 1, "/{name} is not uniquely discoverable");
         let source = command_source(name);
         let description = source.lines().nth(1).unwrap().strip_prefix("description: ").unwrap();
         assert_eq!(entries[0]["description"], description, "/{name} did not load our global Markdown definition");
+    }
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        let response = api(&sandbox, &binary, url, "/api/skill");
+        if let Some(skill) = response["data"].as_array().unwrap().iter().find(|skill| skill["id"] == "impeccable") {
+            assert_eq!(Path::new(skill["path"].as_str().unwrap()), global.join("skills/impeccable/SKILL.md"));
+            assert_ne!(skill["autoinvoke"], false, "Impeccable must remain available to normal skill discovery");
+            let source = fs::read_to_string(skill_source.join("SKILL.md")).unwrap();
+            let (_, body) = source.strip_prefix("---\n").unwrap().split_once("\n---\n").unwrap();
+            assert_eq!(skill["content"].as_str().unwrap().trim(), body.trim(), "native skill discovery loaded different guidance");
+            assert!(skill["description"].as_str().is_some_and(|description| !description.is_empty()));
+            break;
+        }
+        assert!(Instant::now() < deadline, "native Impeccable skill discovery never became ready: {response}");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+#[test]
+fn impeccable_payload_contains_only_the_pinned_static_guidance_and_notices() {
+    let root = repo().join("config/opencode/.config/opencode/skills/impeccable");
+    let mut files = Vec::new();
+    for directory in [root.clone(), root.join("reference")] {
+        for entry in fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path == root.join("reference") { continue; }
+            assert!(path.is_file(), "unexpected executable payload directory: {}", path.display());
+            files.push(path.strip_prefix(&root).unwrap().to_str().unwrap().to_owned());
+        }
+    }
+    files.sort();
+    let mut expected: Vec<_> = IMPECCABLE_FILES.iter().map(|name| name.to_string()).collect();
+    expected.sort();
+    assert_eq!(files, expected, "unreviewed payload files were added or required guidance/notices were lost");
+    for filename in IMPECCABLE_FILES {
+        assert!(!fs::read_to_string(root.join(filename)).unwrap().starts_with("#!"), "executable launcher in the guidance payload: {filename}");
+    }
+    for (filename, upstream_blob) in [
+        ("LICENSE", "bb3f6d23b1f8025514a62a12b51b47d73e3c9aa9"),
+        ("NOTICE.md", "0468271c904ae334cfaf27da6f8df3d5f419a1f0"),
+    ] {
+        let output = std::process::Command::new("git").arg("hash-object").arg(root.join(filename)).output().unwrap();
+        assert!(output.status.success(), "{}", stderr(&output));
+        assert_eq!(stdout(&output).trim(), upstream_blob, "{filename} differs from the pinned upstream notice/license");
     }
 }
