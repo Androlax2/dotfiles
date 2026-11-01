@@ -76,7 +76,7 @@ fn stowing_both_harnesses_keeps_one_global_instruction_owner() {
     let owner = repo().join("config/claude/.claude/CLAUDE.md").canonicalize().unwrap();
     for relative in [".claude/CLAUDE.md", ".config/opencode/AGENTS.md"] {
         assert_eq!(sandbox.home.join(relative).canonicalize().unwrap(), owner,
-            "{relative} no longer loads the shared global completion instructions");
+            "{relative} no longer loads the shared global instructions");
     }
     for name in ["code-review", "simplify"] {
         assert_eq!(sandbox.home.join(format!(".config/opencode/commands/{name}.md")).canonicalize().unwrap(),

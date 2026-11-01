@@ -194,52 +194,9 @@ that mattered, and stall. Shape every reply so I can act on it.
   2. What was kept (so the reviewer sees the constraints).
   3. Tests run and their outcome — verbatim, including failures.
 - Don't claim "done" if tests didn't run or didn't pass. Say so explicitly.
-
-## Final completion gates
-
-For implementation tasks (including configuration and agent instructions), the
-parent session owns this pipeline before declaring the requested work complete:
-
-1. Resolve and record the full task delta: verified base/head, task commits,
-   staged and unstaged changes inspected separately, and relevant untracked
-   implementation artifacts. A clean worktree or the last commit alone is not
-   the task scope. Name exclusions; preserve unrelated user/other-session work.
-2. Invoke `/code-review` through the current harness's supported native command
-   or skill mechanism on that full delta. Wait for the result, inspect findings,
-   and fix actionable in-scope findings within existing authorization. Report
-   unresolved findings; security/protective changes still need their approvals.
-3. Invoke `/simplify` natively on the task's changed code, including committed
-   artifacts when applicable. Apply only justified behavior-preserving cleanup;
-   preserve contracts, security, accessibility, validation, errors, tests, source
-   ownership and user changes. No useful cleanup is a valid no-change result.
-4. Run relevant permitted verification on the resulting tree and review all
-   resulting edits, including fixes and simplification. Recheck affected behavior
-   and review coverage when the delta changes; material unreviewed changes need
-   renewed review. Never use pre-edit test results as final-tree verification.
-5. Report the actual command invocations, scope, findings/fixes, simplify outcome,
-   verification results and remaining limits before the final completion claim.
-
-- Check actual command discovery and invocation support in the current harness.
-  Claude Code uses its native `/code-review` and `/simplify` skills; OpenCode uses
-  the existing global commands in `~/.config/opencode/commands/`. Check for local
-  overrides. Shared instructions do not imply shared invocation tools or support
-  in other harnesses. A prose message, copied prompt, self-review, similarly named
-  skill or command listing is not evidence that either command executed.
-- If a command is unavailable, blocked, failed or still running, state that
-  exact status and what remains pending; do not declare final completion or
-  silently substitute an equivalent. Never install tools, change models/providers,
-  spend outside existing authorization, weaken protective/resource gates or bypass
-  host, dependency, security or protected Git approvals to satisfy this policy.
-- No recursion: while executing `/code-review` or `/simplify`, or acting as their
-  reviewer/simplifier child, do not recursively launch either completion command.
-  Return the scoped findings/cleanup result to the parent, which owns the final
-  pipeline. This exclusion does not exempt the parent's implementation changes.
-- Phase/readiness reports (for example, "edits ready; review pending") are not
-  final completion. Conversation-only, research and other non-implementation tasks
-  with no implementation delta do not require these code gates: state the actual
-  outcome and applicable checks without inventing edits or test results. A
-  review/simplification-only request reports its scoped result, not completion of
-  the parent task. This is instruction policy, not automated enforcement.
+- For non-trivial code changes, get an independent review of the full change
+  and run the project's checks before saying it is done; a project can require
+  a stricter process in its own instructions.
 
 ## Project conventions
 
