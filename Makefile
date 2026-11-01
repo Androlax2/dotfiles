@@ -68,6 +68,8 @@ packages: ## [sudo] Install pacman and AUR packages
 	$(yay_capped) -S --needed - < packages/aur.txt
 
 dotfiles: palette zen ## Link every config/ package into your home
+	@# Codex writes its own skills into ~/.codex/skills: a real folder keeps them out of the repo.
+	mkdir -p ~/.codex/skills
 	$(stow) --restow */
 	~/.config/wireplumber/wireplumber.conf.d/generate-config.sh
 	tools/desktop-settings.sh

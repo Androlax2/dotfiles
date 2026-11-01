@@ -258,8 +258,8 @@ that change.
 ### Conventions (instruction files)
 
 Find the instruction files that govern the changed code: the user-level
-`~/.claude/CLAUDE.md` and `~/.config/opencode/AGENTS.md` (often the same file:
-read it once), the repo-root CLAUDE.md
+`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md` and `~/.codex/AGENTS.md`
+(often the same file: read each distinct file once), the repo-root CLAUDE.md
 and AGENTS.md, plus any CLAUDE.md, CLAUDE.local.md or AGENTS.md in a directory
 that is an ancestor of a changed file (a directory's file only applies to files at
 or below it). Read each one that exists, then check the diff for clear violations

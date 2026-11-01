@@ -131,4 +131,9 @@ Known differences from Claude Code:
 - Output stays raw JSON; Claude's host pretty-prints it as a numbered list.
 - The Conventions angle also reads AGENTS.md files, which is where OpenCode looks.
 - No `ultra`, no ReportFindings tool, no run-the-app follow-up.
-- No Codex port yet.
+- Codex (0.161 has no custom-prompt folder) gets the same text as skills in
+  `config/codex/.codex/skills`, stowed to `~/.codex/skills`, invoked as `$code-review`
+  and `$simplify`. A skill runs in the current session, not as a separate review
+  subagent like Claude's fork. `agents/openai.yaml` turns off implicit invocation, so
+  Codex never starts them unasked. `codex_skills.rs` fails when they drift from the
+  OpenCode commands. Nothing yet checks that Codex itself lists them.
