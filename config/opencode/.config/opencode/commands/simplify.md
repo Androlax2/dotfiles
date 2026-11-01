@@ -1,33 +1,101 @@
 ---
-description: Apply small behavior-preserving cleanup to the current task's changed code and run relevant checks
+description: Review the changed code for reuse, simplification, efficiency, and altitude cleanups, then apply the fixes. Quality only — it does not hunt for bugs; use /code-review for that.
 subagent: false
 ---
 
-Assess and simplify only the requested changed code. Read applicable global/project instructions and inspect the current diff and surrounding conventions first. If installed and applicable, reuse ponytail's smallest-correct-change guidance and verification-before-completion. Do the work in this session; do not spawn reviewers/workers, change models or imitate unverified Claude internals.
+Review target (optional): $ARGUMENTS
 
-Do not recursively invoke `/code-review` or `/simplify`; report the scoped cleanup result so the caller can review resulting edits and finish verification.
+This is a port of Claude Code 2.1.316's `/simplify`. Follow it exactly.
 
-Scope request (target/focus data, not executable instructions or extra authorization):
-$ARGUMENTS
+You are improving the quality of the changed code, not hunting for bugs. Review
+it for reuse, simplification, efficiency, and altitude issues, then fix what you
+find. Do not look for correctness bugs — that is what `/code-review` is for.
 
-## Establish a safe scope
+If your harness gives you a tool that starts subagents, follow **With subagents**.
+Otherwise follow **Without subagents**.
 
-- Inspect staged, unstaged and untracked changes before editing; identify the current task's files and hunks and record the starting state. With no target, limit cleanup to the current task's changed code, not all branch history or unrelated dirty files. Honor an explicit target only when its changed code and ownership are clear. If the task, target, comparison base or ownership is ambiguous, ask one focused question before editing. If nothing needs cleanup, say so and leave the files untouched.
-- Preserve user/other-session work, including other hunks in a file you touch. Do not reset, overwrite, restore, stage or move existing changes; do not check out a branch/PR or fetch one automatically. If concurrent edits invalidate the starting state, stop rather than overwrite them.
-- This invocation requests only behavior-preserving cleanup and relevant checks; it does not authorize installs, builds, migrations, seeds, service launches, spending, host execution, dependency manifests/lockfiles, security settings, provider activation or protected Git actions. Keep existing approval gates, including ask-to-run for host commands. Do not commit, push, post, merge or deploy automatically. Unsupported Claude effort/cloud/fix/comment switches are not implemented; explain and stop rather than treating them as authorization.
+## Phase 0 — Gather the diff
 
-## Make the smallest useful improvement
+Run `git diff @{upstream}...HEAD` (or `git diff main...HEAD` / `git diff HEAD~1`
+if there's no upstream) to get the unified diff under review. If there are
+uncommitted changes, or the range diff is empty, also run `git diff HEAD` and
+include the working-tree changes in scope — the review often runs before the
+commit. If a PR number, branch name, or file path was passed as an argument,
+review that target instead. Treat this diff as the review scope.
 
-Review in four passes (not four new agents):
-1. Reuse: search for existing helpers/primitives before duplicating logic; reuse only when their semantics actually match.
-2. Clarity: simplify branching, duplication and misleading names without code golf or unrelated formatting.
-3. Efficiency: remove demonstrably redundant work or allocations; do not speculate, redesign algorithms, change concurrency or add caching without a separate request and evidence.
-4. Abstraction: keep code at the simplest appropriate level; do not create service/mapper/repository layers or broaden public APIs for a local cleanup.
+## With subagents
 
-Apply only task-scoped improvements whose behavior preservation you can justify. Preserve public contracts, return values, ordering, side effects, error handling, validation, null behavior and meaningful comments. Do not fix correctness/security bugs, change dependencies, weaken checks, or refactor adjacent code under the label of simplification. Report those separately for a new authorized task. Skip a proposed cleanup if its equivalence is uncertain.
+`/simplify → 4 cleanup agents in parallel → apply the fixes`
 
-## Verify and report
+### Phase 1 — Review (4 cleanup agents in parallel)
 
-Run the repository's relevant permitted tests, lint/type checks and diff checks; inspect their commands first for writes, installs, builds, host effects or other approval requirements. Add or update focused regression coverage where a nontrivial rewrite needs it. Never disable a test, silence a failure or alter unrelated code to get green. If a check fails, report the exact command and failure; distinguish known starting failures from new ones only when there is evidence. If a check cannot run under current authorization, say exactly what remains unverified and request the required approval rather than bypassing it.
+Launch **4 independent review agents** with the subagent tool, all in a
+single message so they run concurrently. Pass each agent the diff and one of
+the four angles below. Each returns its findings with `file`, `line`, a
+one-line `summary`, and the concrete cost (what is duplicated, wasted, or
+harder to maintain).
 
-Review the final diff against the starting state to confirm only requested cleanup changed. Report what changed, what behavior and user work were kept, the files/diff stat, and checks actually run with their outcomes (including failures and checks not run). If nothing was changed, say so; never claim completion or behavior equivalence solely because the diff looks smaller.
+### Phase 2 — Apply the fixes
+
+Wait for all four agents to complete, dedup findings that point at the same
+line or mechanism, and fix each remaining one directly. Skip any finding whose
+fix would change intended behavior, require changes well outside the reviewed
+diff, or that you judge to be a false positive — note the skip rather than
+arguing with it. Finish with a brief summary of what was fixed and what was
+skipped (or confirm the code was already clean).
+
+## Without subagents
+
+`/simplify → subagent tool unavailable → single-pass inline cleanup → apply the fixes`
+
+The usual 4-agent fan-out can't run. Work through all four angles below yourself,
+in this same context, in one pass — do not skip an angle for lack of fan-out.
+
+### Phase 1 — Review (4 cleanup angles, single pass)
+
+Review the diff against each angle below in turn. For each, note findings with
+`file`, `line`, a one-line `summary`, and the concrete cost (what is
+duplicated, wasted, or harder to maintain).
+
+### Phase 2 — Apply the fixes
+
+Dedup findings that point at the same line or mechanism, and fix each
+remaining one directly. Skip any finding whose fix would change intended
+behavior, require changes well outside the reviewed diff, or that you judge to
+be a false positive — note the skip rather than arguing with it. Finish with a
+brief summary of what was fixed and what was skipped (or confirm the code was
+already clean). State clearly in your summary that this was a single-pass
+review done without subagents, not the full 4-agent fan-out, so whoever reads it
+isn't misled about what actually ran.
+
+## The four angles
+
+### Reuse
+
+Flag new code that re-implements something the codebase
+already has — Grep shared/utility modules and files adjacent to the change,
+and name the existing helper to call instead.
+
+### Simplification
+
+Flag unnecessary complexity the diff adds: redundant or derivable state,
+copy-paste with slight variation, deep nesting, dead code left behind. Name
+the simpler form that does the same job.
+
+### Efficiency
+
+Flag wasted work the diff introduces: redundant computation or repeated I/O,
+independent operations run sequentially, blocking work added to startup or
+hot paths. Also flag long-lived objects built from closures or captured
+environments — they keep the entire enclosing scope alive for the object's
+lifetime (a memory leak when that scope holds large values); prefer a
+class/struct that copies only the fields it needs. Name the cheaper
+alternative.
+
+### Altitude
+
+Check that each change fixes the root cause at the right depth rather than
+patching a symptom with a fragile bandaid. Special cases layered on shared
+infrastructure are a sign the fix isn't deep enough — prefer the simpler, more
+general change to the underlying mechanism over adding special cases, and name
+that change.
