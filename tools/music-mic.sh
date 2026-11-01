@@ -14,7 +14,7 @@ route_apple_music() {
     local zen_pid stream
     zen_pid=$(pgrep -o -f -- '-P music ' || true)
     if [ -z "$zen_pid" ]; then
-        echo "Apple Music is not open: open it, play a track, then run make music-mic-on again"
+        echo "À faire : Apple Music n'est pas ouvert. Ouvre-le (CMD+M), lance un morceau, puis relance make music-mic-on."
         return
     fi
     local profile_pids streams
@@ -22,13 +22,13 @@ route_apple_music() {
     streams=$(pactl -f json list sink-inputs | jq -r --argjson pids "$profile_pids" \
         '.[] | select(.properties["application.process.id"] as $pid | $pids | index($pid)) | .index')
     if [ -z "$streams" ]; then
-        echo "Apple Music is not playing: play a track, then run make music-mic-on again"
+        echo "À faire : Apple Music ne joue rien. Lance un morceau, puis relance make music-mic-on."
         return
     fi
     for stream in $streams; do
         pactl move-sink-input "$stream" music_mic_music
     done
-    echo "Apple Music now plays into the microphone"
+    echo "OK : Apple Music passe dans le micro (tu l'entends toujours dans ton casque)."
 }
 
 loaded_modules() {
@@ -37,7 +37,7 @@ loaded_modules() {
 
 turn_on() {
     if [ -n "$(loaded_modules)" ]; then
-        echo "music mic is already on"
+        echo "Le micro musique est déjà actif."
         route_apple_music
         return
     fi
@@ -54,8 +54,16 @@ turn_on() {
     echo "$microphone" > "$previous_source_file"
     pactl set-default-source music_mic_source
     trap - ERR
-    echo "music mic on: games hear VirtualMic"
     route_apple_music
+    cat <<'STEPS'
+
+Dans Arc Raiders (options audio) :
+  1. Micro (entrée) : VirtualMic, ou "par défaut".
+  2. Mode du micro : détection vocale / micro ouvert. En push-to-talk, la musique ne passe
+     que quand tu appuies sur la touche.
+Musique trop forte pour les autres : pavucontrol, onglet Lecture, baisse le loopback vers MicMix.
+Pour arrêter : make music-mic-off
+STEPS
 }
 
 turn_off() {
@@ -67,7 +75,7 @@ turn_off() {
         pactl set-default-source "$(cat "$previous_source_file")"
         rm "$previous_source_file"
     fi
-    echo "music mic off"
+    echo "Micro musique coupé : ton vrai micro est de nouveau celui par défaut. Si tu avais choisi VirtualMic dans le jeu, remets ton micro."
 }
 
 case ${1:-} in
