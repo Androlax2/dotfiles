@@ -248,7 +248,7 @@ clean-logs: ## [sudo] Delete journal entries older than 4 weeks
 
 ##@ Play
 
-music-mic-on: ## Mix Apple Music into the microphone games hear (VirtualMic, made the default)
+music-mic-on: ## Make Apple Music, without your voice, the microphone games hear (VirtualMic, made the default)
 	@tools/music-mic.sh on
 
 music-mic-off: ## Remove the music microphone and restore the real one as default
