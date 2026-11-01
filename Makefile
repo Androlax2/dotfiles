@@ -50,7 +50,7 @@ unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -t
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
-	    backup backup-list backup-status backup-check backup-maintain backup-init
+	    backup backup-list backup-status backup-check backup-maintain backup-init music-mic-on music-mic-off
 
 # Descriptions after `##` and sections after `##@` are rendered by tools/make-help.awk.
 # Tags: [sudo] prompts for a password, [asks] confirms before deleting,
@@ -245,6 +245,14 @@ clean-caches: ## Empty npm, pnpm, go, uv, pip and composer caches
 
 clean-logs: ## [sudo] Delete journal entries older than 4 weeks
 	sudo journalctl --vacuum-time=4weeks
+
+##@ Play
+
+music-mic-on: ## Mix Apple Music into the microphone games hear (VirtualMic, made the default)
+	@tools/music-mic.sh on
+
+music-mic-off: ## Remove the music microphone and restore the real one as default
+	@tools/music-mic.sh off
 
 ##@ Back up
 
