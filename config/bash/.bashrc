@@ -1,6 +1,3 @@
-# Route AI CLI commands through Greywall, including noninteractive shells.
-export PATH="$HOME/.local/bin/greywall-agents:$PATH"
-
 #
 # ~/.bashrc
 #

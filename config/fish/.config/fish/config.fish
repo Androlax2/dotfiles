@@ -17,8 +17,5 @@ function fish_greeting
 end
 export PATH="$HOME/.local/bin:$PATH"
 
-# Route AI CLI commands and Claude auto-retry launches through Greywall.
-set -gx PATH "$HOME/.local/bin/greywall-agents" $PATH
-
 # fzf colours (Tokyo Night, from folke/tokyonight.nvim extras/fzf)
 source ~/.config/fzf/tokyonight_night.sh
