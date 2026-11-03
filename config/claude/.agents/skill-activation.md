@@ -35,8 +35,7 @@ available skill names and descriptions. Load those skills with the native tool
 or a discovered, accessible instruction file, then continue their workflows.
 Only the root skill's CLI inspection requirement is waived in this fallback.
 
-Do not retry through another npm cache, download or install a CLI, or change
-sandbox permissions to make routing work. This exception does not waive other
+Do not download or install a CLI to make routing work. This exception does not waive other
 skill instructions, design requirements, or approval gates. If a relevant skill
 cannot actually be loaded, stop and report the missing capability as usual.
 

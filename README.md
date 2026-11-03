@@ -234,7 +234,7 @@ These reports have **no deletion mode**. Games, project checkouts, dependencies,
 Rust build output, IDE indexes, other caches, and the existing manual cleanup
 commands are unchanged. Do not schedule `make clean` as a replacement.
 
-These scripts and units execute **outside the agent sandbox**. Installation on
+Installation on
 another machine, activation changes, and adding deletion behavior require separate
 approval. The system report service runs only the vendor executable, not checkout code as
 root. Run fixture-only regression tests with
@@ -309,14 +309,12 @@ Turbo stays report-only. Existing manual cleanup commands are unchanged.
 
 Host-executed changes are the journald drop-in, vendor paccache service/timer
 drop-ins, package-report command, monthly report script/unit pair, and Vitals
-collector. They run **outside the sandbox** after reviewed deployment.
-No dependency manifest changed. The Makefile test target builds the real OSD
-classifier before testing; `services.txt` records the enabled native system timers.
+collector. `services.txt` records the enabled native system timers.
 
 Activation checklist for another machine or a future reinstall (approval required):
 
-1. Review/apply the clone through the normal dotfiles workflow, including the Vitals
-   build and updated user links; review each system-file diff before installation.
+1. Update ~/dotfiles, build Vitals and restow the user links; review each system-file
+   diff before installation.
 2. Confirm merged journald/paccache settings and the fixed cache path. Installing
    overrides can affect an already-active timer, so check its state before install.
 3. Reload journald if supported; otherwise request approval for a restart. Do not

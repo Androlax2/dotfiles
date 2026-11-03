@@ -76,7 +76,7 @@ isolation, then pages assembled from them. Nothing visual is built directly in a
 1. **Storybook is the workshop.** Every UI component is developed and reviewed in Storybook before
    any page uses it. If the project has no Storybook, stop and propose adding it with the setup
    that matches its framework (`npx storybook@latest init`, or the project's own way): it changes
-   the dependency manifest and adds scripts Theo runs outside the sandbox, so ask first and say both.
+   the dependency manifest and adds scripts, so ask first and say both.
 2. **Bottom-up, mirroring the FigCraft file**: tokens (from `design/tokens.*`) → primitives (button,
    input, icon, text…) → composites (cards, rows, forms, navigation) → layouts and sections → pages.
    A level starts only once the level below has what it needs.

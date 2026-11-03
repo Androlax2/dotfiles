@@ -42,7 +42,7 @@ WCAG 2.2 and WAI-ARIA Authoring Practices, Nielsen Norman Group, Baymard Institu
 e-commerce), GOV.UK Design System, the docs of the design system the project uses.
 
 - Cite what you used (title and link) when you present the work, next to the decision it shaped.
-- A host the sandbox blocks is Theo's call: name it and ask Theo to approve it; don't work around it.
+- A source you cannot reach: name it and ask Theo; don't work around it.
 - Sources disagree or don't fit the case: say so and ask.
 
 ## Rule 3: use the designer skills
