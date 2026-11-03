@@ -6,8 +6,7 @@
   "position": "top",
   "height": 32,
   "margin-top": 6,
-  // No reserved space: hypr/theme.lua keeps the top gap instead, so hiding the bar on the Claude
-  // workspace does not re-lay out the windows (that relayout was an upward slide on every switch).
+  // No reserved space: hypr/theme.lua keeps the top gap instead.
   "exclusive": false,
   "margin-left": 15,
   "margin-right": 15,
@@ -15,15 +14,8 @@
 
   "modules-left": ["hyprland/workspaces", "custom/mpris"],
   "modules-center": ["clock", "clock#date", "image#cal-icon", "custom/calendar"],
-  // Two islands on the right: the Claude sessions chip, then the rest. The .modules-right container
-  // itself is transparent; each group draws its own island. On the Claude workspace the whole bar
-  // hides (custom/workspace-listener): usage and details live in the manager's sidebar there.
-  "modules-right": ["group/claude", "group/right"],
-
-  "group/claude": {
-    "orientation": "inherit",
-    "modules": ["custom/cockpit"]
-  },
+  // The .modules-right container itself is transparent; the group draws its own island.
+  "modules-right": ["group/right"],
 
   "group/right": {
     "orientation": "inherit",
@@ -50,8 +42,7 @@
     "wireplumber",
     "image#notifications-icon",
     "image#keys-icon",
-    "custom/audio-listener",
-    "custom/workspace-listener"
+    "custom/audio-listener"
     ]
   },
 
@@ -195,20 +186,6 @@
     "on-click": "hyprctl eval 'TOGGLE_SCRATCHPAD(\"vitals\")'"
   },
 
-  // ---- Claude island: sessions chip, on every workspace: ● working  ○ waiting  ! needs you; a dim
-  // robot glyph with no session so the island never shows empty. The OSD daemon (osd) rewrites $XDG_RUNTIME_DIR/cockpit.json and sends
-  // RTMIN+16 on every change; the interval only refreshes the ages in the tooltip. Click opens the
-  // most urgent session in the manager.
-  "custom/cockpit": {
-    "exec": "~/.config/waybar/scripts/cockpit.sh",
-    "return-type": "json",
-    "interval": 60,
-    "signal": 16,
-    "format": "{}",
-    "escape": false,
-    "on-click": "osd-show focus-next"
-  },
-
   // ---- right: jobpilot. Sent automatically today, then (N) awaiting manual intervention; the class tracks the hourly
   // jobpilot-apply run (running / error / critical = credentials to refresh). Click opens the triage TUI
   // and refreshes the module on exit; right-click shows the latest run's log (make last).
@@ -335,12 +312,6 @@
   // Never renders text; it only forwards pactl sink events to the volume icon as SIGRTMIN+8.
   "custom/audio-listener": {
     "exec": "~/.config/waybar/scripts/audio-listener.sh",
-    "tooltip": false
-  },
-
-  // Never renders text; it hides the bar on the Claude workspace and shows it elsewhere (SIGUSR1).
-  "custom/workspace-listener": {
-    "exec": "~/.config/waybar/scripts/workspace-listener.sh",
     "tooltip": false
   },
 

@@ -24,10 +24,9 @@ window#waybar {
     color: @textActive;
 }
 
-/* ===== ISLANDS: one per module group; the right slot holds two (group/claude, group/right) ===== */
+/* ===== ISLANDS: one per module group ===== */
 .modules-left,
 .modules-center,
-#claude,
 #right {
     background: alpha(@bg, 0.85);
     border: 1px solid @line;
@@ -48,11 +47,6 @@ window#waybar {
 
 .modules-center {
     padding: 0 12px;
-}
-
-/* The Claude island keeps 8 px of air before the main right island. */
-#claude {
-    margin-right: 8px;
 }
 
 /* ===== DIVIDERS: sep.svg is 12 x 12 with a 1 px line in the middle, 5.5 px of air built in ===== */
@@ -151,8 +145,7 @@ window#waybar {
 #submap,
 #hyprland-submap,
 #custom-hdr,
-#custom-hyprsunset,
-#custom-cockpit {
+#custom-hyprsunset {
     min-height: 24px;
     padding: 0 7px;
     margin: 3px 10px 3px 0;
@@ -185,15 +178,6 @@ window#waybar {
 #hyprland-submap {
     background: alpha(@green, 0.16);
     color: @green;
-}
-
-/* Claude sessions: the counts carry their own colours, the chip tint follows the most urgent state. */
-#custom-cockpit.waiting {
-    background: alpha(@yellow, 0.16);
-}
-
-#custom-cockpit.needs-you {
-    background: alpha(@red, 0.16);
 }
 
 /* ===== RIGHT: stats and stateful icons. Icons are SVGs (image modules), values carry the colour ===== */
@@ -232,16 +216,6 @@ window#waybar {
 
 #custom-updates.stale {
     color: @orange;
-}
-
-/* The sessions chip is alone in its island: no trailing gap. */
-#custom-cockpit {
-    margin-right: 0;
-}
-
-#custom-cockpit.idle {
-    background: transparent;
-    color: @textDim;
 }
 
 /* jobpilot: several classes can apply at once; later rules win, so the most urgent state is last. */
@@ -325,8 +299,7 @@ window#waybar {
     color: @text;
 }
 
-#custom-audio-listener,
-#custom-workspace-listener {
+#custom-audio-listener {
     margin: 0;
     padding: 0;
     font-size: 0;
