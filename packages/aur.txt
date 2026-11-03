@@ -10,7 +10,6 @@ bibata-cursor-theme
 bitwarden-bin
 bitwarden-bin-debug
 bluetooth-autoconnect
-docker-rootless-extras
 elephant
 elephant-calc
 elephant-calc-debug
