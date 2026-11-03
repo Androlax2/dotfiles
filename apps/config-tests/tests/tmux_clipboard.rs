@@ -39,18 +39,9 @@ impl Drop for Tmux {
 }
 
 #[test]
-fn only_opencode_and_cockpit_windows_allow_terminal_passthrough() {
+fn the_tmux_server_passes_a_panes_clipboard_copies_to_the_terminal() {
+    // opencode copies only through OSC 52; the default (external) drops a pane's OSC 52.
     let tmux = Tmux::new();
-    for (session, expected) in [
-        ("claude-manager", "on"),
-        ("claude-retry-opencode-123", "on"),
-        ("ordinary", "off"),
-        ("claude-run-123", "off"),
-        ("claude-retry-123", "off"),
-        ("not-claude-retry-opencode-123", "off"),
-    ] {
-        tmux.run(&["new-session", "-d", "-s", session, "sleep 60"]);
-        let output = tmux.run(&["show-options", "-A", "-w", "-v", "-t", &format!("={session}:0"), "allow-passthrough"]);
-        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), expected, "{session}");
-    }
+    let output = tmux.run(&["show-options", "-s", "-v", "set-clipboard"]);
+    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "on");
 }

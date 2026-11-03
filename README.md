@@ -37,7 +37,7 @@ The desktop itself:
 
 One palette, Tokyo Night (night), applied the same way everywhere:
 
-- **Tokens** live in [`config/waybar/.config/waybar/colors.css`](config/waybar/.config/waybar/colors.css). `make palette` renders kitty, GTK, qt6ct, swaync, Walker, Hyprland, fish, lazygit, fzf, btop, the OSD, slurp and Zen from the templates in [`tools/palette`](tools/palette); `make check-palette` reports drift.
+- **Tokens** live in [`config/waybar/.config/waybar/colors.css`](config/waybar/.config/waybar/colors.css). `make palette` renders kitty, GTK, qt6ct, swaync, Walker, Hyprland, fish, lazygit, fzf, btop, slurp and Zen from the templates in [`tools/palette`](tools/palette); `make check-palette` reports drift.
 - **Ground** `#1a1b26` at 85 % behind blurred islands, a `rgba(192, 202, 245, 0.10)` hairline, radius 10.
 - **Icons are muted** (`#a9b1d6`), **values carry the colour**: blue for CPU, purple for GPU, yellow for volume, red for recording.
 - **One colour family per element**, no gradients across families.
@@ -126,22 +126,18 @@ One palette, Tokyo Night (night), applied the same way everywhere:
 | `XF86MonBrightnessDown` | Brightness down |
 | `XF86MonBrightnessUp` | Brightness up |
 
-## Agent Cockpit
-
-Workspace 6 is the [Agent Cockpit](https://github.com/Androlax2/agent-cockpit): every Claude Code, opencode and Codex session on the machine, each inside greywall, in one tmux window. It is a repository of its own, linked into this home from its running copy `~/agent-cockpit` (`make -C ~/agent-cockpit install`); it brings the session hooks, the opencode and Codex plugins, the greywall launchers and profiles, the bar's cockpit chip and the fish `claude` and `opencode` functions. This repository only calls it: the Hyprland bindings and window rules (`hypr/apps/claude.lua`), the idle lock of workspace 6 (`hypr/scripts/claude-idle.sh`), the lock screen (`cockpit away`), the tmux keys, Claude's rules (`config/claude/.claude/CLAUDE.md`) and skills, opencode's own settings.
-
 ## Games
 
 A game window opening turns **game mode** on by itself (`config/hyprland/.config/hypr/game-mode.lua`), and the game's exit turns it off:
 
-- Hyprland drops animations, blur and rounding; banners and approval windows wait.
+- Hyprland drops animations, blur and rounding.
 - Feral GameMode (`config/gamemode`) puts the CPU governor and the GPU (`card1`) in their performance modes while the game's process runs.
-- `game-performance` (GameMode's start and end hooks) pauses every agent sandbox, Claude Code, opencode or codex (cgroup freezer on the scope of each `greywall` process, a tmux pane's or a kitty window's: they resume mid-step after the game; the column and approval panes stay usable), the backup, jobpilot and the update, security and health checks, and drops any job already running to idle CPU and disk priority. The Todo queue waits too. `game-performance off` thaws by hand; the cockpit doctor flags sessions left frozen.
+- `game-performance` (GameMode's start and end hooks) pauses the backup, jobpilot and the update and security checks, and drops any job already running to idle CPU and disk priority.
 - MangoHud (`config/MangoHud`): FPS, frame times, CPU and GPU load and temperatures, with `Left Shift + F12`. Only Steam and its games load it (`config/steam` sets `MANGOHUD=1` in Steam's launcher).
 
 ## Machine monitor (vitals)
 
-[vitals](https://github.com/Androlax2/vitals) watches the machine (temperatures and their trends, fans, disks, services, kernel errors, memory, the backup), keeps the history and warns through the Agent Cockpit's OSD and the bar. It is a repository of its own, linked from its running copy `~/vitals` (`make -C ~/vitals install`, `make -C ~/vitals system` for its root timer). This repository keeps its keybind (`Ctrl + Cmd + M`), its bar chip (`custom/vitals`) and the disk review it reads (`disk-space-review`).
+[vitals](https://github.com/Androlax2/vitals) watches the machine (temperatures and their trends, fans, disks, services, kernel errors, memory, the backup), keeps the history and warns through the bar. It is a repository of its own, linked from its running copy `~/vitals` (`make -C ~/vitals install`, `make -C ~/vitals system` for its root timer). This repository keeps its keybind (`Ctrl + Cmd + M`), its bar chip (`custom/vitals`) and the disk review it reads (`disk-space-review`).
 
 ## Quickstart
 
@@ -257,15 +253,6 @@ Installed and enabled on this PC on **2026-10-20**:
   and checkouts. The largest 20 of each are written to
   `${XDG_STATE_HOME:-$HOME/.local/state}/disk-maintenance/latest.json`.
   Vitals announces each new report once. **No games or projects are deleted.**
-- **greyproxy.db:** greyproxy keeps every captured request forever, so
-  `greyproxy-prune.timer` (user, hourly: it grows several GB a day) deletes traffic history (transactions,
-  request logs, middleware events, conversations) older than 14 days, then the
-  oldest transactions and conversations until the data fits in 4 GB, in small
-  batches next to the running proxy. Rules, pending requests, sessions and
-  credentials are never touched. It fails (and logs a WARN) when the data still
-  exceeds 4 GB. Freed space returns to disk once the file was compacted:
-  `systemctl --user stop greyproxy; greyproxy-prune --compact; systemctl --user start greyproxy`.
-  Tests: `python3 -m unittest discover -s tools/tests -p 'test_greyproxy_prune.py' -v`.
 
 In this revision, **Vitals → 3 Disques** opens with one plain-language status and
 at most one contextual action. Healthy routine maintenance does not become a to-do
@@ -347,7 +334,7 @@ timer or reverting configuration **cannot restore expired logs or removed packag
 archives**. Do not roll back unrelated SMART, TRIM, backup, or audit settings.
 
 Fixture tests: `python3 -m unittest discover -s tools/tests -v`, on the host (native paccache
-tests prune **temporary fake archives only**; the reports walk every path from `/`, which a greywall
+tests prune **temporary fake archives only**; the reports walk every path from `/`, which a
 sandbox cannot open, so inside a session they fail with `Permission denied: '/'`). Vitals tests:
 `make -C ~/vitals test` (in its own repository).
 
@@ -567,11 +554,10 @@ These came from vendor installers, so `make` can't reinstall them:
 
 | Software | Location | Notes |
 | --- | --- | --- |
-| Claude Code | `~/.local/bin/claude` | Updates itself; CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
-| Codex CLI | `~/.local/npm/bin/codex` | CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents` |
+| Claude Code | `~/.local/bin/claude` | Updates itself |
+| Codex CLI | `~/.local/npm/bin/codex` | |
 | CodeRabbit CLI | `~/.local/bin/coderabbit` | `cr` is a symlink to it |
-| greywall, greyproxy | `~/.local/bin` | The `opencode`, `codex`, and `claude` launchers of the Agent Cockpit (`greywall-agents/`) run through greywall; greyproxy is a user service. Each sandbox logs in to greyproxy as `<agent>-<project>` (`claude-runway`), which its pending page and the cockpit's `⛔ greyproxy holds` line show; a label, not proof (any sandbox can claim any name), so approvals stay per agent (`claude*`), never per project. greywall is built from the `dotfiles` branch of Androlax2/greywall, v0.3.7 plus upstream PRs #103, #112, #113 and #114 (`make -C ~/agent-cockpit greywall-patch`), so a sandbox cannot read greyproxy's keys or `~/.ssh/id_*`. greyproxy is built from the `dotfiles` branch of Androlax2/greyproxy, v0.4.5 plus a block on proxied traffic to its own listeners, so a sandbox cannot reach greyproxy's API through the proxy, an optional API token (`~/.local/share/greyproxy/api-token`) and per-client proxy secrets, both off until greywall sends them, and a fail-closed start: greyproxy exits when its service cannot start (`make -C ~/agent-cockpit greyproxy-patch`) |
-| opencode | `~/.opencode/bin` | `curl -fsSL https://opencode.ai/install \| bash`; CLI commands use the Greywall launcher in `~/.local/bin/greywall-agents`, which turns its self-update off |
+| opencode | `~/.opencode/bin` | `curl -fsSL https://opencode.ai/install \| bash` |
 | Herd Lite | `~/.config/herd-lite` | PHP, Composer and the Laravel installer, added to `PATH` by `~/.profile` |
 | uv | `/usr/local/bin` | `make clean-caches` uses it |
 | Private Internet Access | `/opt/piavpn` | Its installer also writes `piavpn.service` and `wgpia.conf` |

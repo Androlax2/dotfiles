@@ -14,9 +14,6 @@ security/
 # OpenRGB device enumeration logs (USB paths, serial numbers)
 config/OpenRGB/.config/OpenRGB/logs/
 
-# Commits the dotfiles session exports for cockpit apply (in its work clone)
-.outgoing/
-
 # IntelliJ project files
 .idea/
 

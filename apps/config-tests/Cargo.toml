@@ -1,5 +1,5 @@
 # The tests of the dotfiles' own scripts and configuration (Hyprland, tmux, Waybar, the install
-# tools), run by `make test`; the cockpit's and vitals' tests live with them.
+# tools), run by `make test`; vitals' tests live with it.
 [package]
 name = "config-tests"
 version = "0.1.0"

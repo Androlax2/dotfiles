@@ -1,5 +1,5 @@
 //! The user units' .wants links (config/systemd): stow refuses absolute links in a package, and
-//! ~/.config/systemd is a real folder since agent-cockpit and vitals link their units into it too.
+//! ~/.config/systemd is a real folder since vitals links its units into it too.
 
 mod common;
 use common::sandbox::*;

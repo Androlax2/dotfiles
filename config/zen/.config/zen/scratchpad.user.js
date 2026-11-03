@@ -1,4 +1,4 @@
-// Prefs of every web scratchpad profile (music, prs, claude, greyproxy): a compact-mode window
+// Prefs of every web scratchpad profile (music): a compact-mode window
 // on one site, one tab, the fewest content processes. ~/.config/hypr/scripts/web-launch.sh copies this to ~/.zen/<profile>/user.js
 // on every start (so a change here reaches existing profiles) and adds the site as
 // browser.startup.homepage.
@@ -14,7 +14,7 @@ user_pref("layout.css.prefers-color-scheme.content-override", 0);
 user_pref("browser.theme.toolbar-theme", 0);
 user_pref("browser.theme.content-theme", 0);
 user_pref("media.hardwaremediakeys.enabled", true);
-// One tab: a page sent from another app (cockpit' pull requests) replaces the current one
+// One tab: a page sent from another app replaces the current one
 // instead of piling up tabs, and links asking for a new tab or window stay in this one.
 user_pref("browser.link.open_newwindow.override.external", 1);
 user_pref("browser.link.open_newwindow", 1);

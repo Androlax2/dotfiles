@@ -11,9 +11,7 @@ fish-prompt.fish.tpl	config/fish/.config/fish/functions/fish_prompt.fish
 lazygit-config.yml.tpl	config/lazygit/.config/lazygit/config.yml
 fzf.sh.tpl	config/fzf/.config/fzf/tokyonight_night.sh
 btop-theme.tpl	config/btop/.config/btop/themes/tokyonight_night.theme
-osd-style.css.tpl	config/osd/.config/osd/style.css
 slurp-colors.tpl	config/screen-record/.config/slurp-colors
 zen-userChrome.css.tpl	config/zen/.config/zen/userChrome.css
 mpris-card-style.css.tpl	config/mpris-card/.config/mpris-card/style.css
 web-placeholder-style.css.tpl	config/hyprland/.config/hypr/scripts/web-placeholder.css
-claude-idle-style.css.tpl	config/hyprland/.config/hypr/scripts/claude-idle.css

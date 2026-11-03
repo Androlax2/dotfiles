@@ -15,13 +15,7 @@ fn sandbox() -> Sandbox {
     let sandbox = Sandbox::new();
     sandbox.shim("systemctl", FAKE_SYSTEMCTL);
     sandbox.shim("hyprctl", "");
-    sandbox.shim("cockpit", "");
-    // Three greywall sandboxes: two in tmux scopes, one of those with two processes, and one in a
-    // kitty window's scope.
-    sandbox.shim("ps", r#"printf '%s\n' "0::/user.slice/user-1000.slice/user@1000.service/app.slice/tmux-spawn-aaa.scope" \
-        "0::/user.slice/user-1000.slice/user@1000.service/app.slice/tmux-spawn-aaa.scope" \
-        "0::/user.slice/user-1000.slice/user@1000.service/app.slice/tmux-spawn-bbb.scope" \
-        "0::/user.slice/user-1000.slice/user@1000.service/kitty-526640-0.scope""#);
+    sandbox.shim("logger", "");
     sandbox
 }
 
@@ -38,67 +32,10 @@ fn a_game_start_pauses_only_the_timers_that_were_running() {
 }
 
 #[test]
-fn a_game_start_pauses_the_cockpit_health_timer() {
-    let sandbox = sandbox();
-    run(&sandbox, "on", "cockpit-health-check.timer");
-    assert!(sandbox.calls("systemctl").contains(&"systemctl --user stop cockpit-health-check.timer".to_string()));
-}
-
-#[test]
-fn a_game_start_lowers_the_cockpit_health_job_priority() {
-    let sandbox = sandbox();
-    run(&sandbox, "on", "");
-    assert!(sandbox.calls("systemctl").contains(&"systemctl --user set-property --runtime cockpit-health-check.service CPUWeight=idle IOWeight=1".to_string()));
-}
-
-#[test]
-fn a_game_start_leaves_the_sessions_running_while_freeze_while_gaming_is_off() {
-    let sandbox = sandbox();
-    sandbox.shim("cockpit", r#"[[ $1 == setting ]] && echo "$2: off"; exit 0"#);
-    run(&sandbox, "on", "");
-    assert!(sandbox.calls("systemctl").iter().all(|call| !call.contains(" freeze ")));
-}
-
-#[test]
-fn a_game_start_pauses_each_sandboxs_scope_once() {
-    let sandbox = sandbox();
-    run(&sandbox, "on", "");
-    let frozen: Vec<String> = sandbox.calls("systemctl").into_iter().filter(|call| call.contains(" freeze ")).collect();
-    assert_eq!(frozen, [
-        "systemctl --user freeze kitty-526640-0.scope",
-        "systemctl --user freeze tmux-spawn-aaa.scope",
-        "systemctl --user freeze tmux-spawn-bbb.scope",
-    ]);
-}
-
-/// Every agent runs under greywall: looking for greywall, not one agent's binary, freezes them all.
-#[test]
-fn a_game_start_looks_for_the_greywall_sandboxes_not_one_agent() {
-    let sandbox = sandbox();
-    run(&sandbox, "on", "");
-    assert_eq!(sandbox.calls("ps"), ["ps -C greywall -o cgroup="]);
-}
-
-#[test]
 fn a_game_start_drops_running_jobs_to_idle_priority() {
     let sandbox = sandbox();
     run(&sandbox, "on", "");
     assert!(sandbox.calls("systemctl").contains(&"systemctl --user set-property --runtime restic-backup.service CPUWeight=idle IOWeight=1".to_string()));
-}
-
-#[test]
-fn a_game_end_resumes_the_sessions_it_paused() {
-    let sandbox = sandbox();
-    run(&sandbox, "on", "");
-    sandbox.reset_log();
-    run(&sandbox, "off", "");
-    let thawed: Vec<String> = sandbox.calls("systemctl").into_iter().filter(|call| call.contains(" thaw ")).collect();
-    assert_eq!(thawed, [
-        "systemctl --user thaw kitty-526640-0.scope",
-        "systemctl --user thaw tmux-spawn-aaa.scope",
-        "systemctl --user thaw tmux-spawn-bbb.scope",
-    ]);
-    assert!(!sandbox.runtime.join("game-performance.frozen").exists());
 }
 
 #[test]
@@ -136,8 +73,8 @@ fn a_game_end_that_cannot_reach_hyprland_says_so_in_the_log() {
     let sandbox = sandbox();
     sandbox.shim("hyprctl", "exit 1");
     run(&sandbox, "off", "");
-    assert!(sandbox.calls("cockpit").iter().any(|call| call.contains("game WARN") && call.contains("could not be told to leave game mode")),
-            "{:?}", sandbox.calls("cockpit"));
+    assert!(sandbox.calls("logger").iter().any(|call| call.contains("-p user.warning") && call.contains("could not be told to leave game mode")),
+            "{:?}", sandbox.calls("logger"));
 }
 
 #[test]

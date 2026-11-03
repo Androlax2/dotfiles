@@ -1,5 +1,4 @@
--- Game mode: eye candy off and the "gamemode" submap on (banners and approval windows
--- wait meanwhile). Entered by itself when a game window opens, or with ALT + G
+-- Game mode: eye candy off and the "gamemode" submap on. Entered by itself when a game window opens, or with ALT + G
 -- (bindings.lua); the reload on exit restores the config values changed here.
 --
 -- The game's process is registered with Feral GameMode (gamemoded --request=<pid>): CPU and GPU

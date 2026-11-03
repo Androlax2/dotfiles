@@ -4,9 +4,9 @@ SHELL := /bin/bash
 # Recipes parse pacman and systemctl output and rely on byte-order sorting for comm and diff.
 export LC_ALL := C
 
-# ~/.config/waybar, ~/.config/hypr and ~/.config/fish hold agent-cockpit's links too: they were
-# unfolded into real folders once (2026-10-21), and stow does not fold a folder back over another
-# repository's links. Everything else keeps stow's default folding (~/.claude/skills/<skill>).
+# ~/.config/waybar, ~/.config/hypr and ~/.config/fish are real folders (unfolded once, 2026-10-21,
+# when another repository linked into them too); stow keeps them so. Everything else keeps stow's
+# default folding (~/.claude/skills/<skill>).
 stow = cd config && stow -v -t ~
 backup_script = ~/.config/restic/backup.sh
 system_files = $(shell cd system && find . -type f -printf '%P\n' | sort)
@@ -46,7 +46,7 @@ versioned_skills = config/claude/.claude/skills
 unversioned_skills = comm -23 <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name synced -printf '%f\n' | sort) <(jq -r '.skills | keys[]' ~/.agents/.skill-lock.json | sort)
 unlinked_skills = comm -23 <(find $(versioned_skills) -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort) <(find ~/.claude/skills -mindepth 1 -maxdepth 1 -type l -printf '%f\n' | sort)
 
-.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install build dotfiles-work \
+.PHONY: help setup packages dotfiles zen palette files-patch global-packages system locale services initramfs install build \
 	    test check check-packages check-skills check-services check-system check-untracked check-security check-palette \
 	    dump dump-packages dump-skills dump-services dump-system dump-security \
 	    update update-skills disk clean clean-packages clean-caches clean-logs clean-docker clean-trash \
@@ -76,7 +76,7 @@ dotfiles: palette zen ## Link every config/ package into your home
 
 # Colours live in one file (config/waybar/.config/waybar/colors.css); the other themed
 # files are rendered from tools/palette/*.tpl so a token change reaches every surface.
-palette: ## Render kitty, GTK, qt6ct, swaync, walker, Hyprland, fish, lazygit, fzf, btop, OSD, slurp and Zen colours from colors.css
+palette: ## Render kitty, GTK, qt6ct, swaync, walker, Hyprland, fish, lazygit, fzf, btop, slurp and Zen colours from colors.css
 	@tools/palette.sh
 
 # Zen profiles have random names, so stow cannot reach them: link the chrome and
@@ -106,9 +106,8 @@ global-packages: ## Install npm, pnpm, pip, cargo, go and composer packages, age
 	$(call missing,composer) | xargs --no-run-if-empty composer global require
 	$(call missing,skills) | awk '{skills[$$1] = skills[$$1] " --skill " $$2} END {for (source in skills) print source skills[source]}' \
 	    | xargs --no-run-if-empty -L1 npx --yes skills add --global --agent claude-code --agent codex --yes
-	@# The real binary: the fish `claude` function would run this inside greywall, where ~/.claude/plugins
-	@# is read-only. The same goes for the plugin's data folder, which Claude Code creates before running
-	@# a plugin's hooks; it is made here once, or every sandboxed session fails at start (EROFS).
+	@# Claude Code creates a plugin's data folder before running its hooks; it is made here once, or a
+	@# sandboxed session, where ~/.claude/plugins is read-only, fails at start (EROFS).
 	$(call missing,plugins) | while read -r repository plugin; do \
 	    ~/.local/bin/claude plugin marketplace add "$$repository"; \
 	    ~/.local/bin/claude plugin install "$$plugin"; \
@@ -142,9 +141,6 @@ test: ## Run the apps/ test suite (the desktop widgets, the scripts and configur
 
 build: ## Build the desktop widgets in apps/ (mpris-card, web-placeholder, cooler-overlay-mask)
 	cargo build --release --manifest-path apps/Cargo.toml
-
-dotfiles-work: ## Create the clone Claude's dotfiles session works in (~/IdeaProjects/dotfiles); cockpit apply brings its commits here
-	@if [ -e ~/IdeaProjects/dotfiles ]; then echo "~/IdeaProjects/dotfiles exists already"; else git clone -q ~/dotfiles ~/IdeaProjects/dotfiles && echo "created ~/IdeaProjects/dotfiles (origin: ~/dotfiles)"; fi
 
 check: check-packages check-skills check-services check-system check-untracked check-security check-palette test ## [read-only] Show everything that differs from the repo, then run the tests
 

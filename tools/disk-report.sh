@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # Read-only disk report behind `make disk`, ordered by what has filled the disk before:
-# agent clones and their Rust builds, agent logs, caches, then system and games.
+# build output in projects, agent logs, caches, then system and games.
 # Nothing is deleted; each section ends with the command that reclaims it.
 # No pipefail: du exits 1 for any missing or unreadable folder, which is expected here.
 set -u
 
 home=${HOME:?HOME must be set}
-clones_root=${COCKPIT_CLONES:-$home/IdeaProjects/.parallel}
 projects_root=$home/IdeaProjects
 pnpm_home=${PNPM_HOME:-$home/.local/share/pnpm}
 
@@ -22,25 +21,14 @@ if [ -n "$used_percent" ] && [ "$used_percent" -ge 85 ]; then
     echo "!! $home is ${used_percent}% full"
 fi
 
-section "agent clones ($clones_root)"
-mapfile -t clones < <(find "$clones_root" -mindepth 2 -maxdepth 2 -type d 2>/dev/null)
-if [ "${#clones[@]}" -eq 0 ]; then
-    echo "none"
-else
-    echo "${#clones[@]} clones, $(du -sch "${clones[@]}" 2>/dev/null | tail -1 | cut -f1) in total; largest:"
-    sizes "${clones[@]}" | head -n 10
-    hint "nothing removes finished clones; delete them, or at least their apps/target"
-fi
-
 section "build output in projects (target, .next, node_modules, vendor)"
 find "$projects_root" -xdev -type d \( -name target -o -name .next -o -name node_modules -o -name vendor \) \
     -prune -print0 2>/dev/null | xargs -0 -r du -sh 2>/dev/null | largest 10
 hint "cargo clean / rm -rf the folder; it is rebuilt on the next build"
 
 section "agent data"
-sizes "$home/.local/share/greyproxy" "$home/.cache/claude" "$home/.claude" \
+sizes "$home/.cache/claude" "$home/.claude" \
     "$home/.local/share/opencode" "$home/.cache/opencode" "$home/.codex"
-hint "greyproxy-prune.timer caps greyproxy.db at 14 days and 4 GB; greyproxy-prune --compact returns the space"
 
 section "largest user caches (~/.cache)"
 { du -sh "$home"/.cache/* 2>/dev/null || true; } | largest 10
