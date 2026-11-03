@@ -1,2 +1,2 @@
--- The Torlek TUI opens as `kitty --class torlek torlek tui`: no see-through background behind it.
+-- The Torlek TUI opens in a kitty window of class torlek (fish function torlek): no see-through background behind it.
 hl.window_rule({ match = { class = "^(torlek)$" }, opacity = "1 1" })
