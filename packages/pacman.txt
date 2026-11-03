@@ -112,6 +112,7 @@ qt6-wayland
 qt6ct
 restic
 rust
+sccache
 sddm
 slurp
 smartmontools
