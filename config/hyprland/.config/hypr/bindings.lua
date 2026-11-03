@@ -76,10 +76,6 @@ for i = 1, 10 do
     bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }), { description = "Move window to workspace " .. i })
 end
 
--- The Claude session manager: a sidebar of every session plus the selected one (~/.local/bin/cockpit).
-bind(mainMod .. " + C", hl.dsp.exec_cmd("cockpit show"), { description = "Claude sessions" })
-bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("cockpit handoff"), { description = "Hand Claude sessions to Remote Control" })
-
 -- The dropdown terminal and Apple Music scratchpads are bound in scratchpads.lua.
 bind(mainMod .. " + SHIFT + S", hl.dsp.workspace.toggle_special("magic"), { description = "Scratch workspace" })
 -- hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }))
@@ -92,7 +88,7 @@ bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }), { descriptio
 -- hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
 -- hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Volume and monitor brightness keys (the scripts also drive the OSD, see ~/.config/osd)
+-- Volume and monitor brightness keys
 bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("~/.config/hypr/scripts/volume.sh raise"), { locked = true, repeating = true, description = "Volume up" })
 bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("~/.config/hypr/scripts/volume.sh lower"), { locked = true, repeating = true, description = "Volume down" })
 bind("XF86AudioMute", hl.dsp.exec_cmd("~/.config/hypr/scripts/volume.sh mute"), { locked = true, repeating = true, description = "Mute" })

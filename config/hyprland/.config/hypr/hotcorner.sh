@@ -1,6 +1,5 @@
 #!/bin/bash
-# Bottom-left hot corner: locks the screen through lock.sh (which hands the Claude sessions to
-# Remote Control). Hyprland sends no cursor events, so this polls: one `hyprctl cursorpos` per
+# Bottom-left hot corner: locks the screen through lock.sh. Hyprland sends no cursor events, so this polls: one `hyprctl cursorpos` per
 # POLL_S, the monitor layout every LAYOUT_EVERY polls and the gaming check every GAMING_EVERY
 # polls. That is about 7 processes a second; the first version, with every lookup on every
 # 0.1 s poll, started about 80.

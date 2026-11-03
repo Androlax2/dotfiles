@@ -5,7 +5,7 @@ hl.on("hyprland.start", function()
     -- Its log goes to the runtime dir so a slow start can be timed against Hyprland's own log.
     hl.exec_cmd('waybar > "$XDG_RUNTIME_DIR/waybar.log" 2>&1')
     hl.exec_cmd("swaync")
-    -- The OSD daemon, the Claude session manager, elephant and walker are systemd user units
+    -- elephant and walker are systemd user units
     -- (journal logs, restart on failure): hand them the session's environment first, then start
     -- them. Apps launched from walker inherit it, so it carries everything envs.lua sets (theme,
     -- cursor, Wayland backends) and PATH, as an app started from a Hyprland bind would get.
@@ -19,8 +19,7 @@ hl.on("hyprland.start", function()
     -- restart, not start: the units are enabled at login, so systemd may have started them before
     -- Hyprland existed, without its display; walker's apps then fail to open.
     hl.exec_cmd("systemctl --user import-environment " .. session_environment
-        .. " && systemctl --user restart osd.service elephant.service walker.service"
-        .. " && systemctl --user start cockpit.service")
+        .. " && systemctl --user restart elephant.service walker.service")
     hl.exec_cmd("~/.local/bin/mpris-card") -- resident so the card shows instantly
     -- No -n: it would pop a Hyprland notification with a progress bar on every login.
     hl.exec_cmd("hyprpm reload")

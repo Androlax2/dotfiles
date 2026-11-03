@@ -1,5 +1,5 @@
 #!/bin/bash
-# Change the focused monitor's brightness over DDC/CI and show it on the OSD.
+# Change the focused monitor's brightness over DDC/CI.
 # Usage: brightness-adjust-focused.sh +10 | -10 | =100
 # The I2C bus is read from sysfs under the monitor's DRM connector: bus numbers
 # (and DP-N names) shuffle across kernel and driver updates, so nothing is hardcoded.
@@ -35,5 +35,4 @@ esac
 [ "$new" -gt 100 ] && new=100
 
 echo "$new" > "$cache_file"
-~/.local/bin/osd-show brightness "$new"
 ddcutil setvcp 10 "$new" --bus "$bus" --sleep-multiplier 0 --skip-ddc-checks &

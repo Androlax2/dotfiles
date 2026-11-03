@@ -10,7 +10,7 @@ hl.config({
     general = {
         gaps_in = 5,
         -- The bar reserves no space (waybar "exclusive": false): the top gap holds its 6 px margin,
-        -- its 32 px height and 6 px below, so windows never move when it hides on the Claude workspace.
+        -- its 32 px height and 6 px below.
         gaps_out = { top = 44, right = 15, bottom = 15, left = 15 },
 
         border_size = 1,
