@@ -2,11 +2,11 @@
 # Open a site in its own Zen profile, the way the web scratchpads in scratchpads.lua want it:
 #   web-launch.sh <profile> <url>
 # The profile is created on first use; on every start its user.js is rewritten from
-# ~/.config/zen/scratchpad.user.js plus the site as its home page (the one set at creation: a later
-# start on a pull request does not change it), so it is a compact window on that site and nothing
-# else, with its own logins. exec keeps the PID, which the spawn rules in scratchpads.lua match on. No --no-remote:
-# Zen's remoting is per profile, so a later `zen-browser -P <profile> <url>` opens the page in
-# this window (scratchpads.lua's OPEN_IN_SCRATCHPAD) instead of failing on a profile in use.
+# ~/.config/zen/scratchpad.user.js plus the site as its home page (the one set at creation), so it
+# is a compact window on that site and nothing else, with its own logins. exec keeps the PID, which
+# the spawn rules in scratchpads.lua match on. No --no-remote: Zen's remoting is per profile, so a
+# later `zen-browser -P <profile> <url>` opens the page in this window instead of failing on a
+# profile in use.
 set -euo pipefail
 profile=${1:?usage: web-launch.sh <profile> <url>}
 url=${2:?usage: web-launch.sh <profile> <url>}

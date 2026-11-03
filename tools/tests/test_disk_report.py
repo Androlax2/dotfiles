@@ -26,6 +26,12 @@ class DiskReportTests(unittest.TestCase):
         (build / "artifact").write_bytes(b"x" * 8192)
         return build
 
+    def test_lists_a_projects_build_output(self):
+        build = self.add_project_build("project")
+        result = self.run_make_disk()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(str(build), result.stdout)
+
     def test_report_leaves_build_output_in_place(self):
         build = self.add_project_build("project")
         self.run_make_disk()
