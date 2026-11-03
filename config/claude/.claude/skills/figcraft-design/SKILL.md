@@ -1,6 +1,6 @@
 ---
 name: figcraft-design
-description: How to design and review in FigCraft (the figcraft-app MCP tools) like a careful product designer. Use before ANY design work in FigCraft — a screen, a flow, a component, a design system, a redesign or a small change to an existing file — and when Theo asks to see, review or validate existing boards, compare alternatives, or give visual feedback, even without requesting edits. Offers an interactive conversation-only float on FigCraft's workspace for visual reviews, after consent. Asks before assuming, wireframes first, auto layout and components always, best practices checked against current sources.
+description: How to design and review in FigCraft (the figcraft-app MCP tools) like a careful product designer. Use before ANY design work in FigCraft — a screen, a flow, a component, a design system, a redesign or a small change to an existing file — and when Theo asks to see, review or validate existing boards, compare alternatives, or give visual feedback, even without requesting edits. Asks before assuming, wireframes first, auto layout and components always, best practices checked against current sources.
 ---
 
 # Designing in FigCraft
@@ -8,38 +8,6 @@ description: How to design and review in FigCraft (the figcraft-app MCP tools) l
 You are the designer, Theo is the client and the art director. A good designer asks, sketches,
 shows, and only then polishes. Nothing in a brief is obvious: an unstated rule is a question, not
 a guess.
-
-At the start, run `cockpit-design role designer`: Theo's cockpit shows the role on your card and
-hands you the design to-dos developers file (`✎ design`). Start with those: `cockpit-todo list`.
-
-## Visual reviews: offer a floating conversation on FigCraft's workspace
-
-When Theo asks to review or approve boards, compare design alternatives, or give visual feedback,
-offer the chat yourself: "Je peux ouvrir uniquement notre conversation dans une petite fenêtre
-flottante sur le workspace de FigCraft, pour lire et répondre sans changer tes fenêtres. Tu veux ?"
-He should not need to remember a shortcut or ask for a layout.
-Offer once at the start of that review, not on every board or merely because FigCraft connects.
-If he declines, continue the review normally and do not offer again during that review.
-
-Wait for his answer before asking to run anything. After consent, use `ask-to-run` for
-`cockpit design-review start <your-session-id>`, with `--why` explaining that it opens
-another interactive terminal client of this same conversation, not another agent or the cockpit.
-Pass your actual session ID explicitly so the cockpit's selected conversation cannot substitute
-another project's chat. FigCraft and this agent must already be running; the cockpit need not be
-open. Use the existing FigCraft connection procedure if needed, with its own consent. With several
-FigCraft windows, identify the intended window from the host's `hyprctl -j clients` via `ask-to-run`
-and add `--figcraft-window <its-address>` to start. Ask Theo which design if uncertain: never pick
-another project's window. Pass the real address, not an example. Do not rely on focus surviving
-the approval terminal; ambiguity is refused. A refusal or failed command is not consent to try a different placement method. Keep the
-current board; issue no canvas-selection, zoom, main-window movement or resize commands. The two
-terminal clients share the same CLI, so its text may reflow when the last-used client changes.
-
-When the review ends, offer to close the floating chat. Wait for consent, then use `ask-to-run`
-for `cockpit design-review stop <your-session-id>`, explaining that only the floating
-terminal closes and the agent keeps running. Theo can also close the float normally. Do not close
-it automatically when the agent finishes speaking. Repeated start/stop is harmless. The main
-windows stay unchanged, so no layout restoration is needed. Neither command reconnects MCP or
-restarts a session.
 
 ## Rule 1: never assume, ask
 
@@ -145,11 +113,8 @@ Developer sessions build only what you mark ready, and read the repository even 
 closed. At each milestone Theo approves:
 
 1. **Ready for dev**: set `devStatus: readyForDev` on each approved top-level frame or section
-   (`run_command` `node.set`; `inspect.readyForDev` lists them). Only after Theo's yes. Then file the
-   build: `cockpit-todo add 'Build <frame name>' --notes '<file> · frame <id> · ready <date> · <what
-   it covers, states included>'`. Changing a frame already marked: say so, and file
-   `cockpit-todo add 'Update <frame name>' --notes '<what changed>'` (developers see the diff with
-   `dev.compare`).
+   (`run_command` `node.set`; `inspect.readyForDev` lists them). Only after Theo's yes. Changing a
+   frame already marked: say so (developers see the diff with `dev.compare`).
 2. **Tokens**: export the variables into the repository, both forms, at their usual paths:
    `variable.export {format: "json", path: "<repository root>/design/tokens.json"}` and
    `variable.export {format: "css", path: "<repository root>/design/tokens.css"}` (absolute paths,
@@ -171,6 +136,5 @@ closed. At each milestone Theo approves:
 - [ ] Contrast, target sizes and focus states checked (web-design-guidelines, fixing-accessibility).
 - [ ] Best-practice sources cited for the main patterns.
 - [ ] Notes page up to date; file saved.
-- [ ] Approved frames marked ready for dev, each with its "Build" to-do.
+- [ ] Approved frames marked ready for dev.
 - [ ] `design/tokens.json`, `design/tokens.css` and `DESIGN.md` updated.
-- [ ] The `✎ design` to-dos you answered marked done (`cockpit-todo done <id>`).
