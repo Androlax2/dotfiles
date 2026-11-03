@@ -4,7 +4,7 @@
 -- Star Citizen
 hl.window_rule({
     match = { class = "^(starcitizen.exe)$" },
-    workspace = "7",
+    workspace = "6",
     opacity = "1 1",
     idle_inhibit = "always",
     no_blur = true,
@@ -12,4 +12,4 @@ hl.window_rule({
 })
 
 -- RSI Launcher
-hl.window_rule({ match = { class = "^(rsi launcher.exe)$" }, workspace = "7" })
+hl.window_rule({ match = { class = "^(rsi launcher.exe)$" }, workspace = "6" })
