@@ -1,0 +1,4 @@
+# Every checkout (each Torlek worker clones its own) reuses compiled dependencies instead of
+# building them cold into its own target/. Needs the sccache package (packages/pacman.txt).
+[build]
+rustc-wrapper = "sccache"
