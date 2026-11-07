@@ -561,6 +561,19 @@ sudo passwd -S hermes   # "L": the password is locked, so only a key gets in
 
 Then append the agent's public key to `/home/hermes/.ssh/authorized_keys`.
 
+### Wake-on-WLAN
+
+The PC has no ethernet cable, so the NAS wakes it from suspend over Wi-Fi with a magic packet
+to `wlan0`'s permanent MAC, `50:ee:32:b8:8e:d6`. It works from `deep` (S3) suspend only, not
+from power-off, and needs no BIOS change. The setting lives in the NetworkManager connection,
+which is not versioned because it holds the Wi-Fi password:
+
+```bash
+nmcli connection modify "Livebox-5CC0 1" 802-11-wireless.wake-on-wlan magic
+nmcli connection up "Livebox-5CC0 1"
+iw phy0 wowlan show   # "wake up on magic packet"
+```
+
 ### Software installed outside package managers
 
 These came from vendor installers, so `make` can't reinstall them:
@@ -575,6 +588,7 @@ These came from vendor installers, so `make` can't reinstall them:
 | uv | `/usr/local/bin` | `make clean-caches` uses it |
 | Private Internet Access | `/opt/piavpn` | Its installer also writes `piavpn.service` and `wgpia.conf` |
 | Thermalright LCD control | `/usr/local/bin` | Its unit file is versioned in `system/` |
+| wakezilla 0.2.14 | `~/.local/bin/wakezilla` | `VERSION=0.2.14 WAKEZILLA_SUDO_SYMLINK=no sh install.sh` from the [repo](https://github.com/guibeira/wakezilla) (the crates.io release doesn't compile), then `rm ~/.config/autostart/dev.wakezilla.tray.desktop`. `wakezilla-client.service` reads its key from `~/.config/wakezilla/client.env` (mode 600, not versioned): `WAKEZILLA__SECURITY__CLIENT_SHUTDOWN_KEY=$(openssl rand -base64 32)` |
 
 ## Notes
 
