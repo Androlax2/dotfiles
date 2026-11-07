@@ -19,6 +19,7 @@ Everything needed to rebuild my Arch Linux desktop running Hyprland: user dotfil
 | [`services.txt`](services.txt) | System units enabled beyond their vendor preset |
 | [`system-ignore.txt`](system-ignore.txt) | `/etc` paths deliberately left out of the repo, each with a reason |
 | [`Makefile`](Makefile) | Provision, capture, audit and clean the machine; `make help` lists every target |
+| [`ollama/`](ollama) | Local LLMs: the `gpt-oss-64k` Modelfile, where the service override is installed, and the benchmark |
 | [`tools/`](tools) | Helpers for the Makefile: the `make help` renderer, the palette generator, the security check, the README screenshots |
 
 The desktop itself:
