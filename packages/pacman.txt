@@ -92,6 +92,7 @@ noto-fonts-extra
 npm
 numlockx
 nwg-look
+ollama-rocm
 openbsd-netcat
 openrgb
 otf-libertinus
@@ -111,6 +112,7 @@ qt5-wayland
 qt6-wayland
 qt6ct
 restic
+rocminfo
 rust
 sccache
 sddm
