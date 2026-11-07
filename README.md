@@ -547,6 +547,20 @@ journalctl -t wifi-reconnect
 iw reg get   # should show "country FR", not "country 00"
 ```
 
+### Agent user (hermes)
+
+The local AI agent's SSH shell runs as `hermes`: no sudo, no password, key only. sshd's
+[`10-hardening.conf`](system/etc/ssh/sshd_config.d/10-hardening.conf) already refuses passwords for everyone.
+
+```bash
+sudo useradd --create-home --shell /bin/bash --user-group hermes
+sudo install -d -m 700 -o hermes -g hermes /home/hermes/.ssh
+sudo install -m 600 -o hermes -g hermes /dev/null /home/hermes/.ssh/authorized_keys
+sudo passwd -S hermes   # "L": the password is locked, so only a key gets in
+```
+
+Then append the agent's public key to `/home/hermes/.ssh/authorized_keys`.
+
 ### Software installed outside package managers
 
 These came from vendor installers, so `make` can't reinstall them:
