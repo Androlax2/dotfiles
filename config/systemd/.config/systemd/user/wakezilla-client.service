@@ -1,0 +1,10 @@
+[Unit]
+Description=Wakezilla client: lets the NAS suspend this PC
+
+[Service]
+ExecStart=%h/.local/bin/wakezilla client-server
+EnvironmentFile=%h/.config/wakezilla/client.env
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

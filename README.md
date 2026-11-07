@@ -588,6 +588,7 @@ These came from vendor installers, so `make` can't reinstall them:
 | uv | `/usr/local/bin` | `make clean-caches` uses it |
 | Private Internet Access | `/opt/piavpn` | Its installer also writes `piavpn.service` and `wgpia.conf` |
 | Thermalright LCD control | `/usr/local/bin` | Its unit file is versioned in `system/` |
+| wakezilla 0.2.14 | `~/.local/bin/wakezilla` | `VERSION=0.2.14 WAKEZILLA_SUDO_SYMLINK=no sh install.sh` from the [repo](https://github.com/guibeira/wakezilla) (the crates.io release doesn't compile), then `rm ~/.config/autostart/dev.wakezilla.tray.desktop`. `wakezilla-client.service` reads its key from `~/.config/wakezilla/client.env` (mode 600, not versioned): `WAKEZILLA__SECURITY__CLIENT_SHUTDOWN_KEY=$(openssl rand -base64 32)` |
 
 ## Notes
 
